@@ -1,7 +1,12 @@
 SHELL=/usr/bin/env bash
 map=$(foreach value,$(2),$(call $(1),$(value)))
 get_source_in_directory=$(wildcard $(value)/*.hs)
+
+EXEC=ansible-playbook
 ENVNAME=myenv
+
+OPTIONS=-v
+# OPTIONS=-vv
 
 default: help
 
@@ -11,17 +16,13 @@ install: $(ENVNAME) ## Installs
 uninstall: ## Uninstall
 	rm -r ./myenv
 
-run: run_basic
-
-run_basic: ## run basic.yml
+run_hello: ## Run hello
 	source "$(ENVNAME)/bin/activate" && \
-	ansible-playbook basic.yml
+	$(EXEC) $(OPTIONS) hello.yml
 
 run_playground:  ## run playground.yml
 	source "$(ENVNAME)/bin/activate" && \
-	ansible-playbook playground.yml
-
-test: run
+	$(EXEC) $(OPTIONS) playground.yml
 
 debug: ## Print variables
 	@echo SHELL=$(SHELL)

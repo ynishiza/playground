@@ -5,7 +5,8 @@ How to test:
 ```
 # With make
 $ make install
-$ make run_basic
+$ make run_hello
+$ make run_playground
 
 # Install manually
 $ virtualenv myenv

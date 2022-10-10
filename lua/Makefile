@@ -7,11 +7,15 @@ SRC=$(call map,get_source_in_directory,$(DIRS))
 OBJ=$(SRC:.hs=.o)
 
 EXEC=lua
+HELLOSCRIPT=hello.lua
 TESTSCRIPT=test.lua
 
 default: help
 
-run: ## Run test script
+run_hello: ## Run hello
+	$(EXEC) $(HELLOSCRIPT)
+
+run_test: ## Run test script
 	$(EXEC) $(TESTSCRIPT)
 
 test: run

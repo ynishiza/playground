@@ -3,20 +3,24 @@
 import Control.Arrow
 import Control.Monad
 import Control.Applicative
-main = callTest (do
-  testFold
-  -- testTraverse
-  testTraverse2
-  -- testTraverse
-  -- testCompositionMonad
-  -- testFunctionMonad
-  -- testRandom
-  -- testTypeSyntax
-  -- testCase
-  -- testDo
-  -- testData
-  -- testArrow
-  ) "main"
+main = do
+  let message = "Hello"
+  putStrLn message
+
+-- main = callTest (do
+--   testFold
+--   -- testTraverse
+--   testTraverse2
+--   -- testTraverse
+--   -- testCompositionMonad
+--   -- testFunctionMonad
+--   -- testRandom
+--   -- testTypeSyntax
+--   -- testCase
+--   -- testDo
+--   -- testData
+--   -- testArrow
+--   ) "main"
 
 type TestType a = [a]
 data TestType2 a = List [a] | Point (a,a)

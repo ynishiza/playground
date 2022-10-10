@@ -17,9 +17,12 @@ $ make debug
 $ make install
 $ make uninstall
 
-# Compile
+# Hello script
+$ make run_hello
+
+# Test script
 $ make compile
-$ make run
+$ make run_test
 
 # Clean cache
 $ make clean

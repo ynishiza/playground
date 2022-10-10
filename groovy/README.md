@@ -14,5 +14,14 @@ $ brew install groovy
 ```
 $ make help
 $ make debug
-$ make run
+
+# Hello script
+$ make run_hello
+
+# Test script
+$ make compile
+$ make run_test
+
+# Clean cache
+$ make clean
 ```

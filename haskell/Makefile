@@ -8,8 +8,11 @@ OBJ=$(SRC:.hs=.o)
 
 COMPILER=ghc
 EXEC=runhaskell
-BIN=script
 TESTSCRIPT=script.hs
+BIN=$(basename $(TESTSCRIPT))
+
+HELLOSCRIPT=hello.hs
+HELLOBIN=$(basename $(HELLOSCRIPT))
 
 default: help
 
@@ -22,10 +25,12 @@ compile: $(BIN)
 $(BIN): $(SRC)
 	$(COMPILER) $(SRC)
 
-run: 
-	$(EXEC) $(TESTSCRIPT)
+run_hello: ## Run hello
+	$(COMPILER) $(HELLOSCRIPT)
+	./$(HELLOBIN)
 
-test: run
+run_test: 
+	$(EXEC) $(TESTSCRIPT)
 
 # watch: ## Watch for changes
 # 	watchman watch .
@@ -38,6 +43,8 @@ debug: ## Print variables
 	@echo SHELL=$(SHELL)
 	@echo SRC=$(SRC)
 	@echo OBJ=$(OBJ)
+	@echo HELLOBIN=$(HELLOBIN)
+	@echo HELLOSCRIPT=$(HELLOSCRIPT)
 
 clean: ## Clean
 	rm -f $(BIN) $(OBJ) 
@@ -45,4 +52,4 @@ clean: ## Clean
 help: ## Display this help
 	@grep -E '^[0-9a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-.PHONY: debug run clean watch unwatch compile help
+.PHONY: hello debug run clean watch unwatch compile help

@@ -8,8 +8,11 @@ OBJ=$(SRC:.hs=.o)
 
 COMPILER=ghc
 EXEC=runhaskell
-BIN=script
 TESTSCRIPT=script.hs
+BIN=$(basename $(TESTSCRIPT))
+
+HELLOSCRIPT=hello.hs
+HELLOBIN=$(basename $(HELLOSCRIPT))
 
 default: help
 
@@ -19,17 +22,19 @@ install: ## Install packages
 uninstall: ## Uninstall packages
 	echo "Not implemented" && exit 1
 
+run_hello: ## Run hello
+	$(COMPILER) $(HELLOSCRIPT)
+	./$(HELLOBIN)
+
 compile: $(BIN) ## Compile test script
 
 $(BIN): $(SRC)
 	# $(COMPILER) $(SRC)
 	echo "Not implemented" && exit 1
 
-run: ## Run test script
+run_test: ## Run test script
 	# $(EXEC) $(TESTSCRIPT)
 	echo "Not implemented" && exit 1
-
-test: run
 
 watch: ## Watch for changes
 	# watchman watch .
@@ -44,6 +49,7 @@ debug: ## Print variables
 	@echo SHELL=$(SHELL)
 	@echo SRC=$(SRC)
 	@echo OBJ=$(OBJ)
+	@echo HELLOSCRIPT=$(HELLOSCRIPT)
 
 clean: ## Clean cache
 	# rm -f $(BIN) $(OBJ) 
@@ -52,4 +58,4 @@ clean: ## Clean cache
 help: ## Display this help
 	@grep -E '^[0-9a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-.PHONY: install uninstall compile run test watch unwatch clean debug help
+.PHONY: hello install uninstall compile run test watch unwatch clean debug help

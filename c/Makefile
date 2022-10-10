@@ -27,6 +27,7 @@ $(OBJ): $(HEADERS)
 %.o: %.c
 	$(CC) -c $(FLAGS) -o $@ $<
 
+
 print:
 	@echo HEADERS=$(HEADERS) 
 	@echo OBJ=$(OBJ) 

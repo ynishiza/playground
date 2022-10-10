@@ -1,5 +1,6 @@
 # Common
 *.o
+hello # hello script
 
 # Haskell
 *.hi

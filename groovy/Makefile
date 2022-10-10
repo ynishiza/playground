@@ -2,13 +2,15 @@ SHELL=/usr/bin/env bash
 
 EXEC=groovy
 TESTSCRIPT=test.groovy
+HELLOSCRIPT=hello.groovy
 
 default: help
 
-run: ## Run test script
-	$(EXEC) $(TESTSCRIPT)
+run_hello: ## Run test script
+	$(EXEC) $(HELLOSCRIPT)
 
-test: run
+run_test: ## Run test script
+	$(EXEC) $(TESTSCRIPT)
 
 debug: ## Print variables
 	@echo SHELL=$(SHELL)
