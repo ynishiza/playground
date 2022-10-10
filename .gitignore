@@ -1,0 +1,6 @@
+# Common
+*.o
+
+# Haskell
+*.hi
+
