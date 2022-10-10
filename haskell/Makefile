@@ -13,8 +13,9 @@ TESTSCRIPT=script.hs
 
 default: help
 
-install: ## Installs
-	# echo "Not implemented" && exit 1
+install: ## Install packages
+	cabal update
+	cabal install random
 
 compile: $(BIN)
 

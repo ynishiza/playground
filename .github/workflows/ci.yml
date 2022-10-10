@@ -1,0 +1,39 @@
+name: Continuous Integration
+
+on: [push]
+
+jobs:
+  # Uses gh-actions-lua: https://github.com/leafo/gh-actions-lua
+  lua:
+    runs-on: ubuntu-latest
+    steps:
+      - run: set
+      - name: Checkout
+        uses: actions/checkout@v3
+      - uses: leafo/gh-actions-lua@v9
+        with:
+          luaVersion: "5.1.5"
+
+      - name: Run
+        working-directory: ${{ github.workspace }}/lua/
+        run: make run
+
+  # Uses: https://github.com/haskell/actions/tree/main/setup
+  haskell:
+    runs-on: ubuntu-latest
+    steps:
+      - run: set
+      - name: Checkout
+        uses: actions/checkout@v3
+      - uses: haskell/actions/setup@v2
+        with:
+          ghc-version: '8.8' # Resolves to the latest point release of GHC 8.8
+          cabal-version: '3.0.0.0' # Exact version of Cabal
+
+      - name: Install
+        working-directory: ${{ github.workspace }}/haskell/
+        run: make install
+
+      - name: Run
+        working-directory: ${{ github.workspace }}/haskell/
+        run: make run

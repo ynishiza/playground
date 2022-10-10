@@ -1,4 +1,4 @@
-import System.Random
+-- import System.Random
 
 import Control.Arrow
 import Control.Monad
@@ -167,13 +167,13 @@ testCase = callTest (do
   testDone
            ) "testCase"
 
-testRandom = callTest (do
-  let seed = 20
-  let gen = mkStdGen seed
-  let rg = uniformR (1::Int, 100)
-  let val1 = rg gen
-  let val2 = rg (snd val1)
-  print (fst val1, fst val2) ) "testRandom"
+-- testRandom = callTest (do
+--   let seed = 20
+--   let gen = mkStdGen seed
+--   let rg = uniformR (1::Int, 100)
+--   let val1 = rg gen
+--   let val2 = rg (snd val1)
+--   print (fst val1, fst val2) ) "testRandom"
 --   0 ->  "zero"
 --   _ -> "other"
 
