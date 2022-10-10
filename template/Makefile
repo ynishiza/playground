@@ -22,7 +22,7 @@ install: ## Install packages
 uninstall: ## Uninstall packages
 	echo "Not implemented" && exit 1
 
-run_hello: ## Run hello
+hello: ## Run hello
 	$(COMPILER) $(HELLOSCRIPT)
 	./$(HELLOBIN)
 
@@ -32,7 +32,7 @@ $(BIN): $(SRC)
 	# $(COMPILER) $(SRC)
 	echo "Not implemented" && exit 1
 
-run_test: ## Run test script
+run: ## Run test script
 	# $(EXEC) $(TESTSCRIPT)
 	echo "Not implemented" && exit 1
 
@@ -58,4 +58,4 @@ clean: ## Clean cache
 help: ## Display this help
 	@grep -E '^[0-9a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-.PHONY: hello install uninstall compile run test watch unwatch clean debug help
+.PHONY: hello install uninstall compile run hello watch unwatch clean debug help

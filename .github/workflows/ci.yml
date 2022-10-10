@@ -16,7 +16,7 @@ jobs:
 
       - name: Run
         working-directory: ${{ github.workspace }}/lua/
-        run: make run_hello && make run_test
+        run: make hello && make run
 
   # Uses: https://github.com/haskell/actions/tree/main/setup
   haskell:
@@ -36,4 +36,4 @@ jobs:
 
       - name: Run
         working-directory: ${{ github.workspace }}/haskell/
-        run: make run_hello && make run_test
+        run: make hello && make run

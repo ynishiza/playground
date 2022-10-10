@@ -3,24 +3,22 @@
 import Control.Arrow
 import Control.Monad
 import Control.Applicative
-main = do
-  let message = "Hello"
-  putStrLn message
 
--- main = callTest (do
---   testFold
---   -- testTraverse
---   testTraverse2
---   -- testTraverse
---   -- testCompositionMonad
---   -- testFunctionMonad
---   -- testRandom
---   -- testTypeSyntax
---   -- testCase
---   -- testDo
---   -- testData
---   -- testArrow
---   ) "main"
+main = callTest (do
+  testFold
+  -- testMonad
+  -- testTraverse
+  -- testTraverse2
+  -- testTraverse
+  -- testCompositionMonad
+  -- testFunctionMonad
+  -- testRandom
+  -- testTypeSyntax
+  -- testCase
+  -- testDo
+  -- testData
+  -- testArrow
+  ) "main"
 
 type TestType a = [a]
 data TestType2 a = List [a] | Point (a,a)
@@ -49,6 +47,29 @@ callTest x message = do
   print $ "start:" ++ message
   x
   print $ "end:" ++ message
+
+testMonad = callTest (do
+  do 
+    putStr "Hello" 
+    putStr "there" 
+
+  do 
+    putStr "Enter value"
+    x <- getLine
+    let msg = "message" ++ x
+    putStr msg
+
+  let f = do
+        t <- (+10)
+        (+(2*t))
+  print $ f 3
+  let x = do
+        t <- [1..10]
+        [1,2..t]
+  print x
+
+  testDone
+  ) "testMonad"
 
 testFold = callTest (do
   let printer :: Show a => a -> IO () -> IO ()

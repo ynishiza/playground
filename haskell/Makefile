@@ -11,7 +11,7 @@ EXEC=runhaskell
 TESTSCRIPT=script.hs
 BIN=$(basename $(TESTSCRIPT))
 
-HELLOSCRIPT=hello.hs
+HELLOSCRIPT=hellomain.hs
 HELLOBIN=$(basename $(HELLOSCRIPT))
 
 default: help
@@ -25,11 +25,11 @@ compile: $(BIN)
 $(BIN): $(SRC)
 	$(COMPILER) $(SRC)
 
-run_hello: ## Run hello
+hello: ## Run hello
 	$(COMPILER) $(HELLOSCRIPT)
 	./$(HELLOBIN)
 
-run_test: 
+run: ## Run test
 	$(EXEC) $(TESTSCRIPT)
 
 # watch: ## Watch for changes

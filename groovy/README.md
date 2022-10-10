@@ -16,11 +16,11 @@ $ make help
 $ make debug
 
 # Hello script
-$ make run_hello
+$ make hello
 
 # Test script
 $ make compile
-$ make run_test
+$ make run
 
 # Clean cache
 $ make clean

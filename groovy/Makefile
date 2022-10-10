@@ -6,10 +6,10 @@ HELLOSCRIPT=hello.groovy
 
 default: help
 
-run_hello: ## Run test script
+hello: ## Run test script
 	$(EXEC) $(HELLOSCRIPT)
 
-run_test: ## Run test script
+run: ## Run test script
 	$(EXEC) $(TESTSCRIPT)
 
 debug: ## Print variables

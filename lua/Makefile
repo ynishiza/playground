@@ -12,10 +12,10 @@ TESTSCRIPT=test.lua
 
 default: help
 
-run_hello: ## Run hello
+hello: ## Run hello
 	$(EXEC) $(HELLOSCRIPT)
 
-run_test: ## Run test script
+run: ## Run test script
 	$(EXEC) $(TESTSCRIPT)
 
 test: run
