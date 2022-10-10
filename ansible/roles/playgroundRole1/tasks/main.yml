@@ -1,0 +1,10 @@
+- debug: { msg: "Start {{role_name}}" }
+
+- set_fact:
+    role1_value: 1
+
+- include_tasks: another.yml
+
+- debug: { msg: "Done {{role_name}}" }
+  debugger: always
+

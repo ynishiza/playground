@@ -1,0 +1,1 @@
+- debug: { msg: "another task of role {{role_name}}" }

@@ -1,0 +1,11 @@
+- debug: { msg: "Start {{role_name}}" }
+
+- debug:
+    msg: "role1_value={{ role1_value }}"
+
+- set_fact:
+    role2_value: "{{ role1_value + 1 }}"
+
+- debug: { msg: "Done {{role_name}}" }
+  debugger: always
+

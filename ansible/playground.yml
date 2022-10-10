@@ -1,0 +1,129 @@
+- name: variables test
+  hosts: all
+  gather_facts: no
+  tasks:
+    - shell: "echo {{item}}"
+      with_items:
+      - "{{ [-1, -2] }}"
+      - 1
+      - name: 2
+
+    # test: loop N number of times
+    - shell: "echo {{item}}"
+      loop: "{{ range(1, 10)|list }}"
+
+    # test: create list of a given size
+    - set_fact:
+        x: "{{ x|default([]) + ['a' ~ item] }}"
+      loop: [1,2]
+    - shell: "echo {{item}}"
+      loop: "{{ x }}"
+      debugger: always
+
+
+    # test: merge objects
+    - debug: { msg: "{{ {'a':2} | combine({'b':2, 'c': 3 }) }}" }
+      debugger: always
+
+    - debug: { msg: "myhost_var={{myhost_var}} ansible_connection={{ansible_connection}}" }
+    - debug:
+        msg: "hostvars={{hostvars}}\ngroups={{groups}}"
+      # debugger: always
+    - debug:
+        var: ansible_facts
+    - debug:
+        var: ansible_facts.hostname
+      # debugger: always
+
+    # expressions
+    - debug:
+        var: x
+      vars:
+        x:
+          equal: "{{ 1 == 0 }}"
+          and: "{{ 1 and 1 }}"
+          not: "{{ not 1 }}"
+      debugger: always
+
+
+    # ternary
+    - debug: { msg: "{% if x %}hello{% else %}bye{% endif %}" }
+      vars:
+        # x: true
+        # x: false
+        # x: 0
+        x: 1
+    - set_fact: { x: 2 }
+    - debug: { msg: 'x=1' }
+      when: x == 1
+    - debug: { msg: 'x=2' }
+      when: x == 2
+      debugger: always
+
+    # dereference
+    - debug: { msg: "{{ansible_connection}}" }
+    - debug: { msg: "{{ansible_connection}}/a" }
+    - debug: { var: item }
+      loop: "{{list}}"
+      vars:
+        list: [1,2]
+      debugger: always
+
+
+    # Scope variables
+    - block:
+      - debug: { msg: "block x={{x}}" }
+      vars: { x: 2 }
+    - debug: { msg: "undefined x={{x|default(0)}}" }
+    - debug: { msg: "task x={{x}}" }
+      vars: { x: 3 }
+    - set_fact: { x: 2 }
+    - debug: { msg: "task x={{x}}" }
+      vars: { x: 3 }
+    - set_fact: { y: "{{z|default(0)}}" }
+    - set_fact: { z: 9 }
+    - debug: { msg: "y={{y}}" }
+      debugger: always
+
+- name: Test
+  hosts: all
+  gather_facts: no
+  tasks:
+    - debug:
+        msg: hello
+    - set_fact:
+        a: [1,2]
+        b: [3,4]
+    - set_fact:
+        c: "{{ a + b }}"
+    - debug:
+        msg: "value={{ c }}"
+
+- name: Test role 1
+  hosts: all
+  gather_facts: no
+  roles:
+    - playgroundRole1
+  tasks:
+    - debug:
+        msg: "role value = {{ role1_value }}"
+
+# - name: Post test role 1
+#   hosts: all
+#   tasks:
+#     - debug:
+#         msg: "role value = {{ role1_value }}"
+
+- name: Test role 2
+  hosts: all
+  gather_facts: no
+  roles:
+    - playgroundRole2
+  tasks:
+    - debug: { msg: "role2_value = {{ role2_value }}" }
+
+# - name: Post test role 2
+#   hosts: all
+#   tasks:
+#     - debug:
+#         msg: "role2_value = {{ role2_value }}"
