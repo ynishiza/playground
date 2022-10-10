@@ -3,37 +3,64 @@ map=$(foreach value,$(2),$(call $(1),$(value)))
 get_source_in_directory=$(wildcard $(value)/*.c)
 get_header_in_directory=$(wildcard $(value)/*.h)
 
-# macos native gcc
-# CC=gcc
-# gcc-8 installed by
+# case: macos
+# macos native gcc does not work
+# Use gcc-8 installed by
 #   $ brew install gcc@8
-CC=gcc-8
-FLAGS=-g
-DEPS=stack.h
-MAIN=main
-DIRS=. ./lib ./src
+GCC8=$(shell which gcc-8)
 
-SRC=$(call map,get_source_in_directory,$(DIRS))
+CC=gcc
+ifneq (, $(GCC8))
+	CC=$(GCC8)
+endif
+CFLAGS=-g
+DEPS=stack.h
+MAINBIN=main
+DIRS=./lib ./src
+
+SRC=$(call map,get_source_in_directory,$(DIRS)) main.c stack.c
 HEADERS=$(call map,get_header_in_directory,$(DIRS))
 OBJ=$(SRC:.c=.o)
 
-compile: $(MAIN)
+HELLOSRC=hellomain.c
+HELLOBIN=$(basename $(HELLOSRC))
+HELLOOBJ=$(HELLOSRC:.c=.o)
 
-$(MAIN): $(OBJ)
-	$(CC) $(FLAGS) -o $(MAIN) $^
+default: help
+
+compile: $(MAINBIN)
+
+$(MAINBIN): $(OBJ)
+	$(CC) $(CFLAGS) -o $(MAINBIN) $^
 
 $(OBJ): $(HEADERS)
 
-%.o: %.c
-	$(CC) -c $(FLAGS) -o $@ $<
+# Not required. Implicit rule 
+# Ref: https://www.gnu.org/software/make/manual/html_node/Catalogue-of-Rules.html#Catalogue-of-Rules
+# %.o: %.c
+# 	$(CC) -c $(CFLAGS) -o $@ $<
 
+hello: $(HELLOBIN) ## hello
+	./$(HELLOBIN)
 
-print:
+$(HELLOBIN) : $(HELLOOBJ)
+	$(CC) $(CFLAGS) -o $(HELLOBIN) $<
+
+run: $(MAINBIN)
+	./$(MAINBIN)
+
+debug: ## Print variables
+	@echo GCC8=$(GCC8)
+	@echo CC=$(CC)
 	@echo HEADERS=$(HEADERS) 
 	@echo OBJ=$(OBJ) 
 	@echo SRC=$(SRC)
+	@echo HELLOBIN=$(HELLOBIN)
 
-clean:
-	rm -rf $(MAIN) $(OBJ)
+clean: ## Clean cache
+	rm -rf $(MAINBIN) $(OBJ) $(HELLOBIN)
 
-.PHONY: clean compile print
+help: ## Display this help
+	@grep -E '^[0-9a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
+
+.PHONY: help abc clean compile hello debug

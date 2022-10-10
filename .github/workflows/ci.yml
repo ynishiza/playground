@@ -3,6 +3,17 @@ name: Continuous Integration
 on: [push]
 
 jobs:
+  c:
+    runs-on: ubuntu-latest
+    steps:
+      - run: set
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Run
+        working-directory: ${{ github.workspace }}/c/
+        run: make debug && make hello && make run
+
   # Uses gh-actions-lua: https://github.com/leafo/gh-actions-lua
   lua:
     runs-on: ubuntu-latest

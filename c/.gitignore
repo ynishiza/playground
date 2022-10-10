@@ -1,1 +1,6 @@
+# Cache
+*.dSYM
+
+# Bin
+hellomain
 main
