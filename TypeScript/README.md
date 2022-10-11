@@ -2,7 +2,7 @@
 
 ## Requirements
 
-Need Node.js + npm
+Need Node.js v16 + npm
 
 ## Test
 

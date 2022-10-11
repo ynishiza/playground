@@ -3,6 +3,31 @@ name: Continuous Integration
 on: [push]
 
 jobs:
+  TypeScript:
+    runs-on: ubuntu-latest
+    steps:
+      - run: set
+      - name: Checkout
+        uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
+      - name: Print version
+        run: node --version
+
+      - name: Install dependencies
+        working-directory: ${{ github.workspace }}/TypeScript/
+        run: make install
+
+      - name: Run hello
+        working-directory: ${{ github.workspace }}/TypeScript/
+        run: make hello
+
+      - name: Run test
+        working-directory: ${{ github.workspace }}/TypeScript/
+        run: make run
+
   c:
     runs-on: ubuntu-latest
     steps:
@@ -10,9 +35,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Run
+      - name: Run hello
         working-directory: ${{ github.workspace }}/c/
-        run: make debug && make hello && make run
+        run: make debug && make hello
+
+      - name: Run test
+        working-directory: ${{ github.workspace }}/c/
+        run: make run
 
   # Uses gh-actions-lua: https://github.com/leafo/gh-actions-lua
   lua:
@@ -25,9 +54,13 @@ jobs:
         with:
           luaVersion: "5.1.5"
 
+      - name: Run hello
+        working-directory: ${{ github.workspace }}/lua/
+        run: make hello
+
       - name: Run
         working-directory: ${{ github.workspace }}/lua/
-        run: make hello && make run
+        run: make run
 
   # Uses: https://github.com/haskell/actions/tree/main/setup
   haskell:
@@ -45,6 +78,10 @@ jobs:
         working-directory: ${{ github.workspace }}/haskell/
         run: make install
 
-      - name: Run
+      - name: Run hello
         working-directory: ${{ github.workspace }}/haskell/
-        run: make hello && make run
+        run: make hello
+
+      - name: Run test
+        working-directory: ${{ github.workspace }}/haskell/
+        run: make run
