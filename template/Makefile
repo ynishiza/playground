@@ -4,15 +4,15 @@ get_source_in_directory=$(wildcard $(value)/*.hs)
 
 DIRS=.
 SRC=$(call map,get_source_in_directory,$(DIRS))
+SRC=script.hs
 OBJ=$(SRC:.hs=.o)
+BIN=$(basename $(SRC))
+
+HELLOSRC=hello.hs
+HELLOBIN=$(basename $(HELLOSRC))
 
 COMPILER=ghc
 EXEC=runhaskell
-TESTSCRIPT=script.hs
-BIN=$(basename $(TESTSCRIPT))
-
-HELLOSCRIPT=hello.hs
-HELLOBIN=$(basename $(HELLOSCRIPT))
 
 default: help
 
@@ -23,7 +23,7 @@ uninstall: ## Uninstall packages
 	echo "Not implemented" && exit 1
 
 hello: ## Run hello
-	$(COMPILER) $(HELLOSCRIPT)
+	$(COMPILER) $(HELLOSRC)
 	./$(HELLOBIN)
 
 compile: $(BIN) ## Compile test script
@@ -33,7 +33,7 @@ $(BIN): $(SRC)
 	echo "Not implemented" && exit 1
 
 run: ## Run test script
-	# $(EXEC) $(TESTSCRIPT)
+	# $(EXEC) $(SRC)
 	echo "Not implemented" && exit 1
 
 watch: ## Watch for changes
@@ -47,9 +47,12 @@ unwatch: ## Clear watch
 
 debug: ## Print variables
 	@echo SHELL=$(SHELL)
+	@echo BIN=$(BIN)
+	@echo EXEC=$(EXEC)
 	@echo SRC=$(SRC)
 	@echo OBJ=$(OBJ)
-	@echo HELLOSCRIPT=$(HELLOSCRIPT)
+	@echo HELLOBIN=$(HELLOBIN)
+	@echo HELLOSRC=$(HELLOSRC)
 
 clean: ## Clean cache
 	# rm -f $(BIN) $(OBJ) 

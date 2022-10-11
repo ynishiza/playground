@@ -1,0 +1,15 @@
+{
+  "name": "jsModuleWithTypes",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "index.d.ts",
+  "scripts": {
+    "compile": "tsc --declaration --allowJs --emitDeclarationOnly *.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "typescript": "^4.4.4"
+  }
+}
