@@ -3,16 +3,15 @@ map=$(foreach value,$(2),$(call $(1),$(value)))
 get_source_in_directory=$(wildcard $(value)/*.hs)
 
 DIRS=.
-SRC=$(call map,get_source_in_directory,$(DIRS))
-OBJ=$(SRC:.hs=.o)
 
 COMPILER=ghc
 EXEC=runhaskell
-TESTSCRIPT=script.hs
-BIN=$(basename $(TESTSCRIPT))
+SRC=script.hs
+OBJ=$(SRC:.hs=.o)
+BIN=$(basename $(SRC))
 
-HELLOSCRIPT=hellomain.hs
-HELLOBIN=$(basename $(HELLOSCRIPT))
+HELLOSRC=hellomain.hs
+HELLOBIN=$(basename $(HELLOSRC))
 
 default: help
 
@@ -26,11 +25,10 @@ $(BIN): $(SRC)
 	$(COMPILER) $(SRC)
 
 hello: ## Run hello
-	$(COMPILER) $(HELLOSCRIPT)
-	./$(HELLOBIN)
+	$(EXEC) $(HELLOSRC)
 
 run: ## Run test
-	$(EXEC) $(TESTSCRIPT)
+	$(EXEC) $(SRC)
 
 # watch: ## Watch for changes
 # 	watchman watch .
@@ -44,10 +42,10 @@ debug: ## Print variables
 	@echo SRC=$(SRC)
 	@echo OBJ=$(OBJ)
 	@echo HELLOBIN=$(HELLOBIN)
-	@echo HELLOSCRIPT=$(HELLOSCRIPT)
+	@echo HELLOSRC=$(HELLOSRC)
 
 clean: ## Clean
-	rm -f $(BIN) $(OBJ) 
+	rm -f $(BIN) $(OBJ) $(HELLOBIN) 
 
 help: ## Display this help
 	@grep -E '^[0-9a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'

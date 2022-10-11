@@ -9,11 +9,14 @@ get_header_in_directory=$(wildcard $(value)/*.h)
 #   $ brew install gcc@8
 GCC8=$(shell which gcc-8)
 
+# Implicit rule variables for *.c files
+# Ref: https://www.gnu.org/software/make/manual/html_node/Catalogue-of-Rules.html#Catalogue-of-Rules
 CC=gcc
 ifneq (, $(GCC8))
 	CC=$(GCC8)
 endif
 CFLAGS=-g
+
 DEPS=stack.h
 MAINBIN=main
 DIRS=./lib ./src
@@ -35,11 +38,6 @@ $(MAINBIN): $(OBJ)
 
 $(OBJ): $(HEADERS)
 
-# Not required. Implicit rule 
-# Ref: https://www.gnu.org/software/make/manual/html_node/Catalogue-of-Rules.html#Catalogue-of-Rules
-# %.o: %.c
-# 	$(CC) -c $(CFLAGS) -o $@ $<
-
 hello: $(HELLOBIN) ## hello
 	./$(HELLOBIN)
 
@@ -58,7 +56,7 @@ debug: ## Print variables
 	@echo HELLOBIN=$(HELLOBIN)
 
 clean: ## Clean cache
-	rm -rf $(MAINBIN) $(OBJ) $(HELLOBIN)
+	rm -rf $(MAINBIN) $(OBJ) $(HELLOBIN) $(HELLOOBJ)
 
 help: ## Display this help
 	@grep -E '^[0-9a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
