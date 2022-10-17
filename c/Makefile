@@ -55,10 +55,18 @@ debug: ## Print variables
 	@echo SRC=$(SRC)
 	@echo HELLOBIN=$(HELLOBIN)
 
-clean: ## Clean cache
+clean: hacking_book_clean ## Clean cache
 	rm -rf $(MAINBIN) $(OBJ) $(HELLOBIN) $(HELLOOBJ)
+
+hacking_book_compile: ## Compile hacking_book code
+	pushd ./hacking_book/chapter2 >/dev/null && make compile && popd >/dev/null
+	pushd ./hacking_book/auth_overflow >/dev/null && make compile && popd >/dev/null
+
+hacking_book_clean: ## Cleanup
+	pushd ./hacking_book/chapter2 >/dev/null && make clean && popd >/dev/null
+	pushd ./hacking_book/auth_overflow >/dev/null && make clean && popd >/dev/null
 
 help: ## Display this help
 	@grep -E '^[0-9a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-.PHONY: help abc clean compile hello debug
+.PHONY: help abc clean compile hello debug hacking_book_compile hacking_book_clean

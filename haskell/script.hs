@@ -12,13 +12,15 @@ import Data.Char
 import Control.Arrow
 import Control.Monad
 import Control.Applicative
+import Control.Monad.Trans.Maybe
+import Control.Monad.Trans.Class
+import Control.Monad.Trans.State.Lazy
 
 main = callTest (do
   -- testPatterBind
   -- testWrapped
   -- testFunctorMonad
   -- testFold
-  -- testMonad
   -- testTraverse
   -- testTraverse2
   -- testTraverse
@@ -29,17 +31,20 @@ main = callTest (do
   -- testCase
   -- testDoExpression
   -- testData
+  -- testMonad
   testArrow
+  testMonadTransform
+  testStateMonad
   ) "main"
 
 assert :: Bool -> ()
 assert cond =
   if cond then () else error "Assertion failed"
 
-assertIO :: Show a => Bool -> a -> IO ()
+assertIO :: Bool -> String -> IO ()
 assertIO cond message = do
   print message
-  unless cond undefined
+  unless cond $ error $ "FAIL:" ++ message
 
 testDone = putStrLn "done"
 
@@ -50,9 +55,9 @@ printList = traverse_ print
 
 callTest :: IO () -> String -> IO ()
 callTest x message = do
-  putStrLn $ "start:" ++ message
+  printBanner $ "start:" ++ message
   x
-  putStrLn $ "end:" ++ message
+  printBanner $ "end:" ++ message
 
 -- TEST TEMPLATE
 testTemplate = callTest (do
@@ -88,6 +93,7 @@ testFunctorMonad = callTest (do
   testDone) "testFunctionMonad"
 
 testMonad = callTest (do
+  printBanner "do IO"
   do 
     putStr "Hello" 
     putStr "there" 
@@ -98,6 +104,7 @@ testMonad = callTest (do
     let msg = "message" ++ x
     putStr msg
 
+  printBanner "do ->,[]"
   let f = do
         t <- (+10)
         (+(2*t))
@@ -176,14 +183,14 @@ testCompositionMonad = callTest (do
   let x = g <*> f $ 2
   let y = (f >>= flip g) 2
   let z = (f <**> g) 2
-  assertIO (x == y) x
-  assertIO (x == z) x
+  assertIO (x == y) $ show x
+  assertIO (x == z) $ show x
 
   let x = g <*> f $ 5
   let y = (f >>= flip g) 5
   let z = (f <**> g) 5
-  assertIO (x == y) x
-  assertIO (x == z) x) "testCompositionMonad"
+  assertIO (x == y) $ show x
+  assertIO (x == z) $ show x) "testCompositionMonad"
 
 
 testFunctionMonad = callTest (do 
@@ -210,8 +217,8 @@ testArrow = callTest (do
   let f = (+2) +++ (+3)
   print $ f $ Left 1
   print $ f $ Right 1
-  let f = (+2) ||| ord
 
+  let f = (+2) ||| ord
   print $ f $ Left 1
   print $ f $ Right 'a'
   testDone
@@ -349,3 +356,27 @@ testWrapped = callTest (do
   print $ (unwrapArrow $ (+) <$> f <*> f) 2
   print $ unwrapMonad $ (*2) <$> x
   testDone) "testWrapped"
+
+testMonadTransform = callTest (do
+  printBanner "MaybeT"
+  let x = MaybeT [Just 1]
+  let x0 :: MaybeT [] Int; x0 = lift [1]
+  let y :: MaybeT (Either Char) Int; y = MaybeT $ Right (Just 1)
+  let y0 :: MaybeT (Either Char) Int; y0 = lift $ Right 1
+  print x
+  print x0
+  print y
+  print y0
+  -- print $ y == y0
+  -- print $ runMaybeT y == runMaybeT y0
+  assertIO (runMaybeT x == runMaybeT x0) "x==x0"
+  assertIO (runMaybeT y == runMaybeT y0) "y==y0"
+  print $ runMaybeT x
+  print $ runMaybeT x0
+  print $ runMaybeT y
+  print $ runMaybeT y0
+  testDone) "testTemplate"
+
+testStateMonad = callTest (do
+  let x = StateT (\s -> if even s then Right (True, s) else Left s)
+  testDone) "testStateMonad"
