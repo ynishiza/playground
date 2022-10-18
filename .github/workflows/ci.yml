@@ -96,7 +96,7 @@ jobs:
 
       - name: Run test
         working-directory: ${{ github.workspace }}/haskell/
-        run: make run
+        run: make runAll
 
       - name: Cleanup
         working-directory: ${{ github.workspace }}/haskell/

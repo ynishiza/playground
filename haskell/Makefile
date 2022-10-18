@@ -30,6 +30,9 @@ hello: ## Run hello
 run: ## Run test
 	$(EXEC) $(SRC)
 
+runAll: ## Run all tests
+	yes | $(EXEC) $(SRC)
+
 # watch: ## Watch for changes
 # 	watchman watch .
 # 	watchman -- trigger . build "*.tex" "*.cls" -- make compile
@@ -50,4 +53,4 @@ clean: ## Clean
 help: ## Display this help
 	@grep -E '^[0-9a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-.PHONY: hello debug run clean watch unwatch compile help
+.PHONY: hello debug run runAll clean watch unwatch compile help
