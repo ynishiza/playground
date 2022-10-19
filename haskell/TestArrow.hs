@@ -31,7 +31,7 @@ testArrow =
         -- Conditional
         let f :: Either Int Char -> Either Int Char
             f = left (* 3)
-        let g :: Either Int Char -> Either Int Char
+            g :: Either Int Char -> Either Int Char
             g = right $ chr . (+ 1) . ord
         print $ f $ Left 1
         print $ f $ Right 'a'
@@ -61,25 +61,25 @@ testArrowLoop =
                   f2 = snd . f
                in f1 (x, fix (\b -> f2 (x, b)))
 
-        let factorialFix fact n = if n <= 1 then n else n * fact (n - 1)
-        let factorialLoop (n, f) = (f n, factorialFix f)
-        let factorialLoop2 (n, f) = (f n 1, g f)
+            factorialFix fact n = if n <= 1 then n else n * fact (n - 1)
+            factorialLoop (n, f) = (f n, factorialFix f)
+            factorialLoop2 (n, f) = (f n 1, g f)
               where
                 g f i accum = if i <= 0 then accum else f (i - 1) (i * accum)
 
-        let fibonacchiFix fib n = if n <= 1 then n else fib (n - 1) + fib (n - 2)
-        let fibonacci (n, f) = (f n, fibonacchiFix f)
+            fibonacchiFix fib n = if n <= 1 then n else fib (n - 1) + fib (n - 2)
+            fibonacci (n, f) = (f n, fibonacchiFix f)
 
         -- if f(n) = sort O() of length n
         --         = O(n * 2  f(n/2))
         --         = O((n * n/2 * n/4 ...) 2^log n)
         --         = O(n^2)
-        let quickSort0 sort list
+            quickSort0 sort list
               | null list = []
               | (x : xs) <- list =
                   let (less, gt) = partition (< x) xs
                    in sort less ++ (x : sort gt)
-        let quickSortLoop (n, f) = (f n, quickSort0 f)
+            quickSortLoop (n, f) = (f n, quickSort0 f)
 
         let testLoop f testName = do
               printBanner $ "start:" ++ testName

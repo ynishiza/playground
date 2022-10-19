@@ -1,4 +1,9 @@
 -- imprt System.Random
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use mapM_" #-}
+{-# HLINT ignore "Use mapM" #-}
+{-# HLINT ignore "Use and" #-}
 
 import Control.Applicative
 import Control.Arrow
@@ -9,8 +14,10 @@ import Data.Function
 import Data.List
 import Data.Traversable
 import StaticArrow
-import TestArrow
-import TestMonad
+import qualified TestArrow 
+import qualified TestMonad 
+import qualified TestStateMonad 
+import qualified TestStateMonadExample 
 import TestUtils
 
 data MyType a b
@@ -27,9 +34,10 @@ main =
         if response == 'y'
           then runAll
           else do
-            testMonadFix
-            -- testMonadFail
-            -- testStaticArrow
+            TestStateMonad.testStateMonad
+            -- TestStateMonadExample.runTest
+            TestMonad.testMonadFix
+            TestMonad.testLazyStateMonad
     )
     "main"
 
@@ -47,18 +55,21 @@ runAll = do
   testTraverse2
 
   -- test: Category, Arrow
-  testArrow
-  testArrowLoop
+  TestArrow.testArrow
+  TestArrow.testArrowLoop
 
   -- test: Applicative,Monads
-  testMonad
-  testWrappedMonad
-  testCompositionMonad
-  testFunctorMonad
-  testMonadFail
-  testMonadTransform
-  testStateMonad
-  testStaticArrow
+  TestMonad.testMonad
+  TestMonad.testWrappedMonad
+  TestMonad.testCompositionMonad
+  TestMonad.testFunctorMonad
+  TestMonad.testMonadFail
+  TestMonad.testMonadTransform
+  TestMonad.testStaticArrow
+  TestMonad.testLazyStateMonad
+
+  TestStateMonad.testStateMonad
+  TestStateMonadExample.runTest
 
 -- TEST TEMPLATE
 testTemplate =
@@ -120,10 +131,10 @@ testTraverse =
   callTest
     ( do
         let f x = [0, x + 2, 2 * x]
-        let x = [1 .. 3]
+            x = [1 .. 3]
 
-        let y0 = pure [] :: [[Int]]
-        let doTraverseTest f x =
+            y0 = pure [] :: [[Int]]
+            doTraverseTest f =
               foldr
                 ( \x (step, history, res) ->
                     let v = f x
@@ -131,12 +142,12 @@ testTraverse =
                         -- v = f b
                         -- next = f (b:[b]) = f [b]
                         next = liftA2 (:) v res
-                     in (step + 1, history ++ [("step=" ++ show step ++ ",x=" ++ show x ++ " v=" ++ show v ++ " next=" ++ show next)], next)
+                        msg = "step=" ++ show step ++ ",x=" ++ show x ++ " v=" ++ show v ++ " next=" ++ show next
+                     in (step + 1, history ++ [msg], next)
                 )
                 (0, [], pure [])
-                x
 
-        let callTraverseTest f x name = do
+            callTraverseTest f x name = do
               print $ "start name=" ++ name
               print $ "x=" ++ show x
               print $ "steps=" ++ show (doTraverseTest f x)
@@ -146,17 +157,17 @@ testTraverse =
 
         callTraverseTest f [1 .. 3] "list"
 
-        let f = (\x -> if mod x 3 == 0 then Just x else Nothing)
+        let f x = if mod x 3 == 0 then Just x else Nothing
         callTraverseTest f [0, 3] "Just"
         callTraverseTest f [0, 3, 6] "Just"
         callTraverseTest f [0, 3, 6, 7] "Just"
 
-        let f = (\x -> if mod x 5 == 0 then Left x else Right x)
+        let f x = if mod x 5 == 0 then Left x else Right x
         callTraverseTest f [1] "Either"
         callTraverseTest f [1, 2] "Either"
         callTraverseTest f [1, 2, 3, 5, 6] "Either"
 
-        traverse print [1 .. 10]
+        traverse_ print [1 .. 10]
         testDone
     )
     "testTraverse"
@@ -178,7 +189,7 @@ testCaseExpression =
               0 : _ -> "zero"
               1 : _ -> "one"
               _ -> "other"
-        let g x = case x of
+            g x = case x of
               [f]
                 | f == 0 -> "0"
                 | f == 1 -> "1"
@@ -213,7 +224,7 @@ testBindByPatternMatch =
               | x == 2, x < 10 = "two"
               | let n = "other", n == "a" = n
               | otherwise = "other"
-        let g x y
+            g x y
               | n : _ <- x, m : _ <- y, n == m = "x[0] == y[0] == " ++ show n
               | otherwise = "other"
               where
@@ -244,7 +255,7 @@ testTypeSyntax =
     ( do
         let ss :: (Eq (f a), Functor f) => f a -> f a -> Bool
             ss x y = x == y
-        let f :: Num a => a -> a
+            f :: Num a => a -> a
             f x = 2 * x
         print $ ss [1] [2]
         print $ ss [1] [1]

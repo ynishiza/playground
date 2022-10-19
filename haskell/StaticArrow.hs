@@ -5,7 +5,7 @@ where
 
 import Control.Applicative
 import Control.Arrow
-import Control.Category qualified as Cat
+import qualified Control.Category as Cat
 
 -- StaticArrow: as defined in "Applicative programming with effects"
 -- https://www.staff.city.ac.uk/~ross/papers/Applicative.html

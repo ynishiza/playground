@@ -1,3 +1,8 @@
+{-# LANGUAGE RecursiveDo #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Redundant flip" #-}
+{-# HLINT ignore "Use replicate" #-}
 module TestMonad
   ( testMonad,
     testMonadFix,
@@ -6,8 +11,9 @@ module TestMonad
     testFunctorMonad,
     testMonadFail,
     testMonadTransform,
-    testStateMonad,
+    testStateTransformMonad,
     testStaticArrow,
+    testLazyStateMonad,
   )
 where
 
@@ -182,13 +188,13 @@ testMonadTransform =
     )
     "testTemplate"
 
-testStateMonad =
+testStateTransformMonad =
   callTest
     ( do
         let x = StateT (\s -> if even s then Right (True, s) else Left s)
         testDone
     )
-    "testStateMonad"
+    "testStateTransformMonad"
 
 testFunctorMonad =
   callTest
@@ -235,29 +241,123 @@ testMonad =
 testMonadFix =
   callTest
     ( do
-        -- let f = mfix (\fact -> (\n -> if n <= 1 then n else n * fact (n-1)))
+        let repeat_raw :: [Int]
+            repeat_raw = 1 : repeat_raw
+            repeat_fix :: [Int]
+            repeat_fix = fix (1 :)
+            repeat_mfix :: MonadFix m => m [Int]
+            repeat_mfix = mfix (\list -> return (1 : list))
+            repeat_dorec :: MonadFix m => m [Int]
+            repeat_dorec = do
+              rec list <- return (1 : list)
+              return list
+
+            repeatN_raw n = n : repeatN_raw n
+            repeatN_fix :: a -> [a]
+            repeatN_fix n = fix (n :)
+
+            repeatN_mfix :: MonadFix m => Int -> m [Int]
+            repeatN_mfix n = mfix (\list -> do return (n : list))
+            repeatN_dorec :: MonadFix m => Int -> m [Int]
+            repeatN_dorec n = do
+              rec list <- return (n : list)
+              return list
+
+            rangeRaw :: Int -> Int -> [Int]
+            rangeRaw start end
+              | start > end = []
+              | otherwise = start : rangeRaw (succ start) end
+            range_fix :: Int -> Int -> [Int]
+            range_fix =
+              fix
+                ( \range start end ->
+                    let x
+                          | start > end = []
+                          | otherwise = start : range (succ start) end
+                     in x
+                )
+            range_mfix :: MonadFix m => m (Int -> Int -> [Int])
+            range_mfix =
+              mfix
+                ( \range ->
+                    return
+                      ( \start end ->
+                          let x
+                                | start > end = []
+                                | otherwise = start : range (succ start) end
+                           in x
+                      )
+                )
+            range_dorec :: MonadFix m => m (Int -> Int -> [Int])
+            range_dorec = do
+              rec range <-
+                    return
+                      ( \start end ->
+                          let x
+                                | start > end = []
+                                | otherwise = start : range (succ start) end
+                           in x
+                      )
+              return range
+
+            enumFrom_raw n = n : enumFrom_raw (n + 1)
+            enumFrom_fix :: Int -> [Int]
+            enumFrom_fix = fix (\next n -> n : next (n + 1))
+            enumFrom0_fix = enumFrom_fix 0
+            enumFrom_mfix :: MonadFix m => m (Int -> [Int])
+            enumFrom_mfix = mfix (\next -> return (\n -> n : next (n + 1)))
+
+            count_fixBad :: [Int]
+            -- BAD. Cannot access fixed point
+            -- count_fixBad = fix (\list -> (head list + 1):list)
+            count_fixBad = fix (\list@(x : rest) -> (x + 1) : list)
+
+            countInMonadFrom :: MonadFix m => m (Int -> [Int])
+            countInMonadFrom = mfix (\next -> return (\n -> n : next (n + 1)))
+            countInMonadFrom0 :: MonadFix m => m [Int]
+            countInMonadFrom0 = countInMonadFrom <*> return 0
+
+            factorial_mfix :: MonadFix m => m (Int -> Int)
+            factorial_mfix =
+              mfix
+                ( \f ->
+                    return (\n -> if n <= 1 then n else n * f (n - 1))
+                )
+            factorial_dorec :: MonadFix m => m (Int -> Int)
+            factorial_dorec = do
+              rec f <- return (\n -> if n <= 1 then n else n * f (n - 1))
+              return f
+
+        printBanner "repeat"
+        print $ take 10 $ repeat 1
+        print $ take 10 repeat_fix
+        print $ take 10 repeat_raw
+        print $ do l <- repeat_dorec; Identity (head l)
+        print $ do l <- repeat_dorec; Identity (take 10 l)
+        print $ do l <- repeat_mfix; Identity (take 10 l)
+        print $ take 10 $ repeatN_fix 2
+        print $ do l <- repeatN_mfix 2; Identity (take 10 l)
+        print $ do l <- repeatN_mfix 2; Just (take 10 l)
+
+        printBanner "range"
+        print [0 .. 10]
+        print $ rangeRaw 0 10
+        print $ do f <- range_dorec; Identity (f 0 10)
+        print $ do f <- range_dorec; Just (f 0 10)
+        print [(-10) .. 10]
+        print $ rangeRaw (-10) 10
+        print $ range_fix (-10) 10
+        print $ do f <- range_dorec; Just (f (-10) 10)
+
+        printBanner "enum"
+        print $ take 10 enumFrom0_fix
+        print $ take 10 $ enumFrom_raw 0
+        print $ do f <- enumFrom_mfix; Just (take 10 $ f 0)
+
         printBanner "Factorial"
-        let execFactorial fact n = if n <= 1 then n else n * fact (n - 1)
-        -- let f = mfix (\fact -> (\n -> if n <= 1 then n else n * fact (n-1)))
-        let mfixFact1 = mfix (\fact _ -> execFactorial fact)
-        let mfixFact2 = return (fix execFactorial) :: Integer -> Integer -> Integer
-        let mfixFact3 = mfix (return . execFactorial) :: Integer -> Integer -> Integer
-        printList $ mfixFact1 0 <$> [1 .. 10]
-        printList $ mfixFact1 1 <$> [1 .. 10]
-        printList $ mfixFact2 0 <$> [1 .. 10]
-        printList $ mfixFact3 0 <$> [1 .. 10]
+        print $ do f <- factorial_dorec; Just (f 5)
+        print $ do f <- factorial_mfix; Just (f 5)
 
-        printBanner "Factorial - list"
-        let execHalf f n = if odd n || n <= 1 then [] else n : f (div n 2)
-        let mfixHalf1 = mfix (\f _ -> execHalf f)
-        let mfixHalf2 = return (fix execHalf) :: (Integral a, Ord a) => [a -> [a]]
-        let mfixHalf3 = mfix (return . execHalf) :: (Integral a, Ord a) => [a -> [a]]
-        printList $ mfixHalf1 [1 .. 20] 0
-        printList $ mfixHalf2 <*> [1 .. 20]
-        printList $ mfixHalf3 <*> [1 .. 20]
-
-        -- print $ f 2
-        let x = 1
         testDone
     )
     "testMonadFix"
@@ -289,3 +389,17 @@ testStaticArrow =
         testDone
     )
     "testStaticArrow"
+
+testLazyStateMonad =
+  callTest
+    ( do
+        let task1 :: Num a => State a a
+            task1 = do
+              v <- get
+              put (v * 10)
+              get
+        print $ runState task1 1
+        print $ runState task1 2
+        testDone
+    )
+    "testLazyStateMonad"

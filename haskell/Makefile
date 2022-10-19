@@ -5,13 +5,14 @@ get_source_in_directory=$(wildcard $(value)/*.hs)
 DIRS=.
 
 COMPILER=ghc
+OPTIONS=-XRecursiveDo 
 EXEC=runhaskell
 SRC=script.hs
 OBJ=$(SRC:.hs=.o)
-BIN=$(basename $(SRC))
+BIN=$(SRC:.hs=.out)
 
 HELLOSRC=hellomain.hs
-HELLOBIN=$(basename $(HELLOSRC))
+HELLOBIN=$(HELLOSRC:.hs=.out)
 
 default: help
 
@@ -22,16 +23,16 @@ install: ## Install packages
 compile: $(BIN)
 
 $(BIN): $(SRC)
-	$(COMPILER) $(SRC)
+	$(COMPILER) $(OPTIONS) $(SRC) -o $(BIN)
 
 hello: ## Run hello
-	$(EXEC) $(HELLOSRC)
+	$(EXEC) $(OPTIONS) $(HELLOSRC)
 
 run: ## Run test
-	$(EXEC) $(SRC)
+	$(EXEC) $(OPTIONS) $(SRC)
 
 runAll: ## Run all tests
-	yes | $(EXEC) $(SRC)
+	yes | make run
 
 # watch: ## Watch for changes
 # 	watchman watch .
@@ -48,7 +49,7 @@ debug: ## Print variables
 	@echo HELLOSRC=$(HELLOSRC)
 
 clean: ## Clean
-	rm -f $(BIN) $(OBJ) $(HELLOBIN) 
+	rm -f $(BIN) $(OBJ) $(HELLOBIN) *.hi *.o
 
 help: ## Display this help
 	@grep -E '^[0-9a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
