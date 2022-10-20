@@ -5,7 +5,7 @@ get_source_in_directory=$(wildcard $(value)/*.hs)
 DIRS=.
 
 COMPILER=ghc
-OPTIONS=-XRecursiveDo 
+OPTIONS=-XRecursiveDo -XTypeSynonymInstances -XFlexibleInstances
 EXEC=runhaskell
 SRC=script.hs
 OBJ=$(SRC:.hs=.o)

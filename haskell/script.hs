@@ -1,23 +1,28 @@
--- imprt System.Random
+-- import System.Random
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Use mapM_" #-}
 {-# HLINT ignore "Use mapM" #-}
 {-# HLINT ignore "Use and" #-}
-
+{- ORMOLU_DISABLE -}
 import Control.Applicative
 import Control.Arrow
 import Control.Monad
 import Data.Char
+import Data.Int
+import Data.Fixed (Deci, Fixed (..), Uni, resolution)
 import Data.Foldable
 import Data.Function
 import Data.List
 import Data.Traversable
 import StaticArrow
-import qualified TestArrow 
-import qualified TestMonad 
-import qualified TestStateMonad 
-import qualified TestStateMonadExample 
+import qualified TestArrow
+import qualified TestMonad
+import qualified TestMonadTransform
+import qualified TestStateMonad
+import qualified TestStateMonadExample
+import qualified TestTypeClass
+{- ORMOLU_ENABLE -}
 import TestUtils
 
 data MyType a b
@@ -34,10 +39,13 @@ main =
         if response == 'y'
           then runAll
           else do
-            TestStateMonad.testStateMonad
+            testFixed
+            testNumericalConversion
+            -- TestStateMonad.testStateMonad
+            TestTypeClass.testTypeClass
             -- TestStateMonadExample.runTest
-            TestMonad.testMonadFix
-            TestMonad.testLazyStateMonad
+            -- TestMonad.testMonadFix
+            -- TestMonadTransform.testLazyStateMonad
     )
     "main"
 
@@ -47,6 +55,8 @@ runAll = do
   testTypeSyntax
   testCaseExpression
   testList
+  testFixed
+  testNumericalConversion
   -- testRandom
 
   -- test: Fold, Traversable
@@ -60,13 +70,16 @@ runAll = do
 
   -- test: Applicative,Monads
   TestMonad.testMonad
+  TestMonad.testMonadFix
   TestMonad.testWrappedMonad
   TestMonad.testCompositionMonad
   TestMonad.testFunctorMonad
   TestMonad.testMonadFail
-  TestMonad.testMonadTransform
   TestMonad.testStaticArrow
-  TestMonad.testLazyStateMonad
+
+  TestMonadTransform.testMonadTransform
+  TestMonadTransform.testLazyStateMonad
+  TestMonadTransform.testStateTransformMonad
 
   TestStateMonad.testStateMonad
   TestStateMonadExample.runTest
@@ -80,6 +93,18 @@ testTemplate =
         testDone
     )
     "testTemplate"
+
+testFixed =
+  callTest
+    ( do
+        let x = MkFixed 10
+
+        print $ let (MkFixed y) = x in y
+        print $ resolution (x :: Uni)
+        print $ resolution (x :: Deci)
+        testDone
+    )
+    "testFixed"
 
 testList =
   callTest
@@ -262,3 +287,45 @@ testTypeSyntax =
         testDone
     )
     "testTypeSyntax"
+
+testNumericalConversion =
+  callTest
+    ( do
+        let vint = 1 :: Int
+            vinteger = 1 :: Integer
+            vint8 = 1 :: Int8
+            vdouble = 1.1 :: Double
+            vfloat = 1.1 :: Float
+
+        -- integer -> real number
+        print $ fromIntegral vint + vdouble
+        print $ fromIntegral vint + vfloat
+        print $ fromIntegral vint8 + vdouble
+        print $ fromIntegral vinteger + vdouble
+
+        -- real number -> integer
+        print $ vint + round vdouble
+        print $ vint + round vfloat
+        print $ vinteger + round vdouble
+        print $ vinteger + round vdouble
+
+        -- coerce different integer types
+        print $ fromIntegral vint + vint8
+        print $ vint + fromIntegral vint8
+
+        -- case: Integer type is a special case because it is unbounded
+        -- bounded to unbounded
+        print $ toInteger vint + vinteger
+        print $ toInteger vint8 + vinteger
+        -- unbounded to bounded
+        print $ vint + fromInteger vinteger
+        print $ vint8 + fromInteger vinteger
+
+        -- coerce real numbers
+        print $ vfloat + realToFrac vdouble
+        print $ realToFrac vfloat + vdouble
+
+        print $ toInteger (1 :: Int) + (2 :: Integer)
+        testDone
+    )
+    ""

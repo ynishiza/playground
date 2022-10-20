@@ -3,7 +3,7 @@
 
 {-# HLINT ignore "Redundant flip" #-}
 {-# HLINT ignore "Use replicate" #-}
-{-# HLINT ignore "Avoid lambda" #-}
+{-# HLINT ignore "Use <&>" #-}
 module TestMonad
   ( testMonad,
     testMonadFix,
@@ -11,10 +11,7 @@ module TestMonad
     testCompositionMonad,
     testFunctorMonad,
     testMonadFail,
-    testMonadTransform,
-    testStateTransformMonad,
     testStaticArrow,
-    testLazyStateMonad,
   )
 where
 
@@ -22,9 +19,6 @@ import Control.Applicative
 import Control.Arrow
 import Control.Monad
 import Control.Monad.Fix
-import Control.Monad.Trans.Class
-import Control.Monad.Trans.Maybe
-import Control.Monad.Trans.State.Lazy
 import Data.Char
 import Data.Foldable
 import Data.Functor.Identity
@@ -165,38 +159,6 @@ testMonadFail =
     )
     "testMonadFail"
 
-testMonadTransform =
-  callTest
-    ( do
-        printBanner "MaybeT"
-        let x = MaybeT [Just 1]
-        let x0 :: MaybeT [] Int; x0 = lift [1]
-        let y :: MaybeT (Either Char) Int; y = MaybeT $ Right (Just 1)
-        let y0 :: MaybeT (Either Char) Int; y0 = lift $ Right 1
-        print x
-        print x0
-        print y
-        print y0
-        -- print $ y == y0
-        -- print $ runMaybeT y == runMaybeT y0
-        assertIO (runMaybeT x == runMaybeT x0) "x==x0"
-        assertIO (runMaybeT y == runMaybeT y0) "y==y0"
-        print $ runMaybeT x
-        print $ runMaybeT x0
-        print $ runMaybeT y
-        print $ runMaybeT y0
-        testDone
-    )
-    "testTemplate"
-
-testStateTransformMonad =
-  callTest
-    ( do
-        let x = StateT (\s -> if even s then Right (True, s) else Left s)
-        testDone
-    )
-    "testStateTransformMonad"
-
 testFunctorMonad =
   callTest
     ( do
@@ -329,23 +291,31 @@ testMonadFix =
               rec f <- return (\n -> if n <= 1 then n else n * f (n - 1))
               return f
 
-            replExec :: (String -> IO ()) -> String -> IO ()
-            replExec runRepl input = do
-              let repeat = do
-                    nextInput <- getLine
-                    putStrLn $ "value:" ++ input
+            replExec :: (Bool -> String -> IO ()) -> Bool -> String -> IO ()
+            replExec runRepl isFirstCall input = do
+              let queryNext = do
                     putStrLn "Enter next value. Type 'q' to exit"
-                    runRepl nextInput
+                    nextInput <- getLine
+                    runRepl False nextInput
                   result
-                    | input == "q" || input == "y" = putStrLn "done"
-                    | input == "start" = runRepl ""
-                    | otherwise = repeat
+                    -- case: quit
+                    | input == "q" || input == "y"
+                        = do putStrLn "done"
+                    -- case: initial input
+                    | isFirstCall = do
+                        putStrLn "Start REPL"
+                        queryNext
+                    | otherwise = do
+                        unless (null input) (putStrLn $ "value:" ++ input)
+                        queryNext
                in result
-            repl_mfix :: IO (String -> IO ())
-            repl_mfix = mfix (\runRepl -> return (replExec runRepl))
-            repl_dorec :: IO (String -> IO ())
+            repl_fix :: Bool -> String -> IO ()
+            repl_fix = replExec repl_fix
+            repl_mfix :: MonadFix m => m (Bool -> String -> IO ())
+            repl_mfix = mfix $ return.replExec
+            repl_dorec :: MonadFix m => m (Bool -> String -> IO ())
             repl_dorec = do
-              rec runRepl :: String -> IO () <- return (replExec runRepl)
+              rec runRepl <- return (replExec runRepl)
               return runRepl
 
         printBanner "repeat"
@@ -378,8 +348,16 @@ testMonadFix =
         print $ do f <- factorial_dorec; Just (f 5)
         print $ do f <- factorial_mfix; Just (f 5)
 
-        do f <- repl_mfix; f "start REPL with mfix"
-        do f <- repl_dorec; f "start REPL with do-rec"
+        do printBanner "REPL fix"; repl_fix True ""
+        do printBanner "REPL mfix"; f <- repl_mfix; f True ""
+        do printBanner "REPL dorec"; f <- repl_dorec; f True ""
+        printBanner "REPL plain"
+        let
+          -- BAD:
+          -- repl = repl >>= return. replExec
+          -- in repl >>= (\f -> f True "")
+          repl = replExec repl
+         in do repl True ""
 
         testDone
     )
@@ -412,17 +390,3 @@ testStaticArrow =
         testDone
     )
     "testStaticArrow"
-
-testLazyStateMonad =
-  callTest
-    ( do
-        let task1 :: Num a => State a a
-            task1 = do
-              v <- get
-              put (v * 10)
-              get
-        print $ runState task1 1
-        print $ runState task1 2
-        testDone
-    )
-    "testLazyStateMonad"

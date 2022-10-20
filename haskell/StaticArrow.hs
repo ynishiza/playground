@@ -3,9 +3,11 @@ module StaticArrow
   )
 where
 
+{- ORMOLU_DISABLE -}
 import Control.Applicative
 import Control.Arrow
 import qualified Control.Category as Cat
+{- ORMOLU_ENABLE -}
 
 -- StaticArrow: as defined in "Applicative programming with effects"
 -- https://www.staff.city.ac.uk/~ross/papers/Applicative.html

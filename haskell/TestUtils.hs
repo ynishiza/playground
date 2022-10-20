@@ -20,8 +20,10 @@ assertIO cond message = do
   print message
   unless cond $ error $ "FAIL:" ++ message
 
-testDone = putStrLn "done"
+testDone :: IO ()
+testDone = return ()
 
+printBanner :: String -> IO ()
 printBanner msg = putStrLn $ "=====" ++ msg ++ "====="
 
 callTest :: IO () -> String -> IO ()
