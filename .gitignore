@@ -1,6 +1,7 @@
 # Common
-*.o
-hello # hello script
+*.o       # object files
+*.out     # binaries
+hello     # hello script
 
 # Haskell
 *.hi

@@ -3,6 +3,7 @@
 
 {-# HLINT ignore "Redundant flip" #-}
 {-# HLINT ignore "Use replicate" #-}
+{-# HLINT ignore "Avoid lambda" #-}
 module TestMonad
   ( testMonad,
     testMonadFix,
@@ -328,6 +329,25 @@ testMonadFix =
               rec f <- return (\n -> if n <= 1 then n else n * f (n - 1))
               return f
 
+            replExec :: (String -> IO ()) -> String -> IO ()
+            replExec runRepl input = do
+              let repeat = do
+                    nextInput <- getLine
+                    putStrLn $ "value:" ++ input
+                    putStrLn "Enter next value. Type 'q' to exit"
+                    runRepl nextInput
+                  result
+                    | input == "q" || input == "y" = putStrLn "done"
+                    | input == "start" = runRepl ""
+                    | otherwise = repeat
+               in result
+            repl_mfix :: IO (String -> IO ())
+            repl_mfix = mfix (\runRepl -> return (replExec runRepl))
+            repl_dorec :: IO (String -> IO ())
+            repl_dorec = do
+              rec runRepl :: String -> IO () <- return (replExec runRepl)
+              return runRepl
+
         printBanner "repeat"
         print $ take 10 $ repeat 1
         print $ take 10 repeat_fix
@@ -357,6 +377,9 @@ testMonadFix =
         printBanner "Factorial"
         print $ do f <- factorial_dorec; Just (f 5)
         print $ do f <- factorial_mfix; Just (f 5)
+
+        do f <- repl_mfix; f "start REPL with mfix"
+        do f <- repl_dorec; f "start REPL with do-rec"
 
         testDone
     )
