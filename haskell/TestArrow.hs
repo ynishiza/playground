@@ -1,6 +1,7 @@
 module TestArrow
   ( testArrow,
     testArrowLoop,
+    runAll
   )
 where
 
@@ -9,6 +10,10 @@ import Data.Char
 import Data.Function
 import Data.List
 import TestUtils
+
+runAll = do
+  testArrow
+  testArrowLoop
 
 -- TEST TEMPLATE
 testTemplate =
@@ -55,31 +60,38 @@ testArrowLoop =
         -- loop
         printBanner "Loop test"
 
-        -- an equivalent implementation of loop
-        let loop2 f x =
+        let -- an equivalent implementation of loop
+            loop2 f x =
               let f1 = fst . f
                   f2 = snd . f
                in f1 (x, fix (\b -> f2 (x, b)))
 
+            -- factorial
+            factorialFix :: Integral a => (a -> a) -> a -> a
             factorialFix fact n = if n <= 1 then n else n * fact (n - 1)
+            factorialLoop :: Integral a => (a, a -> a) -> (a, a -> a)
             factorialLoop (n, f) = (f n, factorialFix f)
             factorialLoop2 (n, f) = (f n 1, g f)
               where
                 g f i accum = if i <= 0 then accum else f (i - 1) (i * accum)
 
+            -- fibonacchi
+            fibonacchiFix :: Integral a => (a -> a) -> a -> a
             fibonacchiFix fib n = if n <= 1 then n else fib (n - 1) + fib (n - 2)
-            fibonacci (n, f) = (f n, fibonacchiFix f)
+            fibonacciLoop (n, f) = (f n, fibonacchiFix f)
 
-        -- if f(n) = sort O() of length n
-        --         = O(n * 2  f(n/2))
-        --         = O((n * n/2 * n/4 ...) 2^log n)
-        --         = O(n^2)
-            quickSort0 sort list
+            -- if f(n) = sort O() of length n
+            --         = O(n * 2  f(n/2))
+            --         = O((n * n/2 * n/4 ...) 2^log n)
+            --         = O(n^2)
+            -- quicksort
+            quickSortFix :: (Ord a) => ([a] -> [a]) -> [a] -> [a]
+            quickSortFix sort list
               | null list = []
               | (x : xs) <- list =
                   let (less, gt) = partition (< x) xs
                    in sort less ++ (x : sort gt)
-            quickSortLoop (n, f) = (f n, quickSort0 f)
+            quickSortLoop (n, f) = (f n, quickSortFix f)
 
         let testLoop f testName = do
               printBanner $ "start:" ++ testName
@@ -94,12 +106,12 @@ testArrowLoop =
         testLoop (loop2 factorialLoop) "loop2+factorialLoop"
 
         testLoop (fix fibonacchiFix) "fix+fibonacci0"
-        testLoop (loop fibonacci) "loop+fibonacci"
-        testLoop (loop2 fibonacci) "loop2+fibonacci"
+        testLoop (loop fibonacciLoop) "loop+fibonacci"
+        testLoop (loop2 fibonacciLoop) "loop2+fibonacci"
 
         let testList = [100, 5, 20, 9, 53, 13, -33, 1, 3, -1, 2, 3, 2, 1]
-        print $ fix quickSort0 testList
-        print $ fix quickSort0 $ reverse testList
+        print $ fix quickSortFix testList
+        print $ fix quickSortFix $ reverse testList
         print $ loop quickSortLoop testList
         print $ loop quickSortLoop $ reverse testList
 

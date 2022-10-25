@@ -1,9 +1,9 @@
-{-# LANGUAGE RecursiveDo #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Redundant flip" #-}
 {-# HLINT ignore "Use replicate" #-}
 {-# HLINT ignore "Use <&>" #-}
+{-# LANGUAGE RecursiveDo #-}
 module TestMonad
   ( testMonad,
     testMonadFix,
@@ -12,6 +12,7 @@ module TestMonad
     testFunctorMonad,
     testMonadFail,
     testStaticArrow,
+    runAll
   )
 where
 
@@ -26,6 +27,15 @@ import Data.Functor.Sum
 import Data.Maybe
 import StaticArrow
 import TestUtils
+
+runAll = do
+  testMonad
+  testCompositionMonad
+  testWrappedMonad
+  testMonadFail
+  testFunctorMonad
+  testMonadFix
+  testStaticArrow
 
 testCompositionMonad =
   callTest
@@ -47,59 +57,6 @@ testCompositionMonad =
         assertIO (x == z) $ show x
     )
     "testCompositionMonad"
-
-testArrow =
-  callTest
-    ( do
-        -- Basic
-        let f = (+ 4) >>> (* 3)
-        print $ f 1
-        print $ f 2
-
-        -- Conditional
-        let f :: Either Int Char -> Either Int Char
-            f = left (* 3)
-        let g :: Either Int Char -> Either Int Char
-            g = right $ chr . (+ 1) . ord
-        print $ f $ Left 1
-        print $ f $ Right 'a'
-        print $ g $ Left 1
-        print $ g $ Right 'a'
-
-        let f = (+ 2) +++ (+ 3)
-        print $ f $ Left 1
-        print $ f $ Right 1
-
-        let f = (+ 2) ||| ord
-        print $ f $ Left 1
-        print $ f $ Right 'a'
-        testDone
-    )
-    "testArrow"
-
-testCaseExpression =
-  callTest
-    ( do
-        let f x = case x of
-              0 : _ -> "zero"
-              1 : _ -> "one"
-              _ -> "other"
-        let g x = case x of
-              [f]
-                | f == 0 -> "0"
-                | f == 1 -> "1"
-              [_, g]
-                | g == 0 -> "00"
-                | g == 1 -> "01"
-                | otherwise -> "NA g"
-              _ -> show x
-        print $ map (\x -> f [x]) [0 .. 10]
-        print $ map (\x -> f [-1, x]) [0 .. 10]
-        print $ map (\x -> g [x]) [0 .. 10]
-        print $ map (\x -> g [-1, x]) [0 .. 10]
-        testDone
-    )
-    "testCaseExpression"
 
 testWrappedMonad =
   callTest
@@ -131,7 +88,7 @@ testMonadFail =
             doubleFirstItem x = do
               (v : xs) <- x
               Right (2 * v)
-        let doubleFirstItemWithoutMonadFail :: Num a => Either a [a] -> Either a a
+            doubleFirstItemWithoutMonadFail :: Num a => Either a [a] -> Either a a
             doubleFirstItemWithoutMonadFail x = do
               list <- x
               let v
@@ -200,6 +157,8 @@ testMonad =
         testDone
     )
     "testMonad"
+
+type REPLInput = String
 
 testMonadFix =
   callTest
@@ -291,7 +250,7 @@ testMonadFix =
               rec f <- return (\n -> if n <= 1 then n else n * f (n - 1))
               return f
 
-            replExec :: (Bool -> String -> IO ()) -> Bool -> String -> IO ()
+            replExec :: (Bool -> REPLInput -> IO ()) -> Bool -> REPLInput -> IO ()
             replExec runRepl isFirstCall input = do
               let queryNext = do
                     putStrLn "Enter next value. Type 'q' to exit"
@@ -309,9 +268,9 @@ testMonadFix =
                         unless (null input) (putStrLn $ "value:" ++ input)
                         queryNext
                in result
-            repl_fix :: Bool -> String -> IO ()
+            repl_fix :: Bool -> REPLInput -> IO ()
             repl_fix = replExec repl_fix
-            repl_mfix :: MonadFix m => m (Bool -> String -> IO ())
+            repl_mfix :: MonadFix m => m (Bool -> REPLInput -> IO ())
             repl_mfix = mfix $ return.replExec
             repl_dorec :: MonadFix m => m (Bool -> String -> IO ())
             repl_dorec = do

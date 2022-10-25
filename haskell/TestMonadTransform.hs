@@ -3,12 +3,18 @@ module TestMonadTransform (
   testMonadTransform,
   testStateTransformMonad,
   testLazyStateMonad,
+  runAll,
 ) where
 
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.State.Lazy
 import TestUtils
+
+runAll = do
+  testMonadTransform
+  testStateTransformMonad
+  testLazyStateMonad
 
 testMonadTransform =
   callTest
@@ -55,3 +61,4 @@ testLazyStateMonad =
         testDone
     )
     "testLazyStateMonad"
+

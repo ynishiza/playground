@@ -1,9 +1,8 @@
--- import System.Random
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
 {-# HLINT ignore "Use mapM_" #-}
 {-# HLINT ignore "Use mapM" #-}
 {-# HLINT ignore "Use and" #-}
+-- import System.Random
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {- ORMOLU_DISABLE -}
 import Control.Applicative
 import Control.Arrow
@@ -25,11 +24,7 @@ import qualified TestTypeClass
 {- ORMOLU_ENABLE -}
 import TestUtils
 
-data MyType a b
-  = A
-  | B b
-  | C {v1 :: a}
-  | a :<> b
+infinity = 1/0
 
 main =
   callTest
@@ -51,38 +46,28 @@ main =
 
 runAll = do
   -- test: Basic
+  testFixed
+  testListFunctions
+  testFoldable
+  testTraversableInSteps
+  testTraversable
+  testCaseExpression
   testBindByPatternMatch
   testTypeSyntax
-  testCaseExpression
-  testList
-  testFixed
   testNumericalConversion
   -- testRandom
 
-  -- test: Fold, Traversable
-  testFold
-  testTraverse
-  testTraverse2
-
   -- test: Category, Arrow
-  TestArrow.testArrow
-  TestArrow.testArrowLoop
+  TestArrow.runAll
 
   -- test: Applicative,Monads
-  TestMonad.testMonad
-  TestMonad.testMonadFix
-  TestMonad.testWrappedMonad
-  TestMonad.testCompositionMonad
-  TestMonad.testFunctorMonad
-  TestMonad.testMonadFail
-  TestMonad.testStaticArrow
-
-  TestMonadTransform.testMonadTransform
-  TestMonadTransform.testLazyStateMonad
-  TestMonadTransform.testStateTransformMonad
+  TestMonad.runAll
+  TestMonadTransform.runAll
 
   TestStateMonad.testStateMonad
   TestStateMonadExample.runTest
+
+  TestTypeClass.runAll
 
 -- TEST TEMPLATE
 testTemplate =
@@ -106,7 +91,7 @@ testFixed =
     )
     "testFixed"
 
-testList =
+testListFunctions =
   callTest
     ( do
         print $ uncons [1]
@@ -127,7 +112,7 @@ testList =
     )
     "testList"
 
-testFold =
+testFoldable =
   callTest
     ( do
         let printer :: Show a => a -> IO () -> IO ()
@@ -142,7 +127,7 @@ testFold =
     )
     "testFold"
 
-testTraverse2 =
+testTraversable =
   callTest
     ( do
         traverse print [1 .. 10] :: IO [()]
@@ -150,62 +135,73 @@ testTraverse2 =
         mapM print [1 .. 10]
         testDone
     )
-    "testTraverse2"
+    "testTraversable"
 
-testTraverse =
+type TraverseAction a f b = (a -> f b)
+
+type GetTraverseStepInfo a f b = Int -> a -> f b -> f [b] -> String
+
+type TraverseStepResult f b = (Int, [Message], f [b])
+
+testTraversableInSteps =
   callTest
     ( do
-        let f x = [0, x + 2, 2 * x]
+        let f :: Int -> [Int]
+            f x = [0, x + 2, 2 * x]
             x = [1 .. 3]
 
             y0 = pure [] :: [[Int]]
-            doTraverseTest f =
+
+            getStepInfo :: (Show a, Show (f b), Show (f [b])) => GetTraverseStepInfo a f b
+            getStepInfo step x v next =
+              "step=" ++ show step ++ ",x=" ++ show x ++ " v=" ++ show v ++ " next=" ++ show next
+            showTraverseSteps ::
+              (Traversable t, Applicative f) =>
+              TraverseAction a f b ->
+              GetTraverseStepInfo a f b ->
+              t a ->
+              TraverseStepResult f b
+            showTraverseSteps f getInfo =
               foldr
                 ( \x (step, history, res) ->
                     let v = f x
-                        -- res = f [b]
-                        -- v = f b
-                        -- next = f (b:[b]) = f [b]
                         next = liftA2 (:) v res
-                        msg = "step=" ++ show step ++ ",x=" ++ show x ++ " v=" ++ show v ++ " next=" ++ show next
+                        msg = getInfo step x v next
                      in (step + 1, history ++ [msg], next)
                 )
                 (0, [], pure [])
 
-            callTraverseTest f x name = do
+            showTraverseStepsFor ::
+              (Traversable t, Applicative f, Show (f [b]), Show (t a), Show (f (t b))) =>
+              Name ->
+              TraverseAction a f b ->
+              GetTraverseStepInfo a f b ->
+              t a ->
+              IO ()
+            showTraverseStepsFor name f getInfo x = do
               print $ "start name=" ++ name
               print $ "x=" ++ show x
-              print $ "steps=" ++ show (doTraverseTest f x)
+              print $ "steps=" ++ show (showTraverseSteps f getInfo x)
               print $ "traverse=" ++ show (traverse f x)
               print $ "done name=" ++ name
               print ""
 
-        callTraverseTest f [1 .. 3] "list"
+        showTraverseStepsFor "list" f getStepInfo [1 .. 3]
 
         let f x = if mod x 3 == 0 then Just x else Nothing
-        callTraverseTest f [0, 3] "Just"
-        callTraverseTest f [0, 3, 6] "Just"
-        callTraverseTest f [0, 3, 6, 7] "Just"
+        showTraverseStepsFor "Just" f getStepInfo [0 :: Int, 3]
+        showTraverseStepsFor "Just" f getStepInfo [0 :: Int, 3, 6]
+        showTraverseStepsFor "Just" f getStepInfo [0 :: Int, 3, 6, 7]
 
         let f x = if mod x 5 == 0 then Left x else Right x
-        callTraverseTest f [1] "Either"
-        callTraverseTest f [1, 2] "Either"
-        callTraverseTest f [1, 2, 3, 5, 6] "Either"
+        showTraverseStepsFor "Either" f getStepInfo [1 :: Int]
+        showTraverseStepsFor "Either" f getStepInfo [1 :: Int, 2]
+        showTraverseStepsFor "Either" f getStepInfo [1 :: Int, 2, 3, 5, 6]
 
         traverse_ print [1 .. 10]
         testDone
     )
-    "testTraverse"
-
-testDoExpression =
-  callTest
-    ( do
-        print "Enter name"
-        x <- getLine
-        print $ "Hello " ++ x
-        testDone
-    )
-    "testDoExpression"
+    "testTraversableInSteps"
 
 testCaseExpression =
   callTest
@@ -328,4 +324,4 @@ testNumericalConversion =
         print $ toInteger (1 :: Int) + (2 :: Integer)
         testDone
     )
-    ""
+    "testNumericalConversion"

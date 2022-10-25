@@ -5,17 +5,22 @@ module TestUtils
     callTest,
     printBanner,
     printList,
+    Message,
+    Name,
   )
 where
 
 import Control.Monad
 import Data.Foldable
 
+type Message = String
+type Name = String
+
 assert :: Bool -> ()
 assert cond =
   if cond then () else error "Assertion failed"
 
-assertIO :: Bool -> String -> IO ()
+assertIO :: Bool -> Message -> IO ()
 assertIO cond message = do
   print message
   unless cond $ error $ "FAIL:" ++ message
@@ -23,11 +28,12 @@ assertIO cond message = do
 testDone :: IO ()
 testDone = return ()
 
-printBanner :: String -> IO ()
-printBanner msg = putStrLn $ "=====" ++ msg ++ "====="
+printBanner :: Name -> IO ()
+printBanner name = putStrLn $ "=====" ++ name ++ "====="
 
-callTest :: IO () -> String -> IO ()
+callTest :: IO () -> Message -> IO ()
 callTest x message = do
+  when (null message) (error "Missing name")
   printBanner $ "start:" ++ message
   x
   printBanner $ "end:" ++ message
