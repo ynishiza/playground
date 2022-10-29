@@ -11,12 +11,14 @@ import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.State.Lazy
 import TestUtils
 
+runAll :: IO ()
 runAll = callTest (do
   testMonadTransform
   testStateTransformMonad
   testLazyStateMonad
                   ) "TestModuleTransformer"
 
+testMonadTransform :: IO ()
 testMonadTransform =
   callTest
     ( do
@@ -41,6 +43,7 @@ testMonadTransform =
     )
     "testTemplate"
 
+testStateTransformMonad :: IO ()
 testStateTransformMonad =
   callTest
     ( do
@@ -49,6 +52,7 @@ testStateTransformMonad =
     )
     "testStateTransformMonad"
 
+testLazyStateMonad :: IO ()
 testLazyStateMonad =
   callTest
     ( do

@@ -8,24 +8,16 @@ where
 import Control.Arrow
 import Data.Char
 import Data.Function
-import Data.List
+import Data.List (partition)
 import TestUtils
 
+runAll :: IO ()
 runAll = callTest (do
   testArrow
   testArrowLoop
                   ) "TestArrow"
 
--- TEST TEMPLATE
-testTemplate =
-  callTest
-    ( do
-        let x = 1
-        print "copy me"
-        testDone
-    )
-    "testTemplate"
-
+testArrow :: IO ()
 testArrow =
   callTest
     ( do
@@ -35,26 +27,27 @@ testArrow =
         print $ f 2
 
         -- Conditional
-        let f :: Either Int Char -> Either Int Char
-            f = left (* 3)
-            g :: Either Int Char -> Either Int Char
-            g = right $ chr . (+ 1) . ord
-        print $ f $ Left 1
-        print $ f $ Right 'a'
+        let g :: Either Int Char -> Either Int Char
+            g = left (* 3)
+            h :: Either Int Char -> Either Int Char
+            h = right $ chr . (+ 1) . ord
         print $ g $ Left 1
         print $ g $ Right 'a'
+        print $ h $ Left 1
+        print $ h $ Right 'a'
 
-        let f = (+ 2) +++ (+ 3)
-        print $ f $ Left 1
-        print $ f $ Right 1
+        let f2 = (+ 2) +++ (+ 3)
+        print $ f2 $ Left 1
+        print $ f2 $ Right 1
 
-        let f = (+ 2) ||| ord
-        print $ f $ Left 1
-        print $ f $ Right 'a'
+        let f3 = (+ 2) ||| ord
+        print $ f3 $ Left 1
+        print $ f3 $ Right 'a'
         testDone
     )
     "testArrow"
 
+testArrowLoop :: IO ()
 testArrowLoop =
   callTest
     ( do
@@ -74,7 +67,7 @@ testArrowLoop =
             factorialLoop (n, f) = (f n, factorialFix f)
             factorialLoop2 (n, f) = (f n 1, g f)
               where
-                g f i accum = if i <= 0 then accum else f (i - 1) (i * accum)
+                g _f i accum = if i <= 0 then accum else _f (i - 1) (i * accum)
 
             -- fibonacchi
             fibonacchiFix :: Integral a => (a -> a) -> a -> a
@@ -88,10 +81,10 @@ testArrowLoop =
             -- quicksort
             quickSortFix :: (Ord a) => ([a] -> [a]) -> [a] -> [a]
             quickSortFix sort list
-              | null list = []
               | (x : xs) <- list =
                   let (less, gt) = partition (< x) xs
                    in sort less ++ (x : sort gt)
+              | otherwise = []
             quickSortLoop (n, f) = (f n, quickSortFix f)
 
         let testLoop f testName = do

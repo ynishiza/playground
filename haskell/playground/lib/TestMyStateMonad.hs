@@ -37,6 +37,7 @@ import TestUtils
 --      state <- getOp                      State Int Int
 --      putOp (state * 3)                   State Int ()
 --
+nullResult :: ()
 nullResult = ()
 
 newtype StateOp s r = StateOp (s -> (s, r))
@@ -76,14 +77,15 @@ instance Applicative (StateOp s) where
       )
 
 instance Monad (StateOp s) where
-  (StateOp execOp) >>= createOp =
+  (StateOp _execOp) >>= createOp =
     StateOp
       ( \state ->
-          let (nextState, result) = execOp state
+          let (nextState, result) = _execOp state
               (StateOp nextOp) = createOp result
            in nextOp nextState
       )
 
+main :: IO ()
 main = do
   let initState = (-1)
       toString = do
@@ -96,6 +98,7 @@ main = do
   print $ execOp (do multOp 2; addOp 10; multOp 3) initState
   print $ execOp (do multOp 2; addOp 10; multOp 3; toString) initState
 
+testStateMonad :: IO ()
 testStateMonad =
   callTest
     main

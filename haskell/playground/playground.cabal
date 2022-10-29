@@ -31,6 +31,7 @@ library
       TestModuleTransformer
       TestMonad
       TestMyStateMonad
+      TestReadShow
       TestStateMonadExample
       TestTypeClass
       TestUtils
@@ -40,16 +41,33 @@ library
       ./lib
   default-extensions:
       RecursiveDo
-  ghc-options: -Wall -Wdefault -W -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -rtsopts=all
+  ghc-options: -Wall -Wdefault -W -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-type-defaults
   build-depends:
       base
     , ghc-bignum
     , ghc-prim
-    , mtl >=2.3
+    , mtl >=2.2
     , transformers
   default-language: GHC2021
 
-executable playground-exe
+executable hello
+  main-is: ./hello.hs
+  other-modules:
+      Paths_playground
+  hs-source-dirs:
+      ./
+  default-extensions:
+      RecursiveDo
+  ghc-options: -Wall -Wdefault -W -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-type-defaults -threaded
+  build-depends:
+      base
+    , ghc-bignum
+    , ghc-prim
+    , mtl >=2.2
+    , transformers
+  default-language: GHC2021
+
+executable main
   main-is: ./script.hs
   other-modules:
       Paths_playground
@@ -57,12 +75,12 @@ executable playground-exe
       ./
   default-extensions:
       RecursiveDo
-  ghc-options: -Wall -Wdefault -W -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -rtsopts=all -rtsopts=all
+  ghc-options: -Wall -Wdefault -W -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-type-defaults -threaded -rtsopts=all
   build-depends:
       base
     , ghc-bignum
     , ghc-prim
-    , mtl >=2.3
+    , mtl >=2.2
     , playground
     , transformers
   default-language: GHC2021

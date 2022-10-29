@@ -22,7 +22,7 @@ description:         Please see the README on GitHub at <https://github.com/gith
 dependencies:
 - base
 # - base >= 4.7 && < 5
-- mtl >= 2.3
+- mtl >= 2.2
 - transformers
 - ghc-prim
 - ghc-bignum
@@ -39,9 +39,7 @@ ghc-options:
 - -Wmissing-home-modules
 - -Wpartial-fields
 - -Wredundant-constraints
-- -rtsopts=all
-# - -prof
-# - -fprof-auto
+- -Wno-type-defaults
 
 default-extensions:
 - RecursiveDo 
@@ -58,13 +56,22 @@ library:
   source-dirs: ./lib
 
 executables:
-  playground-exe:
+  hello:
+    main:                ./hello.hs
+    source-dirs:         .
+    ghc-options:
+    - -threaded
+
+  main:
     main:                ./script.hs
     source-dirs:         .
     ghc-options:
-    # - -threaded
-    - -rtsopts=all
+    - -threaded
     # - -with-rtsopts=-N
+    - -rtsopts=all
+    ## Profiling
+    # - -fprof-auto
+    # - -o script
     dependencies:
     - playground
 

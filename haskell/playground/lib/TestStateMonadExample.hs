@@ -35,10 +35,11 @@ evalState act = fst . runState act
 execState :: State s a -> s -> s
 execState act = snd . runState act
 
+runTest :: IO ()
 runTest = callTest (do
   let
     test :: Num a => a -> State a a
-    test n = do
+    test _ = do
             put 1
             v <- get
             return $ v+1

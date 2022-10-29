@@ -4,6 +4,7 @@
 {-# HLINT ignore "Use replicate" #-}
 {-# HLINT ignore "Use <&>" #-}
 {-# LANGUAGE RecursiveDo #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 module TestMonad
   ( testMonad,
     testMonadFix,
@@ -20,7 +21,6 @@ import Control.Applicative
 import Control.Arrow
 import Control.Monad
 import Control.Monad.Fix
-import Data.Char
 import Data.Foldable
 import Data.Functor.Identity
 import Data.Functor.Sum
@@ -28,6 +28,7 @@ import Data.Maybe
 import StaticArrow
 import TestUtils
 
+runAll :: IO ()
 runAll = callTest (do
   testMonad
   testCompositionMonad
@@ -38,6 +39,7 @@ runAll = callTest (do
   testStaticArrow
                   ) "TestMonad"
 
+testCompositionMonad :: IO ()
 testCompositionMonad =
   callTest
     ( do
@@ -45,26 +47,30 @@ testCompositionMonad =
         let g = (*) . (+ 3) -- f(x,y) = y(x+3)
 
         -- test g <*> f == f >>= flip g
-        let x = g <*> f $ 2
-        let y = (f >>= flip g) 2
-        let z = (f <**> g) 2
+        let 
+          x = g <*> f $ 2
+          y = (f >>= flip g) 2
+          z = (f <**> g) 2
         assertIO (x == y) $ show x
         assertIO (x == z) $ show x
 
-        let x = g <*> f $ 5
-        let y = (f >>= flip g) 5
-        let z = (f <**> g) 5
-        assertIO (x == y) $ show x
-        assertIO (x == z) $ show x
+        let 
+          x1 = g <*> f $ 5
+          y1 = (f >>= flip g) 5
+          z1 = (f <**> g) 5
+        assertIO (x1 == y1) $ show x1
+        assertIO (x1 == z1) $ show x1
     )
     "testCompositionMonad"
 
+testWrappedMonad :: IO ()
 testWrappedMonad =
   callTest
     ( do
-        let x = (WrapMonad $ Just 1) :: WrappedMonad Maybe Int
-        let x = WrapMonad [1] :: WrappedMonad [] Int
-        let f = WrapArrow (* 2)
+        let 
+          x = (WrapMonad $ Just 1) :: WrappedMonad Maybe Int
+          y = WrapMonad [1] :: WrappedMonad [] Int
+          f = WrapArrow (* 2)
         print $ (unwrapArrow $ (+) <$> f <*> f) 2
         print $ unwrapMonad $ (* 2) <$> x
         testDone
@@ -74,6 +80,7 @@ testWrappedMonad =
 instance Num a => MonadFail (Either a) where
   fail _ = Left (-1)
 
+testMonadFail :: IO ()
 testMonadFail =
   callTest
     ( do
@@ -87,7 +94,7 @@ testMonadFail =
         printBanner "case:with custom Num a => MonadFail(Either a)"
         let doubleFirstItem :: Num a => Either a [a] -> Either a a
             doubleFirstItem x = do
-              (v : xs) <- x
+              (v : _) <- x
               Right (2 * v)
             doubleFirstItemWithoutMonadFail :: Num a => Either a [a] -> Either a a
             doubleFirstItemWithoutMonadFail x = do
@@ -117,10 +124,11 @@ testMonadFail =
     )
     "testMonadFail"
 
+testFunctorMonad :: IO ()
 testFunctorMonad =
   callTest
     ( do
-        let a = Identity 1
+        let _ = Identity 1
         let l = InL $ Just 1
         let r = InR $ Just 2
 
@@ -131,6 +139,7 @@ testFunctorMonad =
     )
     "testFunctorMonad"
 
+testMonad :: IO ()
 testMonad =
   callTest
     ( do
@@ -161,6 +170,7 @@ testMonad =
 
 type REPLInput = String
 
+testMonadFix :: IO ()
 testMonadFix =
   callTest
     ( do
@@ -175,7 +185,6 @@ testMonadFix =
               rec list <- return (1 : list)
               return list
 
-            repeatN_raw n = n : repeatN_raw n
             repeatN_fix :: a -> [a]
             repeatN_fix n = fix (n :)
 
@@ -233,12 +242,7 @@ testMonadFix =
             count_fixBad :: [Int]
             -- BAD. Cannot access fixed point
             -- count_fixBad = fix (\list -> (head list + 1):list)
-            count_fixBad = fix (\list@(x : rest) -> (x + 1) : list)
-
-            countInMonadFrom :: MonadFix m => m (Int -> [Int])
-            countInMonadFrom = mfix (\next -> return (\n -> n : next (n + 1)))
-            countInMonadFrom0 :: MonadFix m => m [Int]
-            countInMonadFrom0 = countInMonadFrom <*> return 0
+            count_fixBad = fix (\list@(x : _) -> (x + 1) : list)
 
             factorial_mfix :: MonadFix m => m (Int -> Int)
             factorial_mfix =
@@ -323,6 +327,7 @@ testMonadFix =
     )
     "testMonadFix"
 
+testStaticArrow :: IO ()
 testStaticArrow =
   callTest
     ( do
@@ -336,10 +341,10 @@ testStaticArrow =
         print $ fn <*> pure 1
         print $ traverse ((fn <*>) . pure) [1 .. 10]
 
-        let fn = getStaticArray (first f >>> second g)
+        let fn2 = getStaticArray (first f >>> second g)
         let dup x = (x, x)
-        print $ fn <*> pure (1, 2)
-        print $ traverse ((fn <*>) . pure . dup) [1 .. 10]
+        print $ fn2 <*> pure (1, 2)
+        print $ traverse ((fn2 <*>) . pure . dup) [1 .. 10]
 
         printBanner "WrapArrow"
         let wf = WrapArrow (* 2)

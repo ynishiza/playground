@@ -3,4 +3,4 @@ cradle:
     - path: "./lib"
       component: "playground:lib"
     - path: "./"
-      component: "playground:exe:playground-exe"
+      component: "playground:exe:main"

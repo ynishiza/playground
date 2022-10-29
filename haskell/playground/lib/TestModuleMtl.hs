@@ -3,8 +3,6 @@ module TestModuleMtl (
   --
 ) where
 
-import Data.Functor.Identity
-import Control.Monad.Trans
 import Control.Monad.State
 import TestUtils
 
@@ -33,6 +31,7 @@ instance MonadState String MyIOState where
   put = MyIOState . putStrLn
 
 
+testMyIOState :: IO ()
 testMyIOState = callTest (do
   let 
     query :: MyIOState ()

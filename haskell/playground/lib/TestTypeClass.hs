@@ -12,10 +12,10 @@ module TestTypeClass
   )
 where
 
-import Data.Int
 import GHC.Types
 import TestUtils
 
+runAll :: IO ()
 runAll =
   callTest
     ( do
@@ -68,6 +68,7 @@ instance MyDoSomethingMult Double Int where
 instance MyDoSomethingMult Double Double where
   doSomethingMult x y = x * y
 
+testTypeClass :: IO ()
 testTypeClass =
   callTest
     ( do
@@ -105,6 +106,7 @@ class MultiParameterTest2 a b | a -> b where
 instance MultiParameterTest2 Int Int where
   (#++) x y = x + y
 
+testMultiParameters :: IO ()
 testMultiParameters =
   callTest
     ( do
@@ -114,7 +116,7 @@ testMultiParameters =
             s = (1 :: Int) #+ (1 :: Double)
             y = (1 :: Int) #+ ((* 2) :: Int -> Int)
 
-            x0 = (1 :: Int) #++ 1
+            _ = (1 :: Int) #++ 1
         print x
         print y
         print s
@@ -201,6 +203,7 @@ instance Num c => ClassOverlap [c] where
 data MyDerivedPair a b = MyDerivedPair a b deriving (Eq, Ord, Bounded, Read, Show)
 data MyDerivedEnum = DA1 | DA2 | DA3 | DA4 | DA5 | DA6 deriving (Eq, Ord, Bounded, Enum, Read, Show)
 
+testDerivedInstance :: IO ()
 testDerivedInstance =
   callTest
     ( do
