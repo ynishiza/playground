@@ -62,6 +62,7 @@ runAll = do
   TestStateMonadExample.runTest
 
   TestTypeClass.runAll
+  TestReadShow.runAll
 
 runAllLocal :: IO ()
 runAllLocal =

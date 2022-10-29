@@ -57,7 +57,7 @@ library:
 
 executables:
   hello:
-    main:                ./hello.hs
+    main:                ./hellomain.hs
     source-dirs:         .
     ghc-options:
     - -threaded
@@ -71,7 +71,7 @@ executables:
     - -rtsopts=all
     ## Profiling
     # - -fprof-auto
-    # - -o script
+    # - -o script.out
     dependencies:
     - playground
 

@@ -51,7 +51,7 @@ library
   default-language: GHC2021
 
 executable hello
-  main-is: ./hello.hs
+  main-is: ./hellomain.hs
   other-modules:
       Paths_playground
   hs-source-dirs:
