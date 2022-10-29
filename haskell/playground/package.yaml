@@ -1,0 +1,80 @@
+name:                playground
+version:             0.1.0.0
+github:              "githubuser/playground"
+license:             BSD3
+author:              "Author name here"
+maintainer:          "example@example.com"
+copyright:           "2022 Author name here"
+
+extra-source-files:
+- README.md
+- CHANGELOG.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/githubuser/playground#readme>
+
+dependencies:
+- base
+# - base >= 4.7 && < 5
+- mtl >= 2.3
+- transformers
+- ghc-prim
+- ghc-bignum
+
+ghc-options:
+- -Wall
+- -Wdefault
+- -W
+- -Wcompat
+- -Widentities
+- -Wincomplete-record-updates
+- -Wincomplete-uni-patterns
+- -Wmissing-export-lists
+- -Wmissing-home-modules
+- -Wpartial-fields
+- -Wredundant-constraints
+- -rtsopts=all
+# - -prof
+# - -fprof-auto
+
+default-extensions:
+- RecursiveDo 
+# - KindSignatures
+# - MultiParamTypeClasses
+# - TypeSynonymInstances 
+# - FlexibleInstances 
+# - FlexibleContexts 
+# - ExplicitForAll 
+
+language: GHC2021
+
+library:
+  source-dirs: ./lib
+
+executables:
+  playground-exe:
+    main:                ./script.hs
+    source-dirs:         .
+    ghc-options:
+    # - -threaded
+    - -rtsopts=all
+    # - -with-rtsopts=-N
+    dependencies:
+    - playground
+
+# tests:
+#   playground-test:
+#     main:                Spec.hs
+#     source-dirs:         test
+#     ghc-options:
+#     - -threaded
+#     - -rtsopts
+#     - -with-rtsopts=-N
+#     dependencies:
+#     - playground

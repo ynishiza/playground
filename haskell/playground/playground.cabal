@@ -1,0 +1,68 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.0.
+--
+-- see: https://github.com/sol/hpack
+
+name:           playground
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/githubuser/playground#readme>
+homepage:       https://github.com/githubuser/playground#readme
+bug-reports:    https://github.com/githubuser/playground/issues
+author:         Author name here
+maintainer:     example@example.com
+copyright:      2022 Author name here
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    CHANGELOG.md
+
+source-repository head
+  type: git
+  location: https://github.com/githubuser/playground
+
+library
+  exposed-modules:
+      StaticArrow
+      TestArrow
+      TestModuleMtl
+      TestModuleTransformer
+      TestMonad
+      TestMyStateMonad
+      TestStateMonadExample
+      TestTypeClass
+      TestUtils
+  other-modules:
+      Paths_playground
+  hs-source-dirs:
+      ./lib
+  default-extensions:
+      RecursiveDo
+  ghc-options: -Wall -Wdefault -W -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -rtsopts=all
+  build-depends:
+      base
+    , ghc-bignum
+    , ghc-prim
+    , mtl >=2.3
+    , transformers
+  default-language: GHC2021
+
+executable playground-exe
+  main-is: ./script.hs
+  other-modules:
+      Paths_playground
+  hs-source-dirs:
+      ./
+  default-extensions:
+      RecursiveDo
+  ghc-options: -Wall -Wdefault -W -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -rtsopts=all -rtsopts=all
+  build-depends:
+      base
+    , ghc-bignum
+    , ghc-prim
+    , mtl >=2.3
+    , playground
+    , transformers
+  default-language: GHC2021

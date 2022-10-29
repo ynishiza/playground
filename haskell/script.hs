@@ -6,7 +6,7 @@
 {- ORMOLU_DISABLE -}
 import Control.Applicative
 import Control.Arrow
-import Control.Monad
+import Control.Monad.Trans
 import Data.Char
 import Data.Int
 import Data.Fixed (Deci, Fixed (..), Uni, resolution)
