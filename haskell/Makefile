@@ -5,50 +5,59 @@ get_source_in_directory=$(wildcard $(value)/*.hs)
 DIRS=.
 
 COMPILER=ghc
-OPTIONS=-XRecursiveDo -XTypeSynonymInstances -XFlexibleInstances -XKindSignatures
+VPATH=.:lib
 EXEC=runhaskell
-SRC=script.hs
-OBJ=$(SRC:.hs=.o)
-BIN=$(SRC:.hs=.out)
+MAINSRC=script.hs
+SRC=$(wildcard ./lib/*.hs) $(MAINSRC)
+BIN=main
+COMPONENTMAIN=playground:exe:main
 
 HELLOSRC=hellomain.hs
 HELLOBIN=$(HELLOSRC:.hs=.out)
 
 default: help
 
-install: ## Install packages
-	cabal update
-	cabal install random
+install: ## Install 
+	stack build
 
-compile: $(BIN)
+uninstall: ## Uninstall
+	stack purge
 
-$(BIN): $(SRC)
-	$(COMPILER) $(OPTIONS) $(SRC) -o $(BIN)
+compile: ## Compile
+	stack build $(COMPONENTMAIN)
+
+compile-profile: ## Compile with profiler
+	stack build --profile $(COMPONENTMAIN)
 
 hello: ## Run hello
-	$(EXEC) $(OPTIONS) $(HELLOSRC)
+	stack runhaskell $(HELLOSRC)
 
-run: ## Run test
-	$(EXEC) $(OPTIONS) $(SRC)
+run:  ## Run test
+	stack exec main
+
+run-profile:
+	stack --profile exec -- main +RTS -xc
 
 runAll: ## Run all tests
 	yes | make run
 
-# watch: ## Watch for changes
-# 	watchman watch .
-# 	watchman -- trigger . build "*.tex" "*.cls" -- make compile
+watch: ## Watch for changes
+	watchman watch .
+	watchman -- trigger . build "*.hs" "lib/*.hs" -- make compile
 
-# unwatch: ## Clear watch
-# 	watchman watch-del .
-#
+unwatch: ## Clear watch
+	watchman watch-del .
+
 debug: ## Print variables
 	@echo SHELL=$(SHELL)
+	@echo MAINSRC=$(MAINSRC)
 	@echo SRC=$(SRC)
 	@echo OBJ=$(OBJ)
 	@echo HELLOBIN=$(HELLOBIN)
 	@echo HELLOSRC=$(HELLOSRC)
 
 clean: ## Clean
+	stack clean
 	rm -f $(BIN) $(OBJ) $(HELLOBIN) *.hi *.o
 
 help: ## Display this help
