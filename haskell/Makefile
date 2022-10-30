@@ -2,15 +2,13 @@ SHELL=/usr/bin/env bash
 map=$(foreach value,$(2),$(call $(1),$(value)))
 get_source_in_directory=$(wildcard $(value)/*.hs)
 
-DIRS=.
-
 COMPILER=ghc
-VPATH=.:lib
 EXEC=runhaskell
 MAINSRC=script.hs
-SRC=$(wildcard ./lib/*.hs) $(MAINSRC)
-BIN=main
+SRC=$(call map,get_source_in_directory,./lib) $(MAINSRC)
+OBJ=$(SRC:.hs=.o)
 COMPONENTMAIN=playground:exe:main
+BIN=main
 
 HELLOSRC=hellomain.hs
 HELLOBIN=$(HELLOSRC:.hs=.out)

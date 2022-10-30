@@ -66,9 +66,6 @@ instance Read a => Read (Equation a) where
       -- in case () of () -> result
 
       parsedFirstEq = optimalParse $ readFirstEquation d text -- ++ asParenEquation readFirstUnparenEquation text
-      -- readsPrec d text = readWithoutBrackets d text ++ readParenAlways (readWithoutBrackets d) text
-
-      -- readsPrec d text = readLeftmostTerm d text
 
       -- 2 possibilities for first equation:
       -- a) a single term
@@ -80,7 +77,7 @@ instance Read a => Read (Equation a) where
       readFirstEquation _d _text = readFirstTerm _d _text ++ readFirstParenEquation _d _text
 
       readFirstTerm _d = readFirstEquationWith (readOneTerm _d) _d
-      readFirstParenEquation = readFirstEquationWith (asParenEquation readFullEquation)
+      readFirstParenEquation = readFirstEquationWith (asParenEquation readsPrec)
 
       readFirstEquationWith :: ReadS (Equation a) -> ReadsPrec (Equation a)
       readFirstEquationWith readLeft _d _text = do
@@ -92,21 +89,29 @@ instance Read a => Read (Equation a) where
       readNextLeftAssociative :: Equation a -> ReadsPrec (Equation a)
       readNextLeftAssociative leftEq _d "" = [(leftEq, "")]
       readNextLeftAssociative leftEq _d _text =
-        -- case:
         do
+          -- case: read next term
+          -- 3 possibilities:
+          -- a) next term is an operation and left associative with the parent equation
+          --    e.g. 1+1+
+          --    e.g. 1+1*
+          -- b) next term is an operation but not left associative with the parent equation
+          --    e.g. 1*1+
+          -- c) next term is not an operation
           (op, oprest) <- lex _text
           if isLeftAssociativeOperation _d op
             then do
               let opPrec = getOperationPrecedence op
-              (rightEq, rightrest) <- readFullEquation opPrec oprest
+              (rightEq, rightrest) <- readsPrec opPrec oprest
               return (applyOperation op leftEq rightEq, rightrest)
             else return (leftEq, _text)
 
+      -- note: precedence=0  
+      -- Equation in parenthesis is independent of parent equation.
+      -- Reset precedence to 0.
       asParenEquation :: ReadsPrec (Equation a) -> ReadS (Equation a)
       asParenEquation s = readParen True (s 0)
 
-      readFullEquation :: ReadsPrec (Equation a)
-      readFullEquation = readsPrec
       readOneTerm :: ReadsPrec (Equation a)
       readOneTerm _d _text = first Term <$> readValue _d _text
       readValue :: ReadsPrec a
@@ -116,37 +121,6 @@ instance Read a => Read (Equation a) where
       isOperation op = op == "+" || op == "*"
       applyOperation op eq1 eq2 | op == "+" = Sum eq1 eq2 | otherwise = Product eq1 eq2
       getOperationPrecedence op | op == "+" = 0 | otherwise = 1
-
--- readsPrec d text =
---   let result =
---         readParen False (readFirstTerm d) text
---           ++ readParen False (readFirstEquation d) text
---    in -- ++ (readFirstEquation d) text
---       -- ++ (readFirstTerm d) text
---       if null result then result else [minimumBy (\x y -> compare (length $ snd x) (length $ snd y)) result]
---   where
-
---     readFirstTerm d = readWithFirstBase (readTerm d) d
---     readFirstEquation d = readWithFirstBase (readParen True $ readsPrec d) d
-
---     readWithFirstBase :: ReadS (Equation a) -> Int -> ReadS (Equation a)
---     readWithFirstBase getFirst d text =
---       [ result
---         | res1@(v1, _) <- getFirst text,
---           res2@(op, _) <- lex (snd res1),
---           result <-
---             if isOp op
---               then [(applyOp op v1 t2, rest) | (t2, rest) <- (readsPrec::Int -> ReadS (Equation a)) d $ snd res2]
---               else [(v1, snd res1)]
---       ]
-
---     readTerm :: Int -> ReadS (Equation a)
---     readTerm d text = first Term <$> readValue d text
---     readValue :: Int -> ReadS a
---     readValue = undefined
---     -- readValue = readsPrec::Int -> ReadS a
---     isOp op = op == "+" || op == "*"
---     applyOp op v1 v2 | op == "+" = Sum v1 v2 | otherwise = Product v1 v2
 
 normalizeEquation :: (Read a, Show a) => Equation a -> Equation a
 normalizeEquation = read . show
@@ -203,6 +177,28 @@ unittestEquationReadShow =
          in traverse_
               (\(eq, strEq, alt) -> testAllStrings eq (strEq : alt))
               testSet
+
+        printBanner "Read rules"
+        traverse_ (\(eq, expected) -> do
+                  let parsed = eqParser eq
+                  assertIsEqual parsed expected
+                  print $ "Pass eq=" ++ eq ++ " parsed=" ++ show expected
+                  )
+                  [
+                  -- Extra values 
+                  ("a", []),
+                  ("1a", [(n1, "a")]),
+                  ("1+2a", [(Sum n1 n2, "a")]),
+                  ("(1+2)a", [(Sum n1 n2, "a")]),
+                  ("1  ", [(n1, "  ")]),
+
+                  -- Incomplete equations
+                  ("1+", []),
+                  ("(1", []),
+                  ("1)", [(n1,")")]),
+                  ("(1+1", []),
+                  ("1+1)", [(Sum n1 n1, ")")])
+                  ]
         printBanner "All tests passed"
     )
     "unittestEquationReadShow"

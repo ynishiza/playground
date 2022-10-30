@@ -69,7 +69,7 @@ testWrappedMonad =
     ( do
         let 
           x = (WrapMonad $ Just 1) :: WrappedMonad Maybe Int
-          y = WrapMonad [1] :: WrappedMonad [] Int
+          _ = WrapMonad [1] :: WrappedMonad [] Int
           f = WrapArrow (* 2)
         print $ (unwrapArrow $ (+) <$> f <*> f) 2
         print $ unwrapMonad $ (* 2) <$> x
@@ -239,10 +239,10 @@ testMonadFix =
             enumFrom_mfix :: MonadFix m => m (Int -> [Int])
             enumFrom_mfix = mfix (\next -> return (\n -> n : next (n + 1)))
 
-            count_fixBad :: [Int]
+            -- count_fixBad :: [Int]
             -- BAD. Cannot access fixed point
             -- count_fixBad = fix (\list -> (head list + 1):list)
-            count_fixBad = fix (\list@(x : _) -> (x + 1) : list)
+            -- count_fixBad = fix (\list@(x : _) -> (x + 1) : list)
 
             factorial_mfix :: MonadFix m => m (Int -> Int)
             factorial_mfix =
@@ -292,12 +292,14 @@ testMonadFix =
         print $ take 10 $ repeatN_fix 2
         print $ do l <- repeatN_mfix 2; Identity (take 10 l)
         print $ do l <- repeatN_mfix 2; Just (take 10 l)
+        print $ do l <- repeatN_dorec 2; Just (take 10 l)
 
         printBanner "range"
         print [0 .. 10]
         print $ rangeRaw 0 10
         print $ do f <- range_dorec; Identity (f 0 10)
         print $ do f <- range_dorec; Just (f 0 10)
+        print $ do f <- range_mfix; Identity (f 0 10)
         print [(-10) .. 10]
         print $ rangeRaw (-10) 10
         print $ range_fix (-10) 10

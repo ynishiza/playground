@@ -6,8 +6,7 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
-module Main (
-  main,
+module TestBase (
   runAll
 ) where
 
@@ -31,25 +30,6 @@ import TestUtils
 
 -- infinity :: Double
 -- infinity = (1 / 0) :: Double
-
-main :: IO ()
-main =
-  callTest
-    ( do
-        putStrLn "Run all? (y/n)"
-        response <- getChar
-        if response == 'y'
-          then runAll
-          else do
-            TestReadShow.testReadShow
-            -- TestTypeClass.testDerivedInstance
-            -- TestModuleMtl.testMyIOState
-            -- TestMyStateMonad.testStateMonad
-            -- TestStateMonadExample.runTest
-            -- TestMonad.testMonadFix
-            -- TestModuleTransformer.testLazyStateMonad
-    )
-    "main"
 
 runAll :: IO ()
 runAll = do

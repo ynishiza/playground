@@ -3,6 +3,7 @@
 
 {-# HLINT ignore "Redundant $" #-}
 {-# HLINT ignore "Redundant bracket" #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 module TestTypeClass
   ( testTypeClass,
@@ -178,14 +179,14 @@ instance MyConflict Double where
   check x = x > 0
 
 instance Num a => MyConflict [a] where
-  check (x : _) = True
+  check _ = False
 
 -- instance Read a => MyConflict [a] where
 --   check (x:_) = False
 instance MyConflict [Char] where
-  check (x : _) = False
+  check _ = False
 
-instance MyConflict [Int] where check (x : _) = False
+instance MyConflict [Int] where check _ = False
 
 class ClassOverlap c where
   isValid :: c -> Bool

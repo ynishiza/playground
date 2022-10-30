@@ -64,8 +64,20 @@ executables:
     - -threaded
 
   main:
-    main:                ./script.hs
-    source-dirs:         .
+    main:                ./main.hs
+    source-dirs:         ./app
+    ghc-options:
+    - -threaded
+    ## Profiling
+    # - -rtsopts=all
+    # - -fprof-auto
+    dependencies:
+    - playground
+
+tests:
+  maintest:
+    main:                ./test.hs
+    source-dirs:         ./test
     ghc-options:
     - -threaded
     ## Profiling

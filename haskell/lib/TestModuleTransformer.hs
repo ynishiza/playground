@@ -47,7 +47,7 @@ testStateTransformMonad :: IO ()
 testStateTransformMonad =
   callTest
     ( do
-        let x = StateT (\s -> if even s then Right (True, s) else Left s)
+        let _ = StateT (\s -> if even s then Right (True, s) else Left s)
         testDone
     )
     "testStateTransformMonad"

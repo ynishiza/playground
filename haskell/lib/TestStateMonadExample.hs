@@ -25,15 +25,15 @@ get = State $ \s -> (s, s)
 put :: s -> State s ()
 put s = State $ const ((), s)
 
-putV :: a -> State s a
-putV = pure
+-- putV :: a -> State s a
+-- putV = pure
 
-modify :: (s -> s) -> State s ()
-modify f = get >>= \x -> put (f x)
-evalState :: State s a -> s -> a
-evalState act = fst . runState act
-execState :: State s a -> s -> s
-execState act = snd . runState act
+-- modify :: (s -> s) -> State s ()
+-- modify f = get >>= \x -> put (f x)
+-- evalState :: State s a -> s -> a
+-- evalState act = fst . runState act
+-- execState :: State s a -> s -> s
+-- execState act = snd . runState act
 
 runTest :: IO ()
 runTest = callTest (do
