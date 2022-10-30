@@ -33,7 +33,10 @@ hello: ## Run hello
 	stack runhaskell $(HELLOSRC)
 
 run:  ## Run test
-	stack runhaskell $(MAINSRC)
+	stack exec main
+
+run-profile:
+	stack --profile exec -- main +RTS -xc
 
 runAll: ## Run all tests
 	yes | make run

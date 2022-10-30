@@ -6,8 +6,8 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
--- import System.Random
 {- ORMOLU_DISABLE -}
+import System.Random
 import Control.Applicative
 import Data.Int
 import Data.List (uncons, partition, intersperse, subsequences, transpose)
@@ -77,6 +77,7 @@ runAllLocal =
         testBindByPatternMatch
         testTypeSyntax
         testNumericalConversion
+        testRandom
     )
     "basic"
 
@@ -236,15 +237,14 @@ testCaseExpression =
     )
     "testCaseExpression"
 
--- testRandom = callTest (do
---   let seed = 20
---   let gen = mkStdGen seed
---   let rg = uniformR (1::Int, 100)
---   let val1 = rg gen
---   let val2 = rg (snd val1)
---   print (fst val1, fst val2) ) "testRandom"
---   0 ->  "zero"
---   _ -> "other"
+testRandom :: IO ()
+testRandom = callTest (do
+  let seed = 20
+  let gen = mkStdGen seed
+  let rg = uniformR (1::Int, 100)
+  let val1 = rg gen
+  let val2 = rg (snd val1)
+  print (fst val1, fst val2)) "testRandom"
 
 testBindByPatternMatch :: IO ()
 testBindByPatternMatch =

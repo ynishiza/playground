@@ -26,6 +26,7 @@ dependencies:
 - transformers
 - ghc-prim
 - ghc-bignum
+- random
 
 ghc-options:
 - -Wall
@@ -67,21 +68,8 @@ executables:
     source-dirs:         .
     ghc-options:
     - -threaded
-    # - -with-rtsopts=-N
-    - -rtsopts=all
     ## Profiling
+    # - -rtsopts=all
     # - -fprof-auto
-    # - -o script.out
     dependencies:
     - playground
-
-# tests:
-#   playground-test:
-#     main:                Spec.hs
-#     source-dirs:         test
-#     ghc-options:
-#     - -threaded
-#     - -rtsopts
-#     - -with-rtsopts=-N
-#     dependencies:
-#     - playground

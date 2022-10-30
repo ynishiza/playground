@@ -47,6 +47,7 @@ library
     , ghc-bignum
     , ghc-prim
     , mtl >=2.2
+    , random
     , transformers
   default-language: GHC2021
 
@@ -64,6 +65,7 @@ executable hello
     , ghc-bignum
     , ghc-prim
     , mtl >=2.2
+    , random
     , transformers
   default-language: GHC2021
 
@@ -75,12 +77,13 @@ executable main
       ./
   default-extensions:
       RecursiveDo
-  ghc-options: -Wall -Wdefault -W -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-type-defaults -threaded -rtsopts=all
+  ghc-options: -Wall -Wdefault -W -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-type-defaults -threaded
   build-depends:
       base
     , ghc-bignum
     , ghc-prim
     , mtl >=2.2
     , playground
+    , random
     , transformers
   default-language: GHC2021

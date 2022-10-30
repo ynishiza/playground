@@ -87,17 +87,17 @@ jobs:
           cabal-version: '3.8' # Exact version of Cabal
 
       - name: Install
-        working-directory: ${{ github.workspace }}/haskell/
+        working-directory: ${{ github.workspace }}/haskell/playground
         run: make install
 
       - name: Run hello
-        working-directory: ${{ github.workspace }}/haskell/
+        working-directory: ${{ github.workspace }}/haskell/playground
         run: make hello
 
       - name: Run test
-        working-directory: ${{ github.workspace }}/haskell/
+        working-directory: ${{ github.workspace }}/haskell/playground
         run: make runAll
 
       - name: Cleanup
-        working-directory: ${{ github.workspace }}/haskell/
+        working-directory: ${{ github.workspace }}/haskell/playground
         run: make clean
