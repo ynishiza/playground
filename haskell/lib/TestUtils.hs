@@ -23,12 +23,13 @@ assert cond =
 
 assertIO :: Bool -> Message -> IO ()
 assertIO cond message = do
-  print message
   unless cond $ error $ "FAIL:" ++ message
+  print message
 
 assertIsEqual :: (Eq a, Show a) => a -> a -> IO ()
 assertIsEqual x y = do
   unless (x == y) $ error $ "assertIsEqual:" ++ show x ++ "!=" ++ show y
+  putStrLn $ "assertIsEqual:" ++ show x ++ "==" ++ show y
 
 testDone :: IO ()
 testDone = return ()

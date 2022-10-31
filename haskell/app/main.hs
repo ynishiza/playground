@@ -1,5 +1,6 @@
 import qualified TestBase
 import qualified TestReadShow
+import qualified TestModuleMtl
 -- import qualified TestMonad
 -- import qualified TestModuleTransformer
 -- import qualified TestModuleMtl
@@ -18,6 +19,8 @@ main =
           then TestBase.runAll
           else do
             TestReadShow.testReadShow
+            -- TestModuleMtl.testBinarySequenceState
+            TestModuleMtl.testComposeState
             -- TestTypeClass.testDerivedInstance
             -- TestModuleMtl.testMyIOState
             -- TestMyStateMonad.testStateMonad
@@ -26,4 +29,3 @@ main =
             -- TestModuleTransformer.testLazyStateMonad
     )
     "main"
-
