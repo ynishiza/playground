@@ -1,7 +1,7 @@
 module TestArrow
   ( testArrow,
     testArrowLoop,
-    runAll
+    allTests,
   )
 where
 
@@ -11,15 +11,18 @@ import Data.Function
 import Data.List (partition)
 import TestUtils
 
-runAll :: IO ()
-runAll = callTest (do
-  testArrow
-  testArrowLoop
-                  ) "TestArrow"
+allTests :: TestState
+allTests =
+  wrapTest
+    ( do
+        testArrow
+        testArrowLoop
+    )
+    "TestArrow"
 
-testArrow :: IO ()
+testArrow :: TestState
 testArrow =
-  callTest
+  createTest
     ( do
         -- Basic
         let f = (+ 4) >>> (* 3)
@@ -47,9 +50,9 @@ testArrow =
     )
     "testArrow"
 
-testArrowLoop :: IO ()
+testArrowLoop :: TestState
 testArrowLoop =
-  callTest
+  createTest
     ( do
         -- loop
         printBanner "Loop test"

@@ -5,7 +5,7 @@
 module TestReadShow
   ( testReadShow,
     unittestEquationReadShow,
-    runAll,
+    allTests,
   )
 where
 
@@ -17,9 +17,9 @@ import TestUtils
 
 data MyBTree a = MyNode (MyBTree a) (MyBTree a) | MyLeaf a
 
-runAll :: IO ()
-runAll =
-  callTest
+allTests :: TestState
+allTests =
+  wrapTest
     ( do
         testShow
         testReadShow
@@ -125,9 +125,9 @@ instance Read a => Read (Equation a) where
 normalizeEquation :: (Read a, Show a) => Equation a -> Equation a
 normalizeEquation = read . show
 
-unittestEquationReadShow :: IO ()
+unittestEquationReadShow :: TestState
 unittestEquationReadShow =
-  callTest
+  createTest
     ( do
         let n1 = Term 1
             n2 = Term 2
@@ -203,9 +203,9 @@ unittestEquationReadShow =
     )
     "unittestEquationReadShow"
 
-testShow :: IO ()
+testShow :: TestState
 testShow =
-  callTest
+  createTest
     ( do
         let show1 = showsPrec 11 1
             show2 = showsPrec 11 2
@@ -228,9 +228,9 @@ testShow =
     )
     "testShow"
 
-testReadShow :: IO ()
+testReadShow :: TestState
 testReadShow =
-  callTest
+  createTest
     ( do
         let n1 = Term 1
             n2 = Term 2
@@ -272,7 +272,7 @@ testReadShow =
               show eq5 ++ "a"
             ]
 
-        unittestEquationReadShow
+        runTest unittestEquationReadShow
         testDone
     )
     "testReadShow"

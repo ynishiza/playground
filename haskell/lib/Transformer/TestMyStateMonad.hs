@@ -2,7 +2,7 @@
 
 {-# HLINT ignore "Use tuple-section" #-}
 
-module TestMyStateMonad
+module Transformer.TestMyStateMonad
   ( -- State(..),
     --
     testStateMonad,
@@ -98,8 +98,8 @@ main = do
   print $ execOp (do multOp 2; addOp 10; multOp 3) initState
   print $ execOp (do multOp 2; addOp 10; multOp 3; toString) initState
 
-testStateMonad :: IO ()
+testStateMonad :: TestState
 testStateMonad =
-  callTest
+  createTest
     main
     "testStateMonad"

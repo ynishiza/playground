@@ -3,7 +3,11 @@ module TestUtils
     assertIO,
     assertIsEqual,
     testDone,
-    callTest,
+    pauseIO,
+    TestState,
+    createTest,
+    wrapTest,
+    runTest,
     printBanner,
     printList,
     Message,
@@ -12,9 +16,12 @@ module TestUtils
 where
 
 import Control.Monad
+import Control.Monad.Trans.State
 import Data.Foldable
+import Data.List (intercalate)
 
 type Message = String
+
 type Name = String
 
 assert :: Bool -> ()
@@ -37,12 +44,44 @@ testDone = return ()
 printBanner :: Name -> IO ()
 printBanner name = putStrLn $ "=====" ++ name ++ "====="
 
-callTest :: IO () -> Message -> IO ()
-callTest x message = do
-  when (null message) (error "Missing name")
-  printBanner $ "start:" ++ message
-  x
-  printBanner $ "end:" ++ message
+pauseIO :: IO ()
+pauseIO = do
+  putStrLn "Press any key to continue"
+  _ <- getChar
+  putStrLn ""
+
+type TestState = State (IO (), [String]) ()
+
+runTest :: TestState -> IO ()
+runTest tests = do
+  let (io, messages) = execState tests (pure (), [])
+   in do
+        io
+        putStrLn $ "tests:" ++ intercalate "," messages
+        putStrLn $ "count=" ++ show (length messages)
+        pauseIO
+
+useIO :: IO () -> TestState
+useIO next = do
+  (io, v) <- get
+  put (do io; next, v)
+
+createTest :: IO () -> Message -> TestState
+createTest x message = do
+  (io, messages) <- get
+  let test = do
+        io
+        when (null message) (error "Missing name")
+        printBanner $ "start:" ++ message
+        x
+        printBanner $ "end:" ++ message
+   in put (test, message : messages)
+
+wrapTest :: TestState -> Message -> TestState
+wrapTest tests message = do
+  useIO $ printBanner $ "start:" ++ message
+  tests
+  useIO $ printBanner $ "end:" ++ message
 
 printList :: (Foldable f, Show a) => f a -> IO ()
 printList = traverse_ print

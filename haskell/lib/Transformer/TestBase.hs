@@ -1,26 +1,35 @@
-module TestModuleTransformer (
-  -- testParser
-  testMonadTransform,
-  testStateTransformMonad,
-  testLazyStateMonad,
-  runAll,
-) where
+module Transformer.TestBase
+  ( testMonadTransform,
+    testLazyStateMonad,
+    testTreeToNumber,
+    allTests,
+  )
+where
 
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.State.Lazy
 import TestUtils
+import Transformer.TestLabellingTrees
+import Transformer.TestStateMonadExample
+import Transformer.TestMyStateMonad
 
-runAll :: IO ()
-runAll = callTest (do
-  testMonadTransform
-  testStateTransformMonad
-  testLazyStateMonad
-                  ) "TestModuleTransformer"
+allTests :: TestState
+allTests =
+  wrapTest
+    ( do
+        testMonadTransform
+        testLazyStateMonad
+        testTreeToNumber
+        Transformer.TestLabellingTrees.testTreeToNumber
+        Transformer.TestMyStateMonad.testStateMonad
+        Transformer.TestStateMonadExample.testStateMonad
+    )
+    "TestModuleTransformer"
 
-testMonadTransform :: IO ()
+testMonadTransform :: TestState
 testMonadTransform =
-  callTest
+  createTest
     ( do
         printBanner "MaybeT"
         let x = MaybeT [Just 1]
@@ -41,20 +50,11 @@ testMonadTransform =
         print $ runMaybeT y0
         testDone
     )
-    "testTemplate"
+    "testMonadTransform"
 
-testStateTransformMonad :: IO ()
-testStateTransformMonad =
-  callTest
-    ( do
-        let _ = StateT (\s -> if even s then Right (True, s) else Left s)
-        testDone
-    )
-    "testStateTransformMonad"
-
-testLazyStateMonad :: IO ()
+testLazyStateMonad :: TestState
 testLazyStateMonad =
-  callTest
+  createTest
     ( do
         let task1 :: Num a => State a a
             task1 = do
@@ -66,4 +66,3 @@ testLazyStateMonad =
         testDone
     )
     "testLazyStateMonad"
-

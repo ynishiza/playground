@@ -1,6 +1,5 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
 {-# HLINT ignore "Redundant $" #-}
 {-# HLINT ignore "Redundant bracket" #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
@@ -9,16 +8,16 @@ module TestTypeClass
   ( testTypeClass,
     testMultiParameters,
     testDerivedInstance,
-    runAll,
+    allTests,
   )
 where
 
 import GHC.Types
 import TestUtils
 
-runAll :: IO ()
-runAll =
-  callTest
+allTests :: TestState
+allTests =
+  wrapTest
     ( do
         testDerivedInstance
         testTypeClass
@@ -69,9 +68,9 @@ instance MyDoSomethingMult Double Int where
 instance MyDoSomethingMult Double Double where
   doSomethingMult x y = x * y
 
-testTypeClass :: IO ()
+testTypeClass :: TestState
 testTypeClass =
-  callTest
+  createTest
     ( do
         printSomething (1 :: Int)
         printSomething (1.0 :: Double)
@@ -107,9 +106,9 @@ class MultiParameterTest2 a b | a -> b where
 instance MultiParameterTest2 Int Int where
   (#++) x y = x + y
 
-testMultiParameters :: IO ()
+testMultiParameters :: TestState
 testMultiParameters =
-  callTest
+  createTest
     ( do
         let x :: Int
             -- x = (1::Int) #+ (1::Int)
@@ -178,8 +177,9 @@ instance MyConflict Int where
 instance MyConflict Double where
   check x = x > 0
 
-instance Num a => MyConflict [a] where
-  check _ = False
+instance (Ord a, Num a) => MyConflict [a] where
+  check [] = False
+  check (x : _) = x > 0
 
 -- instance Read a => MyConflict [a] where
 --   check (x:_) = False
@@ -194,19 +194,21 @@ class ClassOverlap c where
 instance ClassOverlap [Int] where
   isValid _ = False
 
-instance Num c => ClassOverlap [c] where
-  isValid _ = True
+instance (Ord c, Num c) => ClassOverlap [c] where
+  isValid [] = False
+  isValid (x : _) = x > 0
 
 -- x = isValid [0::Int]     -- ERROR. Overlapping instance
 --
 
 -- Derived
 data MyDerivedPair a b = MyDerivedPair a b deriving (Eq, Ord, Bounded, Read, Show)
+
 data MyDerivedEnum = DA1 | DA2 | DA3 | DA4 | DA5 | DA6 deriving (Eq, Ord, Bounded, Enum, Read, Show)
 
-testDerivedInstance :: IO ()
+testDerivedInstance :: TestState
 testDerivedInstance =
-  callTest
+  createTest
     ( do
         printBanner "Eq,Ord"
         print $ MyDerivedPair 1 2 < MyDerivedPair 1 3
@@ -219,15 +221,15 @@ testDerivedInstance =
         print $ (minBound :: MyDerivedPair Int Int)
         print $ (maxBound :: MyDerivedPair Int Int)
         print $ (minBound :: MyDerivedPair Int Char)
-        print $ MyDerivedPair (minBound::Int) (minBound::Char)
+        print $ MyDerivedPair (minBound :: Int) (minBound :: Char)
         print $ (maxBound :: MyDerivedPair Int Char)
         -- print $ (maxBound::Pair Int Double)    NO
-        print $ (minBound:: MyDerivedEnum)
-        print $ (maxBound:: MyDerivedEnum)
+        print $ (minBound :: MyDerivedEnum)
+        print $ (maxBound :: MyDerivedEnum)
 
         print $ DA1
-        print $ [(DA1)..]
-        print $ [(DA1),(DA3)..]
+        print $ [(DA1) ..]
+        print $ [(DA1), (DA3) ..]
         -- print [DA1..]
 
         printBanner "Show"

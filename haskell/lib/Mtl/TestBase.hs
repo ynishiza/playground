@@ -1,11 +1,11 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Use tuple-section" #-}
-module TestModuleMtl
+module Mtl.TestBase
   ( testMyIOState,
     testBinarySequenceState,
     testComposeState,
-    runAll,
+    allTests,
   )
 where
 
@@ -13,9 +13,9 @@ import Control.Monad.State
 import Data.Foldable (traverse_)
 import TestUtils
 
-runAll :: IO ()
-runAll =
-  callTest
+allTests :: TestState
+allTests =
+  wrapTest
     (do testMyIOState; testBinarySequenceState; testComposeState)
     "TestModuleMtl"
 
@@ -44,9 +44,9 @@ instance MonadState String MyIOState where
   get = MyIOState getLine
   put = MyIOState . putStrLn
 
-testMyIOState :: IO ()
+testMyIOState :: TestState
 testMyIOState =
-  callTest
+  createTest
     ( do
         let query :: MyIOState ()
             query = do
@@ -100,9 +100,9 @@ execAndPrintStateWithIO st = printStateWithIOResult . execStateWithIO st
 prependLabel :: Show a => String -> a -> String
 prependLabel label x = label ++ "=" ++ show x
 
-testBinarySequenceState :: IO ()
+testBinarySequenceState :: TestState
 testBinarySequenceState =
-  callTest
+  createTest
     ( do
         let appendBit :: BinarySequenceState
             appendBit =
@@ -135,13 +135,13 @@ testBinarySequenceState =
             printB re = do
               printStateWithIOResult re
               putStrLn $ prependLabel "count" (length re)
-              _ <- getLine
+              pauseIO
               putStrLn ""
 
             result1 = execStateWithIO sequence1 []
             result12 = execStateWithIO sequence2 []
 
-        _ <- getLine
+        pauseIO
         execAndPrintStateWithIO sequence1 [0, 1]
         printB result1
         printB result12
@@ -152,9 +152,9 @@ testBinarySequenceState =
 
 type ComposeState a = StateWithIO ((->) (StateWithIOData a)) Int
 
-testComposeState :: IO ()
+testComposeState :: TestState
 testComposeState =
-  callTest
+  createTest
     ( do
         let composeOne :: String -> (Int -> Int) -> ComposeState a
             composeOne label f =

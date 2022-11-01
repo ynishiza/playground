@@ -6,9 +6,10 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
-module TestBase (
-  runAll
-) where
+module TestBase
+  ( allTests,
+  )
+where
 
 {- ORMOLU_DISABLE -}
 import System.Random (mkStdGen, uniformR)
@@ -19,10 +20,8 @@ import Data.Fixed (Deci, Fixed (..), Uni, resolution)
 import Data.Foldable
 import qualified TestArrow
 import qualified TestMonad
-import qualified TestModuleTransformer
-import qualified TestModuleMtl
-import qualified TestMyStateMonad
-import qualified TestStateMonadExample
+import qualified Transformer.TestBase as Transformer
+import qualified Mtl.TestBase as Mtl
 import qualified TestTypeClass
 import qualified TestReadShow
 {- ORMOLU_ENABLE -}
@@ -31,27 +30,28 @@ import TestUtils
 -- infinity :: Double
 -- infinity = (1 / 0) :: Double
 
-runAll :: IO ()
-runAll = do
-  runAllLocal
+allTests :: TestState
+allTests =
+  wrapTest
+    ( do
+        runAllLocal
 
-  -- test: Category, Arrow
-  TestArrow.runAll
+        -- test: Category, Arrow
+        TestArrow.allTests
 
-  -- test: Applicative,Monads
-  TestMonad.runAll
-  TestModuleTransformer.runAll
-  TestModuleMtl.testMyIOState
+        -- test: Applicative,Monads
+        TestMonad.allTests
+        Transformer.allTests
+        Mtl.allTests
 
-  TestMyStateMonad.testStateMonad
-  TestStateMonadExample.runTest
+        TestTypeClass.allTests
+        TestReadShow.allTests
+    )
+    ""
 
-  TestTypeClass.runAll
-  TestReadShow.runAll
-
-runAllLocal :: IO ()
+runAllLocal :: TestState
 runAllLocal =
-  callTest
+  wrapTest
     ( do
         testFixed
         testListFunctions
@@ -68,9 +68,9 @@ runAllLocal =
 
 -- testRandom
 
-testFixed :: IO ()
+testFixed :: TestState
 testFixed =
-  callTest
+  createTest
     ( do
         let x = MkFixed 10
 
@@ -81,9 +81,9 @@ testFixed =
     )
     "testFixed"
 
-testListFunctions :: IO ()
+testListFunctions :: TestState
 testListFunctions =
-  callTest
+  createTest
     ( do
         print $ uncons [1]
         print $ uncons ([] :: [Int])
@@ -103,9 +103,9 @@ testListFunctions =
     )
     "testList"
 
-testFoldable :: IO ()
+testFoldable :: TestState
 testFoldable =
-  callTest
+  createTest
     ( do
         let printer :: Show a => a -> IO () -> IO ()
             printer x accum = putStr (show x) >> accum
@@ -119,9 +119,9 @@ testFoldable =
     )
     "testFold"
 
-testTraversable :: IO ()
+testTraversable :: TestState
 testTraversable =
-  callTest
+  createTest
     ( do
         _ <- traverse print [1 .. 10] :: IO [()]
         _ <- sequence $ fmap print [1 .. 10] :: IO [()]
@@ -136,9 +136,9 @@ type GetTraverseStepInfo a f b = Int -> a -> f b -> f [b] -> String
 
 type TraverseStepResult f b = (Int, [Message], f [b])
 
-testTraversableInSteps :: IO ()
+testTraversableInSteps :: TestState
 testTraversableInSteps =
-  callTest
+  createTest
     ( do
         let f :: Int -> [Int]
             f x = [0, x + 2, 2 * x]
@@ -197,9 +197,9 @@ testTraversableInSteps =
     )
     "testTraversableInSteps"
 
-testCaseExpression :: IO ()
+testCaseExpression :: TestState
 testCaseExpression =
-  callTest
+  createTest
     ( do
         let f x = case x of
               0 : _ -> "zero"
@@ -222,18 +222,22 @@ testCaseExpression =
     )
     "testCaseExpression"
 
-testRandom :: IO ()
-testRandom = callTest (do
-  let seed = 20
-  let gen = mkStdGen seed
-  let rg = uniformR (1::Int, 100)
-  let val1 = rg gen
-  let val2 = rg (snd val1)
-  print (fst val1, fst val2)) "testRandom"
+testRandom :: TestState
+testRandom =
+  createTest
+    ( do
+        let seed = 20
+        let gen = mkStdGen seed
+        let rg = uniformR (1 :: Int, 100)
+        let val1 = rg gen
+        let val2 = rg (snd val1)
+        print (fst val1, fst val2)
+    )
+    "testRandom"
 
-testBindByPatternMatch :: IO ()
+testBindByPatternMatch :: TestState
 testBindByPatternMatch =
-  callTest
+  createTest
     ( do
         let f x
               | x == 1 = "one"
@@ -243,10 +247,10 @@ testBindByPatternMatch =
             g x y
               | n : _ <- x, m : _ <- y, n == m = "x[0] == y[0] == " ++ show n
               | otherwise = "other"
-              -- where
-                -- k = 100 :: Int
-                -- s = 2
-                -- l = 10
+        -- where
+        -- k = 100 :: Int
+        -- s = 2
+        -- l = 10
 
         printBanner "f"
         print $ f 1
@@ -267,9 +271,9 @@ testPatternMatch =
       _ = m where m = 1
    in k
 
-testTypeSyntax :: IO ()
+testTypeSyntax :: TestState
 testTypeSyntax =
-  callTest
+  createTest
     ( do
         let ss :: (Eq (f a), Applicative f, Eq a) => f a -> f a -> (Bool, f Bool)
             ss x y = (x == y, (==) <$> x <*> y)
@@ -282,9 +286,9 @@ testTypeSyntax =
     )
     "testTypeSyntax"
 
-testNumericalConversion :: IO ()
+testNumericalConversion :: TestState
 testNumericalConversion =
-  callTest
+  createTest
     ( do
         let vint = 1 :: Int
             vinteger = 1 :: Integer
@@ -324,4 +328,3 @@ testNumericalConversion =
         testDone
     )
     "testNumericalConversion"
-

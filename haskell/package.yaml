@@ -20,8 +20,7 @@ extra-source-files:
 description:         Please see the README on GitHub at <https://github.com/githubuser/playground#readme>
 
 dependencies:
-- base
-# - base >= 4.7 && < 5
+- base >= 4.7 && < 5
 - mtl >= 2.2
 - transformers
 - ghc-prim
@@ -44,12 +43,6 @@ ghc-options:
 
 default-extensions:
 - RecursiveDo 
-# - KindSignatures
-# - MultiParamTypeClasses
-# - TypeSynonymInstances 
-# - FlexibleInstances 
-# - FlexibleContexts 
-# - ExplicitForAll 
 
 language: GHC2021
 
@@ -73,6 +66,20 @@ executables:
     # - -fprof-auto
     dependencies:
     - playground
+
+  rwh:
+    main:               ./main.hs
+    source-dirs:        ./RealWorldHaskell
+    dependencies:
+    - playground
+    - rwhlib
+
+internal-libraries:
+  rwhlib:
+    source-dirs:      ./RealWorldHaskell/lib
+    exposed-modules:
+    - Temp
+    - Chapter15
 
 tests:
   maintest:

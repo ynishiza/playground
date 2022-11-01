@@ -1,7 +1,9 @@
-module TestImport (
-  x,
-) where
+module TestImport
+  ( x,
+  )
+where
 
-import qualified TestExport hiding (MyADT(ADTA)) 
+import TestExport qualified hiding (MyADT (ADTA))
+
 -- import qualified Data.Maybe (Maybe(Just))
 x = TestExport.ADTB 1

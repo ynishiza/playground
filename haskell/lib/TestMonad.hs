@@ -13,7 +13,7 @@ module TestMonad
     testFunctorMonad,
     testMonadFail,
     testStaticArrow,
-    runAll
+    allTests
   )
 where
 
@@ -28,8 +28,8 @@ import Data.Maybe
 import StaticArrow
 import TestUtils
 
-runAll :: IO ()
-runAll = callTest (do
+allTests :: TestState
+allTests = wrapTest (do
   testMonad
   testCompositionMonad
   testWrappedMonad
@@ -39,9 +39,9 @@ runAll = callTest (do
   testStaticArrow
                   ) "TestMonad"
 
-testCompositionMonad :: IO ()
+testCompositionMonad :: TestState
 testCompositionMonad =
-  callTest
+  createTest
     ( do
         let f = (* 2)
         let g = (*) . (+ 3) -- f(x,y) = y(x+3)
@@ -63,9 +63,9 @@ testCompositionMonad =
     )
     "testCompositionMonad"
 
-testWrappedMonad :: IO ()
+testWrappedMonad :: TestState
 testWrappedMonad =
-  callTest
+  createTest
     ( do
         let 
           x = (WrapMonad $ Just 1) :: WrappedMonad Maybe Int
@@ -80,9 +80,9 @@ testWrappedMonad =
 instance Num a => MonadFail (Either a) where
   fail _ = Left (-1)
 
-testMonadFail :: IO ()
+testMonadFail :: TestState
 testMonadFail =
-  callTest
+  createTest
     ( do
         printBanner "case: with builtin MonadFail(Maybe)"
         let doubleMaybe x = do
@@ -124,9 +124,9 @@ testMonadFail =
     )
     "testMonadFail"
 
-testFunctorMonad :: IO ()
+testFunctorMonad :: TestState
 testFunctorMonad =
-  callTest
+  createTest
     ( do
         let _ = Identity 1
         let l = InL $ Just 1
@@ -139,9 +139,9 @@ testFunctorMonad =
     )
     "testFunctorMonad"
 
-testMonad :: IO ()
+testMonad :: TestState
 testMonad =
-  callTest
+  createTest
     ( do
         printBanner "do IO"
         do
@@ -170,9 +170,9 @@ testMonad =
 
 type REPLInput = String
 
-testMonadFix :: IO ()
+testMonadFix :: TestState
 testMonadFix =
-  callTest
+  createTest
     ( do
         let repeat_raw :: [Int]
             repeat_raw = 1 : repeat_raw
@@ -329,9 +329,9 @@ testMonadFix =
     )
     "testMonadFix"
 
-testStaticArrow :: IO ()
+testStaticArrow :: TestState
 testStaticArrow =
-  callTest
+  createTest
     ( do
         printBanner "StaticArrow"
         let f = StaticArrow $ Just (* 2)
