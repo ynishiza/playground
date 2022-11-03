@@ -3,7 +3,7 @@
 {-# HLINT ignore "Use shows" #-}
 {-# HLINT ignore "Use show" #-}
 module TestReadShow
-  ( testReadShow,
+  ( testComplexReadShow,
     unittestEquationReadShow,
     allTests,
   )
@@ -21,8 +21,8 @@ allTests :: TestState
 allTests =
   wrapTest
     ( do
-        testShow
-        testReadShow
+        testBasicShow
+        testComplexReadShow
     )
     "TestReadShow"
 
@@ -203,8 +203,8 @@ unittestEquationReadShow =
     )
     "unittestEquationReadShow"
 
-testShow :: TestState
-testShow =
+testBasicShow :: TestState
+testBasicShow =
   createTest
     ( do
         let show1 = showsPrec 11 1
@@ -228,8 +228,8 @@ testShow =
     )
     "testShow"
 
-testReadShow :: TestState
-testReadShow =
+testComplexReadShow :: TestState
+testComplexReadShow =
   createTest
     ( do
         let n1 = Term 1
@@ -275,4 +275,4 @@ testReadShow =
         runTest unittestEquationReadShow
         testDone
     )
-    "testReadShow"
+    "testComplexReadShow"

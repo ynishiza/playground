@@ -1,5 +1,7 @@
 module TestUtils
-  ( assert,
+  ( 
+  prependLabel,
+    assert,
     assertIO,
     assertIsEqual,
     testDone,
@@ -23,6 +25,9 @@ import Data.List (intercalate)
 type Message = String
 
 type Name = String
+
+prependLabel :: Show a => String -> a -> String
+prependLabel label v = label ++ "=" ++ show v
 
 assert :: Bool -> ()
 assert cond =
@@ -75,7 +80,7 @@ createTest x message = do
         printBanner $ "start:" ++ message
         x
         printBanner $ "end:" ++ message
-   in put (test, message : messages)
+   in put (test, messages ++ [message])
 
 wrapTest :: TestState -> Message -> TestState
 wrapTest tests message = do

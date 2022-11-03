@@ -255,29 +255,31 @@ testMonadFix =
               rec f <- return (\n -> if n <= 1 then n else n * f (n - 1))
               return f
 
-            replExec :: (Bool -> REPLInput -> IO ()) -> Bool -> REPLInput -> IO ()
-            replExec runRepl isFirstCall input = do
+            replExec :: (Int -> REPLInput -> IO ()) -> Int -> REPLInput -> IO ()
+            replExec runRepl callCount input = do
               let queryNext = do
                     putStrLn "Enter next value. Type 'q' to exit"
                     nextInput <- getLine
-                    runRepl False nextInput
+                    runRepl (callCount + 1) nextInput
                   result
                     -- case: quit
                     | input == "q" || input == "y"
                         = do putStrLn "done"
                     -- case: initial input
-                    | isFirstCall = do
+                    | callCount == 0 = do
                         putStrLn "Start REPL"
                         queryNext
+                    | callCount == 3 = do
+                        do putStrLn "Aborting."
                     | otherwise = do
                         unless (null input) (putStrLn $ "value:" ++ input)
                         queryNext
                in result
-            repl_fix :: Bool -> REPLInput -> IO ()
+            repl_fix :: Int -> REPLInput -> IO ()
             repl_fix = replExec repl_fix
-            repl_mfix :: MonadFix m => m (Bool -> REPLInput -> IO ())
+            repl_mfix :: MonadFix m => m (Int -> REPLInput -> IO ())
             repl_mfix = mfix $ return.replExec
-            repl_dorec :: MonadFix m => m (Bool -> String -> IO ())
+            repl_dorec :: MonadFix m => m (Int -> String -> IO ())
             repl_dorec = do
               rec runRepl <- return (replExec runRepl)
               return runRepl
@@ -314,16 +316,16 @@ testMonadFix =
         print $ do f <- factorial_dorec; Just (f 5)
         print $ do f <- factorial_mfix; Just (f 5)
 
-        do printBanner "REPL fix"; repl_fix True ""
-        do printBanner "REPL mfix"; f <- repl_mfix; f True ""
-        do printBanner "REPL dorec"; f <- repl_dorec; f True ""
+        do printBanner "REPL fix"; repl_fix 0 ""
+        do printBanner "REPL mfix"; f <- repl_mfix; f 0 ""
+        do printBanner "REPL dorec"; f <- repl_dorec; f 0 ""
         printBanner "REPL plain"
         let
           -- BAD:
           -- repl = repl >>= return. replExec
           -- in repl >>= (\f -> f True "")
           repl = replExec repl
-         in do repl True ""
+         in do repl 0 ""
 
         testDone
     )

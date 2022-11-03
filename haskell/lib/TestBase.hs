@@ -54,7 +54,7 @@ runAllLocal =
   wrapTest
     ( do
         testFixed
-        testListFunctions
+        testListUtilityFunctions
         testFoldable
         testTraversableInSteps
         testTraversable
@@ -65,8 +65,6 @@ runAllLocal =
         testRandom
     )
     "basic"
-
--- testRandom
 
 testFixed :: TestState
 testFixed =
@@ -81,8 +79,8 @@ testFixed =
     )
     "testFixed"
 
-testListFunctions :: TestState
-testListFunctions =
+testListUtilityFunctions :: TestState
+testListUtilityFunctions =
   createTest
     ( do
         print $ uncons [1]

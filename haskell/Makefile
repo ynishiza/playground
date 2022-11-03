@@ -19,6 +19,7 @@ install: ## Install
 	stack build
 
 uninstall: ## Uninstall
+	make clean
 	stack purge
 
 compile: ## Compile

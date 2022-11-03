@@ -97,9 +97,6 @@ printStateWithIOResult =
 execAndPrintStateWithIO :: (Show a, Foldable m, Monad m) => StateWithIO m a -> a -> IO ()
 execAndPrintStateWithIO st = printStateWithIOResult . execStateWithIO st
 
-prependLabel :: Show a => String -> a -> String
-prependLabel label x = label ++ "=" ++ show x
-
 testBinarySequenceState :: TestState
 testBinarySequenceState =
   createTest

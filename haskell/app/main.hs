@@ -1,6 +1,5 @@
-import TestBase qualified
-import Mtl.TestBase qualified
-import TestReadShow qualified
+-- import Mtl.TestBase qualified
+-- import TestReadShow qualified
 -- import qualified TestMonad
 -- import qualified TestModuleTransformer
 
@@ -8,8 +7,14 @@ import TestReadShow qualified
 -- import qualified TestMyStateMonad
 -- import qualified TestStateMonadExample
 -- import qualified TestTypeClass
+
+import Control.Monad
+import Control.Monad.Trans.State
+import TestBase qualified
 import TestUtils
-import Transformer.TestLabellingTrees qualified as TL
+import Transformer.TestBase qualified
+
+-- import Transformer.TestLabellingTrees qualified as TL
 
 main :: IO ()
 main = do
@@ -20,10 +25,12 @@ main = do
     else
       runTest
         ( do
-            TestReadShow.testReadShow
+            -- TestReadShow.testReadShow
             -- TestModuleMtl.testBinarySequenceState
-            Mtl.TestBase.testComposeState
-            TL.testTreeToNumber
+            -- Mtl.TestBase.testComposeState
+            -- TL.testTreeToNumber
+            -- Transformer.TestBase.testStateWithAndWithoutMonads
+            Transformer.TestBase.testReadWriteState
             -- TestTypeClass.testDerivedInstance
             -- TestModuleMtl.testMyIOState
             -- TestMyStateMonad.testStateMonad
