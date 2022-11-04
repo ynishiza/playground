@@ -59,8 +59,8 @@ runAllLocal =
         testTraversableInSteps
         testTraversable
         testCaseExpression
-        testBindByPatternMatch
-        testTypeSyntax
+        testBindGuards
+        testTypeSignature
         testNumericalConversion
         testRandom
     )
@@ -233,8 +233,8 @@ testRandom =
     )
     "testRandom"
 
-testBindByPatternMatch :: TestState
-testBindByPatternMatch =
+testBindGuards :: TestState
+testBindGuards =
   createTest
     ( do
         let f x
@@ -269,8 +269,8 @@ testPatternMatch =
       _ = m where m = 1
    in k
 
-testTypeSyntax :: TestState
-testTypeSyntax =
+testTypeSignature :: TestState
+testTypeSignature =
   createTest
     ( do
         let ss :: (Eq (f a), Applicative f, Eq a) => f a -> f a -> (Bool, f Bool)

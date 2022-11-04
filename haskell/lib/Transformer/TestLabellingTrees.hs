@@ -33,6 +33,24 @@ toNumberTree tree
           put (values ++ [value])
           return $ length values
 
+toNumberTreeRecursive :: Eq a => ([a], Tree a) -> ([a], Tree Int)
+toNumberTreeRecursive (values, tree)
+  | (Leaf value) <- tree =
+      let (_values, n) = getValues values value
+       in (_values, Leaf n)
+  | otherwise =
+      let (Node value tree1 tree2) = tree
+          (_values1, _tree1) = toNumberTreeRecursive (values, tree1)
+          (_values2, _tree2) = toNumberTreeRecursive (_values1, tree2)
+          (_values3, n) = getValues _values2 value
+       in (_values3, Node n _tree1 _tree2)
+  where
+    getValues :: Eq a => [a] -> a -> ([a], Int)
+    getValues _values v =
+      case elemIndex v _values of
+        (Just i) -> (_values, i)
+        _ -> (_values ++ [v], length _values)
+
 testTreeToNumber :: TestState
 testTreeToNumber =
   createTest
@@ -56,12 +74,16 @@ testTreeToNumber =
             printTrees (tree : rest) = do
               (io, values) <- get
               let (itree, values') = runState (toNumberTree tree) values
+                  (values_rec, itree_rec) = toNumberTreeRecursive (values, tree)
                   io' = do
                     io
                     putStrLn ""
                     putStrLn $ "tree:" ++ show tree
                     putStrLn $ "numbered:" ++ show itree
                     putStrLn $ "table:" ++ printValues values'
+                    putStrLn $ "numbered (recursive):" ++ show itree_rec
+                    putStrLn $ "table (recursive):" ++ printValues values_rec
+                    assertIsEqual itree itree_rec
               put (io', values')
               printTrees rest
               where

@@ -13,9 +13,9 @@ where
 
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Maybe
+import Control.Monad.Trans.Reader
 import Control.Monad.Trans.State.Lazy
 import Control.Monad.Trans.Writer.Lazy
-import Control.Monad.Trans.Reader
 import TestUtils
 import Transformer.TestLabellingTrees
 import Transformer.TestMyStateMonad
@@ -76,6 +76,7 @@ testLazyStateMonad =
     "testLazyStateMonad"
 
 data User = User {name :: String, count :: Int} deriving (Show, Eq)
+
 type ComputeStateData = ([Int], IO ())
 
 testStateWithAndWithoutMonads :: TestState
@@ -116,62 +117,59 @@ testStateWithAndWithoutMonads =
                     y1 <- compute 1
                     y2 <- compute y1
                     compute y2
-                  (y3, (items3, console3)) = runState task1 ([], pure())
+                  (y3, (items3, console3)) = runState task1 ([], pure ())
 
                   task2 = do
                     _ <- task1
                     _ <- task1
                     task1
-                  (y4, (items4, console4)) = runState task2 ([], pure())
+                  (y4, (items4, console4)) = runState task2 ([], pure ())
                in do
                     console3
                     putStrLn $ "items=" ++ show items3 ++ "y=" ++ show y3
 
                     console4
                     putStrLn $ "items=" ++ show items4 ++ "y=" ++ show y4
-
          in example
 
         testDone
     )
     "testStateWithAndWithoutMonads"
 
-
 testReadWriteState :: TestState
-testReadWriteState = createTest (do
-  let 
-    writeTask :: Writer String Int
-    writeTask = do
-      tell "hello"
-      tell "world"
-      return 1
+testReadWriteState =
+  createTest
+    ( do
+        let writeTask :: Writer String Int
+            writeTask = do
+              tell "hello"
+              tell "world"
+              return 1
 
-    readTask :: Reader [Int] Int
-    readTask = do
-      list <- ask
-      v1 <- asks (!!0)
-      v2 <- asks (!!1)
-      return $ v1 + v2 + last list
+            readTask :: Reader [Int] Int
+            readTask = do
+              list <- ask
+              v1 <- asks (!! 0)
+              v2 <- asks (!! 1)
+              return $ v1 + v2 + last list
 
-    readTask2 = local ((*2)<$>) readTask
+            readTask2 = local ((* 2) <$>) readTask
 
-    st :: State Int Int
-    st = state (\s -> (1,s))
+            printWriter :: (Show w, Show a) => Writer w a -> IO ()
+            printWriter w =
+              let (_state, result) = runWriter w
+               in putStrLn $ prependLabel "state" _state ++ prependLabel " result" result
 
-    printWriter :: (Show w, Show a) => Writer w a -> IO ()
-    printWriter w = 
-      let (_state, result) = runWriter w in 
-      putStrLn $ prependLabel "state" _state ++ prependLabel " result" result
+            printReader :: Show a => Reader r a -> r -> IO ()
+            printReader r readOnlyState =
+              let result = runReader r readOnlyState
+               in putStrLn $ prependLabel "result" result
 
-    printReader :: Show a => Reader r a -> r -> IO ()
-    printReader r readOnlyState =
-      let result = runReader r readOnlyState in
-          putStrLn $ prependLabel "result" result
+        printWriter writeTask
 
-  printWriter writeTask
+        printReader readTask [1 .. 10]
+        printReader readTask2 [1 .. 10]
 
-  printReader readTask [1..10]
-  printReader readTask2 [1..10]
-
-  testDone
-  ) "testReadWriteState"
+        testDone
+    )
+    "testReadWriteState"

@@ -55,7 +55,7 @@ pauseIO = do
   _ <- getChar
   putStrLn ""
 
-type TestState = State (IO (), [String]) ()
+type TestState = State (IO (), [Message]) ()
 
 runTest :: TestState -> IO ()
 runTest tests = do
