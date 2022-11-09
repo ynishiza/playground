@@ -93,13 +93,6 @@ executables:
     dependencies:
     - playground
 
-# internal-libraries:
-  # rwhlib:
-  #   source-dirs:      ./RealWorldHaskell/lib
-  #   exposed-modules:
-  #   - Temp
-  #   - Chapter15
-
 tests:
   maintest:
     main:                ./test.hs

@@ -1,0 +1,3 @@
+:set -XGHC2021
+:set prompt "ghci> "
+:set editor "nvim"
