@@ -4,8 +4,12 @@ module Utils (
   promptRun,
   trace,
   traceShow,
+  assertIsEqual,
+  assertIsEqualSilent,
+  printBanner,
   ) where
 
+import Control.Monad
 import Debug.Trace(trace)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
@@ -26,3 +30,19 @@ promptRun message action = do
     else do
       TIO.putStrLn $ fmt "Skipping "+|message|+""
       return False
+
+assertIsEqual :: (Eq a, Show a) => a -> a -> IO ()
+assertIsEqual x y = do
+  assertIsEqualBase True x y 
+
+assertIsEqualSilent :: (Eq a, Show a) => a -> a -> IO ()
+assertIsEqualSilent x y = do
+  assertIsEqualBase False x y 
+
+assertIsEqualBase :: (Eq a, Show a) => Bool -> a -> a -> IO ()
+assertIsEqualBase showMessage x y = do
+  unless (x == y) $ error $ fmtLn $ "assertIsEqual:"+||x||+"!="+||y||+""
+  when showMessage $ fmtLn $ "assertIsEqual:" +|| x ||+ "==" +|| y ||+""
+
+printBanner :: T.Text -> IO ()
+printBanner name = fmtLn $ "====="+| name |+ "====="

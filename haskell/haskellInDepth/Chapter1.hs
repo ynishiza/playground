@@ -15,16 +15,16 @@ import Data.Maybe
 import Data.Text(Text)
 import Data.Text qualified as T
 import Data.Text.IO qualified as TIO
-import System.Environment
 import Fmt
+import System.Environment
 import Utils
 
 run :: IO ()
 run = do
-  promptRun "task1" task1
   scratchSpace
 
   putStrLn "Chapter1"
+  task1
 
 task1 :: IO ()
 task1 = do
@@ -35,7 +35,7 @@ task1 = do
     [filename, n] ->
       process filename False (read n)
     _ ->
-      putStrLn "[-a] FILEPATH TOPN"
+      error "[-a] FILEPATH TOPN"
 
 process :: FilePath -> Bool -> Int -> IO ()
 process filename optAll n = do
@@ -43,12 +43,12 @@ process filename optAll n = do
 
   let vocab = extractVocab text
   TIO.putStrLn $ wordsCountReport vocab
-  _ <- getChar
+  -- _ <- getChar
   TIO.putStrLn $ wordsByFrequencyReportN vocab n
-  _ <- getChar
+  -- _ <- getChar
   when optAll $ do
     TIO.putStrLn $ allWordsReport vocab
-    _ <- getChar
+    -- _ <- getChar
     pure ()
 
 scratchSpace :: IO ()

@@ -7,8 +7,11 @@ module Radar (
   rotateMany,
   orient,
   orientMany,
-  rotateManyInSteps
+  rotateManyInSteps,
+  getEnumLength,
   ) where
+
+import Fmt
 
 class (Bounded a, Enum a, Eq a) => CyclicEnum a where
   csucc :: a -> a
@@ -21,7 +24,7 @@ class (Bounded a, Enum a, Eq a) => CyclicEnum a where
     | x == minBound = maxBound
     | otherwise = pred x
 
-data Direction = North | East | South | West deriving (Eq, Show, Enum, Bounded)
+data Direction = North | East | South | West deriving (Eq, Ord, Read, Show, Enum, Bounded)
 
 instance CyclicEnum Direction
 
@@ -34,7 +37,7 @@ instance Num Direction where
   (*) = enumApplyBinaryOp (*)
 
 
-data Turn = TNone | TRight | TAround | TLeft deriving (Eq, Show, Enum, Bounded)
+data Turn = TNone | TRight | TAround | TLeft deriving (Eq, Ord, Show, Read, Enum, Bounded)
 
 instance Semigroup Turn where
   t1 <> t2 = toEnum $ fromEnum $ t1 + t2
@@ -86,3 +89,19 @@ allDirections = [North ..]
 
 allTurns :: [Turn]
 allTurns = [TNone ..]
+
+instance Buildable Turn where
+  build x = case x of
+            TNone -> build "･･"
+            TLeft -> build "<-"
+            TRight -> build "->"
+            TAround -> build "<>"
+-- →←↑↓↔︎∙
+
+instance Buildable Direction where
+  build x = case x of
+            North -> build "N"
+            East -> build "E"
+            South -> build "S"
+            West -> build "W"
+
