@@ -4,3 +4,7 @@ cradle:
       component: "playground:lib"
     - path: "./"
       component: "playground:exe:main"
+    - path: "./haskellInDepth"
+      component: "playground:exe:hid"
+    - path: "./realWorldHaskell"
+      component: "playground:exe:rwh"

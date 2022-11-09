@@ -8,6 +8,7 @@ MAINSRC=script.hs
 SRC=$(call map,get_source_in_directory,./lib) $(MAINSRC)
 OBJ=$(SRC:.hs=.o)
 COMPONENTMAIN=playground:exe:main
+HIDMAIN=playground:exe:hid
 BIN=main
 
 HELLOSRC=hellomain.hs
@@ -25,6 +26,9 @@ uninstall: ## Uninstall
 compile: ## Compile
 	stack build $(COMPONENTMAIN)
 
+compile-hid: ## Compile hid
+	stack build $(HIDMAIN)
+
 compile-profile: ## Compile with profiler
 	stack build --profile $(COMPONENTMAIN)
 
@@ -39,6 +43,9 @@ run-profile:
 
 runAll: ## Run all tests
 	yes | make run
+
+run-hid: ## Haskell in depth
+	stack exec -- hid
 
 watch: ## Watch for changes
 	watchman watch .

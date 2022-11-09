@@ -25,7 +25,8 @@ dependencies:
 - transformers
 - ghc-prim
 - ghc-bignum
-- random
+- text
+# - fmt
 
 ghc-options:
 - -Wall
@@ -48,6 +49,9 @@ language: GHC2021
 
 library:
   source-dirs: ./lib
+  dependencies:
+  - fmt
+  - random
 
 executables:
   hello:
@@ -67,19 +71,34 @@ executables:
     dependencies:
     - playground
 
+  hid:
+    main:               main.hs
+    source-dirs:        ./haskellInDepth
+    # exposed-modules:
+    other-modules:
+    - Utils
+    - Chapter1
+    - Chapter2
+    - Radar
+    dependencies: 
+    - fmt
+    - bytestring
+
   rwh:
     main:               ./main.hs
-    source-dirs:        ./RealWorldHaskell
+    source-dirs:        ./realWorldHaskell
+    other-modules:
+      - Chapter15
+      - Temp
     dependencies:
     - playground
-    - rwhlib
 
-internal-libraries:
-  rwhlib:
-    source-dirs:      ./RealWorldHaskell/lib
-    exposed-modules:
-    - Temp
-    - Chapter15
+# internal-libraries:
+  # rwhlib:
+  #   source-dirs:      ./RealWorldHaskell/lib
+  #   exposed-modules:
+  #   - Temp
+  #   - Chapter15
 
 tests:
   maintest:

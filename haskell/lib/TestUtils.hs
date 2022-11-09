@@ -1,6 +1,8 @@
 module TestUtils
-  ( 
-  prependLabel,
+  ( prependLabel,
+  prependLabelStr,
+  trace,
+  traceShow,
     assert,
     assertIO,
     assertIsEqual,
@@ -17,17 +19,26 @@ module TestUtils
   )
 where
 
+import Debug.Trace(trace)
 import Control.Monad
+import Control.Monad.Trans.Class
 import Control.Monad.Trans.State
 import Data.Foldable
+import Data.Functor.Identity
 import Data.List (intercalate)
 
 type Message = String
 
 type Name = String
 
+traceShow :: Show a1 => a1 -> a2 -> a2
+traceShow x = trace (show x) 
+
 prependLabel :: Show a => String -> a -> String
-prependLabel label v = label ++ "=" ++ show v
+prependLabel label v = prependLabelStr label (show v)
+
+prependLabelStr :: String -> String -> String
+prependLabelStr label v = label ++ "=" ++ v
 
 assert :: Bool -> ()
 assert cond =
@@ -55,11 +66,12 @@ pauseIO = do
   _ <- getChar
   putStrLn ""
 
-type TestState = State (IO (), [Message]) ()
+type TestState = StateT [Message] (State (IO ())) ()
 
 runTest :: TestState -> IO ()
 runTest tests = do
-  let (io, messages) = execState tests (pure (), [])
+  let inner = runStateT tests []
+      (((), messages), io) = runIdentity $ runStateT inner (pure ())
    in do
         io
         putStrLn $ "tests:" ++ intercalate "," messages
@@ -68,19 +80,20 @@ runTest tests = do
 
 useIO :: IO () -> TestState
 useIO next = do
-  (io, v) <- get
-  put (do io; next, v)
+  io <- lift get
+  lift $ put (do io; next)
 
 createTest :: IO () -> Message -> TestState
 createTest x message = do
-  (io, messages) <- get
+  io <- lift get
   let test = do
         io
         when (null message) (error "Missing name")
         printBanner $ "start:" ++ message
         x
         printBanner $ "end:" ++ message
-   in put (test, messages ++ [message])
+   in lift $ put test
+  modify (++ [message])
 
 wrapTest :: TestState -> Message -> TestState
 wrapTest tests message = do
