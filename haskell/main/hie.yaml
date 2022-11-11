@@ -2,11 +2,7 @@ cradle:
   stack:
     - path: "./lib"
       component: "playground:lib"
-    - path: "./"
+    - path: "./app"
       component: "playground:exe:main"
-    - path: "./haskellInDepth"
-      component: "playground:exe:hid"
-    - path: "./haskellInDepth/test"
-      component: "playground:test:hid-test"
     - path: "./realWorldHaskell"
       component: "playground:exe:rwh"

@@ -33,6 +33,7 @@ allTests =
         Transformer.TestState.testWriteState
         Transformer.TestState.testNestedState
         Transformer.TestState.testCont
+        Transformer.TestState.testContWithIO
         Transformer.TestLabellingTrees.testTreeToNumber
         Transformer.TestMyStateMonad.testStateMonad
         Transformer.TestStateMonadExample.testStateMonad

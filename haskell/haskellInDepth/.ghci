@@ -2,6 +2,9 @@
 :set -XOverloadedString
 :set prompt "ghci> "
 :set editor "nvim"
+:set +m             -- multine
+:set +s             -- time
+:set +t
 
 import Data.Text(Text)
 import Data.Text as T

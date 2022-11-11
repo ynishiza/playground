@@ -1,0 +1,61 @@
+resolver: lts-18.21
+
+# compiler: ghc-9.2.4
+
+packages:
+- .
+
+allow-newer: true
+
+extra-deps:
+  # - Chart-diagrams-1.9.3
+  - blaze-colonnade-1.2.2.1
+  - colonnade-1.2.0.2
+
+  # HLS test
+  # - haskell-language-server-1.7.0.0
+  # - ghcide-1.7.0.0@sha256:bf9895f409db151c08607729a9d395cddb71a00207ca649dd79f4af820fe92c8,14227
+  # - hiedb-0.4.2.0@sha256:26929f3ba26c9074900d1e3f9aaf92ccc0a7574627621154803be00ab303b011,2913
+  # - hls-alternate-number-format-plugin-1.1.0.0@sha256:3593a7ec3c7cd40f8eb8f87001f2e4c54ce5adb281d4559d573fa314c3f22c6f,1797
+  # - hls-brittany-plugin-1.0.2.2@sha256:d5d9e4acb8b35f3aac652d0faba08c14a1fbe82512d1155f6da2254ea48a8fa0,1601
+  # - hls-call-hierarchy-plugin-1.0.3.0@sha256:7e0fd7c80b46cf56d8ab5cf29df26fa89fb47bf5161b2063e3f0bf17896b2b6a,1616
+  # - hls-change-type-signature-plugin-1.0.1.1@sha256:e2445601428f7445f87de57fc04d208619cb5cc3c3b8730e8f33239ce7fe024d,1704
+  # - hls-class-plugin-1.0.3.0@sha256:c27fde605504ba9a6f9da84880723f557fec7cc2e7aa3463116e41ae95586c2c,1531
+  # - hls-eval-plugin-1.2.2.0@sha256:e39ea26de41db29190ab2607dc4d19b80d64c191c2eaca8aa90b5797508034c2,2754
+  # - hls-explicit-imports-plugin-1.1.0.1@sha256:ab4902960812e8c31fd5ebb15707beaa4f590eb5e266795f2defa6393b9c2b4e,1328
+  # - hls-floskell-plugin-1.0.1.2@sha256:d7347b5cb391c93fddf7de79192da287ea68f6eadca8cc9875cff0988fc25815,1361
+  # - hls-fourmolu-plugin-1.0.3.0@sha256:48bcac6ff59fc2bebd2b66fff73e7b42476cc927f633c871efa82313bf5cf2f8,1445
+  # - hls-graph-1.8.0.0@sha256:54697b0ad7cc4d454da92575f52a9f674ba710a5a5c21275be53b46752623939,3110
+  # - hls-haddock-comments-plugin-1.0.1.0@sha256:eb62cd289ac0bab85d0a5a4b40a8cd43b00ac703a17d548d858d03cb848d0237,1610
+  # - hls-hlint-plugin-1.0.4.0@sha256:f9768803a3b36da5ba5f37ef40feebd565d0677ced62052f72263a4102540c65,3707
+  # - hls-module-name-plugin-1.0.2.0@sha256:23af61eabd129f20909c6a57b39c731cca35525987fbcf893af42b2535577400,1246
+  # - hls-ormolu-plugin-1.0.2.2@sha256:78cae3591e18f03ee9c6fd393d9bb3dbb7cd7f3970fa55a32087e9c0a9a8f282,1417
+  # - hls-plugin-api-1.4.0.0@sha256:56fbd997755865a53012ddcfbc0d1a55fb69a1d30e997d473a0a8b84f0b61c57,2282
+  # - hls-pragmas-plugin-1.0.3.0@sha256:3104cbd77b29c6da6c2f5f5f31143c3137c4eaa431422a09be768184f8c97f2f,1354
+  # - hls-qualify-imported-names-plugin-1.0.1.0@sha256:bcb153c012c0a7316b108157a9e3d5af5ee2b0b2279d600d6bee92e750b3b6a9,1502
+  # - hls-refine-imports-plugin-1.0.3.0@sha256:814e35b245f7384b39e6a501cda4232524c01aed8a86dcbbaf8c5a8f3af1b7ee,1360
+  # - hls-rename-plugin-1.0.1.0@sha256:0735646b753b5b6fca1a7c5481923db668a0fdc451faba26a2b7931b0bce096e,1501
+  # - hls-retrie-plugin-1.0.2.2@sha256:32359c383f7703fc1c396882ee8aa0168d8ed9d723896b600e3a5824a2c23989,1183
+  # - hls-selection-range-plugin-1.0.0.0@sha256:db9ecc404b8a4288477aa184b242878363af090ee8aed71df0affcf4c31558da,1365
+  # - hls-splice-plugin-1.0.2.0@sha256:c863a50d6abaeee8f3391d8f230f080139591f922208ea3c1f8aeb40e2bd6332,1696
+  # - hls-stylish-haskell-plugin-1.0.1.1@sha256:9b7de5617d17445aad144ccee485f372a403ede9177690c3300dba71fe60fca8,1251
+  # - hls-tactics-plugin-1.6.2.0@sha256:3690ebaae1fbf8db3d72210dd266d79cb20e0ffdc5f3ec412c434f9296a61ac4,4091
+
+  # - brittany-0.14.0.2@sha256:4b4955fe7e2c5b9700aaaf49461e2395535bb8854a8d53a724b04ac94bf04eac,4656
+  # - floskell-0.10.6@sha256:e77d194189e8540abe2ace2c7cb8efafc747ca35881a2fefcbd2d40a1292e036,3819
+  # - heapsize-0.3.0.1@sha256:0b69aa97a46d819b700ac7b145f3b5493c3565cf2c5b8298682238d405d0326e,1417
+  # - hie-compat-0.2.1.1@sha256:b77011887ffc9ffd57b130a20ed53d6f57208228d121595211569ec523c85387,1634
+  # - hls-refactor-plugin-1.0.0.0@sha256:ef57f66d3403dd8ee94174670e027b98a453bbeef69c398c61de07f4e16574b2,2963
+  # - implicit-hie-cradle-0.5.0.0@sha256:4276f60f3a59bc22df03fd918f73bca9f777de9568f85e3a8be8bd7566234a59,2368
+  # - refinery-0.4.0.0@sha256:fe3a43add8ff1db5cfffee7e7694c86128b1dfe62c541f26e25a8eadf9585610,1663
+  # - retrie-1.2.0.1@sha256:14173900db9f7c3e899ffbafebdb45994fb8bfa0dee84135dd1cdb9a9e24d940,4479
+  # - stm-containers-1.2@sha256:a887f2e7692b7cf20e0b081e2d66e21076e2bd4b57016ec59c484edfa2d29397,3244
+  # - stylish-haskell-0.14.3.0@sha256:9d8862448d6ea424d79b397202044e6ef8a824910df91e3fb25b360234c2c811,4363
+
+  # - data-tree-print-0.1.0.2@sha256:5e4075f56ef64e1d63672278c0c86384f9edf15d2a8a2b85f83fe907f85f4448,1620
+  # - implicit-hie-0.1.3.0@sha256:86ab5aff3c3d29c484097c6b8b37eac9b45b7365450430c51912047fa4f621e0,3111
+  # - monad-dijkstra-0.1.1.3@sha256:d2fc098d7c122555e726830a12ae0423ac187f89de9228f32e56e2f6fc2238e1,1900
+  # - stm-hamt-1.2.0.8@sha256:479907a31ed74ecb29ad1a95138632c065b3fef0736234514e0d912975a79fc5,3978
+  # - text-rope-0.2@sha256:53b9b4cef0b278b9c591cd4ca76543acacf64c9d1bfbc06d0d9a88960446d9a7,2087
+
+  # - Cabal-syntax-3.8.1.0@sha256:4936765e9a7a8ecbf8fdbe9067f6d972bc0299220063abb2632a9950af64b966,7619

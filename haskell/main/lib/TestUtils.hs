@@ -1,8 +1,8 @@
 module TestUtils
   ( prependLabel,
-  prependLabelStr,
-  trace,
-  traceShow,
+    prependLabelStr,
+    trace,
+    traceShow,
     assert,
     assertIO,
     assertIsEqual,
@@ -19,20 +19,20 @@ module TestUtils
   )
 where
 
-import Debug.Trace(trace)
 import Control.Monad
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.State
 import Data.Foldable
 import Data.Functor.Identity
 import Data.List (intercalate)
+import Debug.Trace (trace)
 
 type Message = String
 
 type Name = String
 
 traceShow :: Show a1 => a1 -> a2 -> a2
-traceShow x = trace (show x) 
+traceShow x = trace (show x)
 
 prependLabel :: Show a => String -> a -> String
 prependLabel label v = prependLabelStr label (show v)

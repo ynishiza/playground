@@ -5,6 +5,7 @@
 module TestReadShow
   ( testComplexReadShow,
     unittestEquationReadShow,
+    testBasicShow,
     allTests,
   )
 where
@@ -13,6 +14,8 @@ where
 import Control.Arrow (first)
 import Data.Foldable
 import Data.List (singleton)
+import qualified Data.Text as T
+import qualified TextShow as TS
 import TestUtils
 
 data MyBTree a = MyNode (MyBTree a) (MyBTree a) | MyLeaf a
@@ -35,6 +38,15 @@ instance Show a => Show (MyBTree a) where
       leafLabel = showString "Leaf "
       delim = showString " "
 
+instance TS.TextShow a => TS.TextShow (MyBTree a) where
+  showbPrec d tree
+    | (MyLeaf x) <- tree = TS.showbParen (d > 0) $ leafLabel <> TS.showbPrec 11 x
+    | (MyNode left right) <- tree =
+        TS.showbParen True $ TS.showbPrec (d + 1) left <> delim <> TS.showbPrec (d + 1) right
+    where
+      leafLabel = TS.fromString "Leaf "
+      delim = TS.fromString " "
+
 data Equation a = Sum (Equation a) (Equation a) | Product (Equation a) (Equation a) | Term a
 
 instance Show a => Eq (Equation a) where
@@ -49,6 +61,16 @@ instance Show a => Show (Equation a) where
       showOperator p symbol eq1 eq2 =
         -- add parenthesis if operator has higher precedence
         showParen (d > p) $ showsPrec p eq1 . showString symbol . showsPrec p eq2
+
+instance TS.TextShow a => TS.TextShow (Equation a) where
+  showbPrec d (Term x) = TS.showbPrec d x
+  showbPrec d eq
+    | (Sum eq1 eq2) <- eq = showOperator 0 "+" eq1 eq2 -- sum has lowest precedence
+    | (Product eq1 eq2) <- eq = showOperator 1 "*" eq1 eq2 -- product has high precedence
+    where
+      showOperator p symbol eq1 eq2 =
+        -- add parenthesis if operator has higher precedence
+        TS.showbParen (d > p) $ TS.showbPrec p eq1 <> TS.fromString symbol <> TS.showbPrec p eq2
 
 type ReadsPrec a = Int -> ReadS a
 
@@ -122,8 +144,8 @@ instance Read a => Read (Equation a) where
       applyOperation op eq1 eq2 | op == "+" = Sum eq1 eq2 | otherwise = Product eq1 eq2
       getOperationPrecedence op | op == "+" = 0 | otherwise = 1
 
-normalizeEquation :: (Read a, Show a) => Equation a -> Equation a
-normalizeEquation = read . show
+-- normalizeEquation :: (Read a, Show a) => Equation a -> Equation a
+-- normalizeEquation = read . show
 
 unittestEquationReadShow :: TestState
 unittestEquationReadShow =
@@ -158,10 +180,23 @@ unittestEquationReadShow =
               ]
 
         printBanner "Show test"
+        pauseIO
         traverse_
           ( \(eq, strEq, _) -> do
               let showEq = show eq
               assertIsEqual strEq showEq
+              print $ "Pass " ++ strEq
+          )
+          testSet
+
+        printBanner "TextShow test"
+        pauseIO
+        traverse_
+          ( \(eq, strEq, _) -> do
+              let 
+                showEq = TS.showt eq
+                textEq = T.pack strEq
+              assertIsEqual textEq showEq
               print $ "Pass " ++ strEq
           )
           testSet
@@ -179,6 +214,7 @@ unittestEquationReadShow =
               testSet
 
         printBanner "Read rules"
+        pauseIO
         traverse_ (\(eq, expected) -> do
                   let parsed = eqParser eq
                   assertIsEqual parsed expected
@@ -200,6 +236,7 @@ unittestEquationReadShow =
                   ("1+1)", [(Sum n1 n1, ")")])
                   ]
         printBanner "All tests passed"
+        pauseIO
     )
     "unittestEquationReadShow"
 
@@ -212,6 +249,7 @@ testBasicShow =
             show3 = showsPrec 11 3
             showL = showList [1 .. 10]
 
+            tree0 :: MyBTree Int
             tree0 = MyNode (MyNode (MyLeaf 1) (MyLeaf 2)) (MyLeaf 3)
 
         print $ show1 "a" ++ "b"
@@ -225,6 +263,13 @@ testBasicShow =
         print $ showsPrec 0 (MyLeaf 1) ""
         print $ showsPrec 0 tree0 ""
         print $ showsPrec 0 tree0 ""
+
+        print $ TS.toText $ TS.showbPrec 0 (MyLeaf (1::Int))
+        print $ TS.toText $ TS.showbPrec 0 (MyLeaf $ Just (1::Int)) 
+        print $ TS.toText $ TS.showbPrec 1 (MyLeaf (1::Int)) 
+        print $ TS.toText $ TS.showbPrec 0 (MyLeaf (1::Int)) 
+        print $ TS.toText $ TS.showbPrec 0 tree0 
+        print $ TS.toText $ TS.showbPrec 0 tree0 
     )
     "testShow"
 

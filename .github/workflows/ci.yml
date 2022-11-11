@@ -86,18 +86,31 @@ jobs:
           ghc-version: '9.0.1' # Resolves to the latest point release of GHC 8.8
           cabal-version: '3.8' # Exact version of Cabal
 
-      - name: Install
-        working-directory: ${{ github.workspace }}/haskell
+      - name: Install main
+        working-directory: ${{ github.workspace }}/haskell/main
         run: make install
 
       - name: Run hello
-        working-directory: ${{ github.workspace }}/haskell
+        working-directory: ${{ github.workspace }}/haskell/main
         run: make hello
 
-      - name: Run test
-        working-directory: ${{ github.workspace }}/haskell
+      - name: Run main test
+        working-directory: ${{ github.workspace }}/haskell/main
         run: make runAll
 
-      - name: Cleanup
-        working-directory: ${{ github.workspace }}/haskell
+      - name: Cleanup main
+        working-directory: ${{ github.workspace }}/haskell/main
+        run: make clean
+
+      # Haskell In Depth
+      - name: Install HID
+        working-directory: ${{ github.workspace }}/haskell/haskellInDepth
+        run: make install
+
+      - name: Run test HID
+        working-directory: ${{ github.workspace }}/haskell/haskellInDepth
+        run: make run
+
+      - name: Cleanup HID
+        working-directory: ${{ github.workspace }}/haskell/haskellInDepth
         run: make clean

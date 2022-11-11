@@ -26,6 +26,7 @@ dependencies:
 - ghc-prim
 - ghc-bignum
 - text
+- text-show
 - fmt
 
 ghc-options:
@@ -41,6 +42,7 @@ ghc-options:
 - -Wpartial-fields
 - -Wredundant-constraints
 - -Wno-type-defaults
+- -haddock
 
 default-extensions:
 - RecursiveDo 
@@ -70,18 +72,6 @@ executables:
     dependencies:
     - playground
 
-  hid:
-    main:               main.hs
-    source-dirs:        ./haskellInDepth
-    # exposed-modules:
-    other-modules:
-    - Utils
-    - Chapter1
-    - Chapter2
-    - Radar
-    dependencies: 
-    - bytestring
-
   rwh:
     main:               ./main.hs
     source-dirs:        ./realWorldHaskell
@@ -90,16 +80,6 @@ executables:
       - Temp
     dependencies:
     - playground
-
-internal-libraries:
-  hid-lib:
-    source-dirs: ./haskellInDepth
-    exposed-modules:
-      - Utils
-      - Chapter1
-      - Chapter2
-      - Radar
-    dependencies: []
 
 tests:
   maintest:
@@ -112,11 +92,3 @@ tests:
     # - -fprof-auto
     dependencies:
     - playground
-
-  hid-test:
-    main:               main.hs
-    source-dirs:      ./haskellInDepth/test
-    dependencies: 
-    - random
-    - hid-lib
-

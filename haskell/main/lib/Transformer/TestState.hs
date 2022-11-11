@@ -1,12 +1,15 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Use const" #-}
+
 module Transformer.TestState
   ( testStateWithAndWithoutMonads,
     testReadState,
     testNestedState,
     testWriteState,
     testCont,
+    testContWithIO,
   )
 where
 
@@ -17,6 +20,8 @@ import Control.Monad.Trans.Reader
 import Control.Monad.Trans.State.Lazy
 import Control.Monad.Trans.Writer.Lazy
 import Data.Char
+import Data.Foldable
+import Fmt
 import TestUtils
 
 data User = User {name :: String, count :: Int} deriving (Show, Eq)
@@ -117,6 +122,61 @@ testCont =
         testDone
     )
     "testCont"
+
+type ContResult = StateT [Int] IO
+
+type IOCont r = ContT r ContResult
+
+testContWithIO :: TestState
+testContWithIO =
+  createTest
+    ( do
+        let cmult :: Int -> Int -> IOCont r Int
+            cmult x y = do
+              let result = x * y
+              lift
+                ( do
+                    modify (result :)
+                    lift $ putStrLn $ fmtLn "x" +| x |+ " y=" +| y |+ " result=" +| result |+ ""
+                    return result
+                )
+
+            crequireLt :: Int -> IOCont r Int -> IOCont r Int
+            crequireLt upper inner =
+              callCC
+                ( \k -> do
+                    x <- inner
+                    let resetValue = 0
+                        resetState = do
+                          modify (resetValue :)
+                          lift $ fmtLn $ x |+ ">" +| upper |+ "  reset=" +| resetValue |+ ""
+                          return ()
+
+                    if x > upper
+                      then do
+                          lift resetState
+                          k resetValue
+                      else return x
+                )
+
+            cSomeComputation n = do
+              r1 <- cmult n n
+              r2 <- cmult n r1
+              r3 <- cmult r1 r2
+              crequireLt 1000 $ cmult r2 r3
+
+            runComputeWith :: IOCont Int Int -> IO ()
+            runComputeWith c = do
+              let st = runContT c return
+                  res = runStateT st []
+              do
+                (computeRes, computeHistory) <- res
+                fmtLn $ "computeRes=" +| computeRes |+ "  state=" +| computeHistory |+ ""
+
+        traverse_ (runComputeWith . cSomeComputation) [1 .. 10]
+        testDone
+    )
+    "testContWithIO"
 
 testStateWithAndWithoutMonads :: TestState
 testStateWithAndWithoutMonads =

@@ -2,15 +2,13 @@ SHELL=/usr/bin/env bash
 map=$(foreach value,$(2),$(call $(1),$(value)))
 get_source_in_directory=$(wildcard $(value)/*.hs)
 
-COMPILER=ghc
-EXEC=runhaskell
-MAINSRC=script.hs
-SRC=$(call map,get_source_in_directory,./lib) $(MAINSRC)
+SRC=$(call map,get_source_in_directory,./app ./app/** ./lib ./lib/**) 
 OBJ=$(SRC:.hs=.o)
 
-COMPONENTMAIN=playground:exe:main
-HIDMAIN=playground:exe:hid
-HIDTEST=playground:test:hid-test
+PROJECT=playground
+COMPONENTMAIN=$(PROJECT):exe:main
+HIDMAIN=$(PROJECT):exe:hid
+HIDTEST=$(PROJECT):test:hid-test
 BIN=main
 
 HELLOSRC=hellomain.hs
@@ -45,30 +43,9 @@ run-profile:
 
 runAll: ## Run all tests
 	yes | make run
-	make run-hid
-
-run-hid: ## Haskell in depth
-	@echo "Chapter 1"
-	@echo 1 | stack exec -- hid ./haskellInDepth/data/hamlet.txt 20
-	@echo 1 | stack exec -- hid ./haskellInDepth/data/forsyte.txt 20
-
-	@echo "Chapter 2"
-	@echo 2 | stack exec -- hid -r ./haskellInDepth/data/rotations1.txt North
-	@echo 2 | stack exec -- hid -o ./haskellInDepth/data/directions1.txt 
-
-	@echo "Tests"
-	@stack test -- $(HIDTEST)
-
-watch: ## Watch for changes
-	watchman watch .
-	watchman -- trigger . build "*.hs" "lib/*.hs" -- make compile
-
-unwatch: ## Clear watch
-	watchman watch-del .
 
 debug: ## Print variables
 	@echo SHELL=$(SHELL)
-	@echo MAINSRC=$(MAINSRC)
 	@echo SRC=$(SRC)
 	@echo OBJ=$(OBJ)
 	@echo HELLOBIN=$(HELLOBIN)
