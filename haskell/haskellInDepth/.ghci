@@ -1,4 +1,3 @@
-:set -XGHC2021
 :set -XOverloadedString
 :set prompt "ghci> "
 :set editor "nvim"
@@ -7,9 +6,8 @@
 :set +t
 
 import Data.Text(Text)
-import Data.Text as T
+import qualified Data.Text as T
 import Data.Maybe
-import Data.List
 import Data.Foldable
 import Data.Traversable
 import Control.Applicative

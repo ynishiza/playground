@@ -3,6 +3,7 @@ module TestUtils
     prependLabelStr,
     trace,
     traceShow,
+    traceShowId,
     assert,
     assertIO,
     assertIsEqual,
@@ -33,6 +34,9 @@ type Name = String
 
 traceShow :: Show a1 => a1 -> a2 -> a2
 traceShow x = trace (show x)
+
+traceShowId :: Show a1 => a1 -> a1
+traceShowId x = trace (show x) x
 
 prependLabel :: Show a => String -> a -> String
 prependLabel label v = prependLabelStr label (show v)

@@ -114,6 +114,7 @@ executable stockquotes
     , text
     , time >=1.8 && <1.12
     , transformers
+    , vector
   default-language: Haskell2010
 
 test-suite main-test

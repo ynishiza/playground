@@ -45,8 +45,9 @@ main = do
             -- LT.testTreeToNumber
             -- Transformer.TestBase.testStateWithAndWithoutMonads
             -- Transformer.TestState.testWriteState
-            Transformer.TestState.testCont
-            Transformer.TestState.testContWithIO
+            -- Transformer.TestState.testCont
+            -- Transformer.TestState.testContWithIO
+            Transformer.TestState.testDelimitedCont
             -- Transformer.TestState.testNestedState
             -- TestTypeClass.testDerivedInstance
             -- TestModuleMtl.testMyIOState

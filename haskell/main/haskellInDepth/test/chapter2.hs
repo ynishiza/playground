@@ -1,2 +1,0 @@
-runTest = do
-  putStrLn ""

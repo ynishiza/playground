@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
 {-# HLINT ignore "Use const" #-}
+{-# HLINT ignore "Use tuple-section" #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module Transformer.TestState
   ( testStateWithAndWithoutMonads,
@@ -10,6 +11,7 @@ module Transformer.TestState
     testWriteState,
     testCont,
     testContWithIO,
+    testDelimitedCont,
   )
 where
 
@@ -46,11 +48,9 @@ testCont =
               traceShow x (pure ())
               traceShow y (pure ())
               return (x, y)
-            -- return $ x + y
+         in -- return $ x + y
             --
-
-            reset0 = reset (return 0)
-         in do
+            do
               runCont cTask print
         -- runCont reset0 $ \x -> print $ 10 + x
 
@@ -95,9 +95,8 @@ testCont =
         let f1 x = x + x
             f2 x = x * x
             f3 x = x - 1
-            f4 x = (-x)
-            c1 :: Cont r Int
-            c1 = return 10
+            c0 :: Cont r Int
+            c0 = return 10
             k1 n = return $ trace (show n) (f1 n)
             k2 n = return $ trace (show n) (f2 n)
             k3 n = return $ trace (show n) (f3 n)
@@ -111,11 +110,11 @@ testCont =
               x2 <- k2 x1
               k3 x2
 
-            finalize x = "result:" ++ (show x)
+            finalize x = "result:" ++ show x
          in do
-              putStrLn $ runCont (comb c1) finalize
-              putStrLn $ runCont (comb2 c1) finalize
-              putStrLn $ runCont (comb3 c1) finalize
+              putStrLn $ runCont (comb c0) finalize
+              putStrLn $ runCont (comb2 c0) finalize
+              putStrLn $ runCont (comb3 c0) finalize
               putStrLn $ runCont (comb3 $ return 100) finalize
               putStrLn $ runCont (comb3 $ return 100) finalize
         -- putStrLn $ runCont (c1 >>= return.f1 >>= return.f2) show
@@ -154,8 +153,8 @@ testContWithIO =
 
                     if x > upper
                       then do
-                          lift resetState
-                          k resetValue
+                        lift resetState
+                        k resetValue
                       else return x
                 )
 
@@ -177,6 +176,84 @@ testContWithIO =
         testDone
     )
     "testContWithIO"
+
+instance (Show a, Show b) => Buildable (a, b) where
+  build = build . show
+
+testDelimitedCont :: TestState
+testDelimitedCont =
+  createTest
+    ( do
+        let reset0 :: Cont r Int
+            reset0 = reset $ return 0
+            reset1 :: Cont r Int
+            reset1 = reset $ do
+              shift (\f -> return $ f 1)
+            reset2 :: Cont r Int
+            reset2 = reset $ do
+              x <- shift (\f -> return $ f 1)
+              return $ 2 * x
+            reset3 :: Cont r Int
+            reset3 = reset $ do
+              x <- shift (\f -> return $ f $ f 1)
+              return $ 2 * x
+
+            binarySequences :: Int -> Cont r [[Int]]
+            binarySequences n = reset $ do
+              x <-
+                shift $
+                  return . foldr ($) [[1], [0]] . replicate n
+              return $ do
+                a <- x
+                [a, 0 : a, 1 : a]
+
+            reset5 :: Cont r Int
+            reset5 = reset $ do
+              x <- shift (\ret -> return $ ret $ ret $ ret 1)
+              return $ x * 10
+            reset5raw :: Cont r Int
+            reset5raw = reset $ do
+              x <- cont (\ret -> ret $ ret $ ret 1)
+              return $ x * 10
+            reset5T :: ContT r Maybe Int
+            reset5T = resetT $ do
+              x <- shiftT (\ret -> lift $ Just 1 >>= ret >>= ret >>= ret)
+              lift $ Just (x * 10)
+            reset5TRaw :: ContT r Maybe Int
+            reset5TRaw = resetT $ do
+              x <- callN
+              lift $ Just (x * 10)
+              where
+                callN = ContT (\ret -> Just 1 >>= ret >>= ret >>= ret)
+
+            useReset c = do
+              x <- c
+              return $ x * 2
+
+            runReset :: Buildable a => Cont (IO ()) a -> IO ()
+            runReset r = runCont r (fmtLn . build)
+            runResetMany :: Buildable a => [Cont (IO ()) a] -> IO ()
+            runResetMany = traverse_ runReset
+         in do
+              runResetMany $
+                fmap binarySequences [0 .. 4]
+              runResetMany
+                [ reset0,
+                  reset1,
+                  reset2,
+                  reset3
+                ]
+              runResetMany
+                [ reset5,
+                  useReset reset5,
+                  reset5raw,
+                  useReset reset5raw
+                ]
+              print $ runContT reset5T return
+              print $ runContT reset5TRaw return
+        testDone
+    )
+    "testDelimitedCont"
 
 testStateWithAndWithoutMonads :: TestState
 testStateWithAndWithoutMonads =
@@ -270,7 +347,7 @@ testWriteState =
               tell "hello"
               tell "world"
 
-              m <- listen (return ())
+              _ <- listen (return ())
               return 1
 
             wToUpper :: Writer String a -> Writer String a
