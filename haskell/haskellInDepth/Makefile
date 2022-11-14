@@ -23,19 +23,21 @@ uninstall: ## Uninstall
 	stack purge
 
 compile: ## Compile
-	stack build $(MAINEXE)
+	stack build 
 
 compile-profile: ## Compile with profiler
 	stack build --profile $(MAINEXE)
 
 run:  ## Run test
 	@echo "Chapter 1"
-	@echo 1 | stack exec -- $(MAINEXE_NAME) ./app/data/hamlet.txt 20
-	@echo 1 | stack exec -- $(MAINEXE_NAME) ./app/data/forsyte.txt 20
+	@echo 1 | stack exec -- $(MAINEXE_NAME) ./src/data/hamlet.txt 20
+	@echo 1 | stack exec -- $(MAINEXE_NAME) ./src/data/forsyte.txt 20
 
 	@echo "Chapter 2"
-	@echo 2 | stack exec -- $(MAINEXE_NAME) -r ./app/data/rotations1.txt North
-	@echo 2 | stack exec -- $(MAINEXE_NAME) -o ./app/data/directions1.txt 
+	@echo 2 | stack exec -- $(MAINEXE_NAME) -r ./src/data/rotations1.txt North
+	@echo 2 | stack exec -- $(MAINEXE_NAME) -o ./src/data/directions1.txt 
+
+	@echo 2 | stack exec -- stockquotes ./src/data/quotes.csv --company "My Company" -H "./stockreport.html"
 
 	@echo "Tests"
 	@stack test -- $(MAINTEST)

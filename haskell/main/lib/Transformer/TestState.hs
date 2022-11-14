@@ -45,9 +45,7 @@ testCont =
             cTask = do
               x <- cfact 5
               y <- cmult x 2
-              traceShow x (pure ())
-              traceShow y (pure ())
-              return (x, y)
+              return $ traceShowId "pair" (x, y)
          in -- return $ x + y
             --
             do
@@ -97,9 +95,9 @@ testCont =
             f3 x = x - 1
             c0 :: Cont r Int
             c0 = return 10
-            k1 n = return $ trace (show n) (f1 n)
-            k2 n = return $ trace (show n) (f2 n)
-            k3 n = return $ trace (show n) (f3 n)
+            k1 n = return $ traceShowId "f1 n" (f1 n)
+            k2 n = return $ traceShowId "f2 n" (f2 n)
+            k3 n = return $ traceShowId "f3 n" (f3 n)
             chainCont :: Cont r a -> (a -> Cont r b) -> Cont r b
             chainCont c1 c2 = cont (\ret -> runCont c1 (\x -> runCont (c2 x) ret))
             comb c = c `chainCont` k1 `chainCont` k2 `chainCont` k3
@@ -226,12 +224,37 @@ testDelimitedCont =
               where
                 callN = ContT (\ret -> Just 1 >>= ret >>= ret >>= ret)
 
+            f1 :: Int -> Cont r Int
+            f1 x = reset $ do
+              x' <- shift (\ret -> return $ ret $ ret x)
+              return $ 2 * x' + 1
+            f1Delimit x = do
+              y <- reset $ do
+                x' <- shift (\ret -> return $ ret $ ret x)
+                return $ 2 * x'
+              return $ y + 1
+
+            gyield :: Functor f => f a -> (f r -> r) -> Cont r a
+            gyield list handleResult =
+              shift
+                ( \ret -> do
+                    let x = ret <$> list
+                     in return $ handleResult x
+                )
+
+            generatorTask :: [Int] -> Cont r Int
+            generatorTask list = do
+              res <- reset $ do
+                x <- gyield list sum
+                return $ traceShowId "gen" $ 10 * x
+              return $ res + 1
+
             useReset c = do
               x <- c
               return $ x * 2
 
             runReset :: Buildable a => Cont (IO ()) a -> IO ()
-            runReset r = runCont r (fmtLn . build)
+            runReset r = runCont r (fmtLn . ("result:" +|) . build)
             runResetMany :: Buildable a => [Cont (IO ()) a] -> IO ()
             runResetMany = traverse_ runReset
          in do
@@ -243,6 +266,8 @@ testDelimitedCont =
                   reset2,
                   reset3
                 ]
+
+              printBanner "Shift + reset"
               runResetMany
                 [ reset5,
                   useReset reset5,
@@ -251,6 +276,15 @@ testDelimitedCont =
                 ]
               print $ runContT reset5T return
               print $ runContT reset5TRaw return
+              runResetMany
+                [ f1 1,
+                  f1 2,
+                  f1Delimit 1,
+                  f1Delimit 2
+                ]
+
+              printBanner "Generator"
+              runReset $ generatorTask [1 .. 10]
         testDone
     )
     "testDelimitedCont"

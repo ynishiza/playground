@@ -8,9 +8,25 @@ packages:
 allow-newer: true
 
 extra-deps:
-  # - Chart-diagrams-1.9.3
   - blaze-colonnade-1.2.2.1
   - colonnade-1.2.0.2
+
+  # For charts
+  - Chart-diagrams-1.9.3
+  - diagrams-core-1.5.0
+  - diagrams-lib-1.4.5.1
+  - diagrams-postscript-1.5
+  - diagrams-svg-1.4.3.1
+  - svg-builder-0.1.1
+  - SVGFonts-1.7.0.1
+  - active-0.2.0.15
+  - dual-tree-0.2.3.0
+  - monoid-extras-0.6.1
+  - statestack-0.3
+
+  - Chart-cairo-1.9.3
+  - cairo-0.13.8.2
+  - gtk2hs-buildtools-0.13.8.3
 
   # HLS test
   # - haskell-language-server-1.7.0.0

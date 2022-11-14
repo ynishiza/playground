@@ -4,6 +4,7 @@ module Utils (
   promptRun,
   trace,
   traceShow,
+  traceShowId,
   assertIsEqual,
   assertIsEqualSilent,
   printBanner,
@@ -17,6 +18,9 @@ import Fmt
 
 traceShow :: Show a1 => a1 -> a2 -> a2
 traceShow x = trace (show x) 
+
+traceShowId :: Show a1 => String -> a1 -> a1
+traceShowId label x = trace (label|+" "+||x||+"") x
 
 promptRun :: T.Text -> IO () -> IO Bool
 promptRun message action = do

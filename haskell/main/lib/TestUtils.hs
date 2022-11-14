@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module TestUtils
   ( prependLabel,
     prependLabelStr,
@@ -27,6 +28,7 @@ import Data.Foldable
 import Data.Functor.Identity
 import Data.List (intercalate)
 import Debug.Trace (trace)
+import Fmt
 
 type Message = String
 
@@ -35,8 +37,8 @@ type Name = String
 traceShow :: Show a1 => a1 -> a2 -> a2
 traceShow x = trace (show x)
 
-traceShowId :: Show a1 => a1 -> a1
-traceShowId x = trace (show x) x
+traceShowId :: Show a1 => String -> a1 -> a1
+traceShowId label x = trace (label|+" "+||x||+"") x
 
 prependLabel :: Show a => String -> a -> String
 prependLabel label v = prependLabelStr label (show v)

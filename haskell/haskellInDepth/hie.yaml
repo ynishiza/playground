@@ -1,10 +1,12 @@
 cradle:
   stack:
-    - path: "./app/"
+    - path: "./lib/"
+      component: haskellInDepth:lib
+    - path: "./src/main"
       component: haskellInDepth:exe:main
-    - path: "./app/stockquotes"
+    - path: "./src/stockquotes"
       component: haskellInDepth:exe:stockquotes
-    - path: "./test"
+    - path: "./test/main"
       component: haskellInDepth:test:main-test
-    - path: "./app"
+    - path: "./src/main"
       component: haskellInDepth:lib
