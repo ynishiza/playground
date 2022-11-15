@@ -2,7 +2,7 @@
 
 module Params
   ( parseParams,
-    Params (filename, company, includeChart, htmlFilename, silent, Params),
+    Params (dataFilepath, company, includeChart, htmlFilepath, silent, Params),
   )
 where
 
@@ -10,10 +10,10 @@ import qualified Data.Text as T
 import Options.Applicative
 
 data Params = Params
-  { filename :: !FilePath,
+  { dataFilepath :: !FilePath,
     company :: !(Maybe T.Text),
     includeChart :: !Bool,
-    htmlFilename :: !(Maybe FilePath),
+    htmlFilepath :: !(Maybe FilePath),
     silent :: !Bool
   }
   deriving (Show, Eq)
@@ -22,7 +22,7 @@ parser :: Parser Params
 parser =
   Params
     <$> strArgument (metavar "FILE" <> help "CSV file")
-    <*> optional (option str (metavar "NAME" <> long "company" <> help "Company name"))
+    <*> optional (option str (metavar "NAME" <> long "name" <> short 'n' <> help "Company name"))
     <*> switch (short 'c' <> long "chart" <> help "Include chart")
     <*> optional (option str (metavar "FILE" <> short 'H' <> long "html" <> help "Include html"))
     <*> switch (short 's' <> long "silent" <> help "")
@@ -33,4 +33,4 @@ parseParams = execParser parserInfo
     parserInfo =
       info
         (parser <**> helper)
-        (fullDesc <> progDesc "")
+        (fullDesc <> progDesc "Compute stock quote stats")

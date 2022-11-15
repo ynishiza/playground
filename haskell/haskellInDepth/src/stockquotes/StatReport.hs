@@ -1,9 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module StatReport
-  ( 
-  QuoteFieldStats(field, mean, maxValue, minValue, daysBetweenMinMax),
-  QuoteFieldStatValue,
+  ( QuoteFieldStats (field, mean, maxValue, minValue, daysBetweenMinMax),
+    QuoteFieldStatValue,
     quoteStatsToText,
     computeQuoteStats,
   )
@@ -20,9 +19,9 @@ import QuoteData
 type QuoteFieldSelect a = QuoteData -> a
 
 data QuoteFieldStatValue a = QuoteFieldStatValue
-       { decimalPlaces :: !Int,
-         value :: !a
-       }
+  { decimalPlaces :: !Int,
+    value :: !a
+  }
   deriving (Show, Read, Eq, Ord)
 
 data QuoteFieldStats a = QuoteFieldStats

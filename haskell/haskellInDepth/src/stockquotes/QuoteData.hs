@@ -37,6 +37,5 @@ deriving instance FromRecord QuoteData
 
 deriving instance FromNamedRecord QuoteData
 
-
 barDelim :: DecodeOptions
 barDelim = DecodeOptions $ fromIntegral (ord '|')

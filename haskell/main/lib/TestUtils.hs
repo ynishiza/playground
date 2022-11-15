@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+
 module TestUtils
   ( prependLabel,
     prependLabelStr,
@@ -38,7 +39,7 @@ traceShow :: Show a1 => a1 -> a2 -> a2
 traceShow x = trace (show x)
 
 traceShowId :: Show a1 => String -> a1 -> a1
-traceShowId label x = trace (label|+" "+||x||+"") x
+traceShowId label x = trace (label |+ " " +|| x ||+ "") x
 
 prependLabel :: Show a => String -> a -> String
 prependLabel label v = prependLabelStr label (show v)
@@ -57,8 +58,8 @@ assertIO cond message = do
 
 assertIsEqual :: (Eq a, Show a) => a -> a -> IO ()
 assertIsEqual x y = do
-  unless (x == y) $ error $ "assertIsEqual:" ++ show x ++ "!=" ++ show y
-  putStrLn $ "assertIsEqual:" ++ show x ++ "==" ++ show y
+  unless (x == y) $ error $ fmtLn $ "assertIsEqual:" +|| x ||+ " != " +|| y ||+ ""
+  fmtLn $ "assertIsEqual:" +|| x ||+ " == " +|| y ||+ ""
 
 testDone :: IO ()
 testDone = return ()
@@ -85,20 +86,17 @@ runTest tests = do
         pauseIO
 
 useIO :: IO () -> TestState
-useIO next = do
-  io <- lift get
-  lift $ put (do io; next)
+useIO next = lift $ modify (>> next)
 
 createTest :: IO () -> Message -> TestState
 createTest x message = do
-  io <- lift get
-  let test = do
-        io
+  useIO
+    ( do
         when (null message) (error "Missing name")
         printBanner $ "start:" ++ message
         x
         printBanner $ "end:" ++ message
-   in lift $ put test
+    )
   modify (++ [message])
 
 wrapTest :: TestState -> Message -> TestState

@@ -1,5 +1,4 @@
 -- import Mtl.TestBase qualified
-import TestReadShow qualified
 -- import qualified TestMonad
 -- import qualified TestModuleTransformer
 -- import qualified TestModuleMtl
@@ -7,15 +6,22 @@ import TestReadShow qualified
 -- import qualified TestStateMonadExample
 -- import qualified TestTypeClass
 {-# OPTIONS_GHC -Wno-unused-local-binds #-}
+{-# LANGUAGE OverloadedStrings #-} 
 
+-- import Control.Applicative
 import Control.Monad
-import Control.Applicative
+import Data.Foldable
 -- import Control.Monad.Trans.Class
-import Control.Monad.Trans.Cont
-import Control.Monad.Trans.State
+-- import Control.Monad.Trans.Cont
+-- import Control.Monad.Trans.State
+import Fmt
+-- import Modules.TestOptparseApplicative qualified
 import TestBase qualified
+import TestMyOptParse qualified
+-- import TestMyOptParse2 qualified
+-- import TestReadShow qualified
 import TestUtils
-import Transformer.TestState qualified
+-- import Transformer.TestState qualified
 
 -- import Transformer.TestLabellingTrees qualified as LT
 
@@ -38,6 +44,9 @@ main = do
     else
       runTest
         ( do
+            TestMyOptParse.runAll
+            -- TestMyOptParse2.runAll
+            -- Modules.TestOptparseApplicative.test
             -- TestReadShow.unittestEquationReadShow
             -- TestReadShow.testBasicShow
             -- TestModuleMtl.testBinarySequenceState
@@ -45,9 +54,9 @@ main = do
             -- LT.testTreeToNumber
             -- Transformer.TestBase.testStateWithAndWithoutMonads
             -- Transformer.TestState.testWriteState
-            Transformer.TestState.testCont
-            Transformer.TestState.testContWithIO
-            Transformer.TestState.testDelimitedCont
+            -- Transformer.TestState.testCont
+            -- Transformer.TestState.testContWithIO
+            -- Transformer.TestState.testDelimitedCont
             -- Transformer.TestState.testNestedState
             -- TestTypeClass.testDerivedInstance
             -- TestModuleMtl.testMyIOState
@@ -59,24 +68,18 @@ main = do
 
 scratchSpace :: IO ()
 scratchSpace = do
-  let
-    (>>==) :: [a] -> (a -> [b]) -> [b]
-    l1 >>== k 
-      | (x:xs) <- l1 = foldr (:) (xs >>== k) (k x)
-      | otherwise = []
+  let (>>==) :: [a] -> (a -> [b]) -> [b]
+      l1 >>== k
+        | (x : xs) <- l1 = foldr (:) (xs >>== k) (k x)
+        | otherwise = []
+   in print $ [1 .. 10] >>== (\x -> [x, 10 * x]) >>== \x -> replicate 2 x
 
-  print $ [1..10] >>== (\x -> [x,10 * x]) >>== \x -> replicate 2 x
-
-  let 
-    f :: Int -> Cont r Int
-    f n = do
-      unless (even n) $ return ()
-      return n
-
-    g :: Int -> Cont r Int
-    g n = callCC (\exit -> do
-      unless (even n) $ exit (-1)
-      return n
-                 )
+  let f x = do
+        when (x `mod` 2 == 0) Nothing
+        when (x `mod` 3 == 0) Nothing
+        when (x `mod` 5 == 0) Nothing
+        return x
+   in do
+      traverse_ (\x -> f x||+" ") [1..30]
 
   putStrLn "Scratch"

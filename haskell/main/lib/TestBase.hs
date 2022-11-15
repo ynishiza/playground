@@ -21,6 +21,7 @@ import Data.Foldable
 import qualified TestArrow
 import qualified TestMonad
 import qualified Transformer.TestBase as Transformer
+import qualified Modules.TestOptparseApplicative 
 import qualified Mtl.TestBase as Mtl
 import qualified TestTypeClass
 import qualified TestReadShow
@@ -46,6 +47,7 @@ allTests =
 
         TestTypeClass.allTests
         TestReadShow.allTests
+        Modules.TestOptparseApplicative.test
     )
     ""
 
