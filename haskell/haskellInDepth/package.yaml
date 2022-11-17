@@ -59,12 +59,16 @@ executables:
     other-modules:
     - Chapter1
     - Chapter2
+    - Chapter5
+    - Chapter5Parser
+    - Chapter5ParserTest
     - Radar
     dependencies: 
     - haskellInDepth
     - bytestring
     - text
     - fmt
+    - random
 
   stockquotes:
     main:                Main.hs
@@ -104,6 +108,7 @@ internal-libraries:
       - Radar
     dependencies: 
       - haskellInDepth
+      - random
 
 tests:
   main-test:

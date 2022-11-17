@@ -19,6 +19,8 @@ module TestUtils
     printList,
     Message,
     Name,
+    bindLeft,
+    maybeToEither,
   )
 where
 
@@ -34,6 +36,10 @@ import Fmt
 type Message = String
 
 type Name = String
+
+bindLeft :: (a -> a') -> Either a b -> Either a' b
+bindLeft _ (Right x) = pure x
+bindLeft f (Left x) = Left (f x)
 
 traceShow :: Show a1 => a1 -> a2 -> a2
 traceShow x = trace (show x)
@@ -61,6 +67,9 @@ assertIsEqual x y = do
   unless (x == y) $ error $ fmtLn $ "assertIsEqual:" +|| x ||+ " != " +|| y ||+ ""
   fmtLn $ "assertIsEqual:" +|| x ||+ " == " +|| y ||+ ""
 
+maybeToEither :: a -> Maybe b -> Either a b
+maybeToEither e = maybe (Left e) Right
+
 testDone :: IO ()
 testDone = return ()
 
@@ -81,8 +90,13 @@ runTest tests = do
       (((), messages), io) = runIdentity $ runStateT inner (pure ())
    in do
         io
-        putStrLn $ "tests:" ++ intercalate "," messages
-        putStrLn $ "count=" ++ show (length messages)
+        putStrLn $
+          "tests:"
+            +| nameF "tests" (build $ intercalate "," messages)
+            |+ "\n"
+            +| nameF "count" (build $ length messages)
+            |+ "\n"
+            +| "success"
         pauseIO
 
 useIO :: IO () -> TestState

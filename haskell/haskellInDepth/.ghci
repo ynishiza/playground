@@ -1,4 +1,6 @@
-:set -XOverloadedString
+:set -w             -- reset warnings
+:set -W             -- minimal warnings
+:set -XOverloadedStrings
 :set prompt "ghci> "
 :set editor "nvim"
 :set +m             -- multine

@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
 {-# HLINT ignore "Use <&>" #-}
 
 module MyOptParse
@@ -15,13 +16,12 @@ module MyOptParse
   )
 where
 
--- import Control.Monad.Trans.Class
--- import Control.Monad.Trans.Except
+import Control.Monad
 import Control.Monad.Trans.State
-import Text.Read (readMaybe)
 import Data.List (findIndex)
 import Fmt
 import TestUtils
+import Text.Read (readMaybe)
 
 type Arg = String
 
@@ -47,42 +47,42 @@ data Opt a = Opt
 
 class HasDefault a where
   getDefault :: a
+
 instance HasDefault String where
   getDefault = ""
+
 instance HasDefault Int where
   getDefault = 0
+
 instance HasDefault Integer where
   getDefault = 0
+
 instance HasDefault Double where
   getDefault = 0
+
 instance HasDefault Float where
   getDefault = 0
+
 instance HasDefault Bool where
   getDefault = False
 
 instance Functor ParserBase where
-  fmap f p = p >>= return . f
+  fmap f parser = parser >>= return . f
 
 instance Applicative ParserBase where
-  pure = P  . pure . pure
-  sf <*> st = sf >>= (<$>st)
+  pure = P . pure . pure
+  parserf <*> parser = parserf >>= (<$> parser)
 
-instance Monad ParserBase where 
-  (P st) >>= k = P $ do
-    res <- st
-    case res of 
-      Right x -> getParser $ k x
-      Left e -> return $ Left e
-
+instance Monad ParserBase where
+  (P parser) >>= k = P $ do
+    pres <- parser
+    either (return . Left) (getParser . k) pres
 
 runParser :: ParserBase a -> [Arg] -> (Either ParserError a, ParserState)
-runParser parser args = (res', pstate)
-  where 
-    (res, pstate) = runState (getParser parser) args 
-    res' = res >>
-      if null pstate
-        then res
-        else Left (PError (fmtLn $ "Unused args:" +| pstate |+ ""))
+runParser parser args = (pres >> validate >> pres, pstate)
+  where
+    (pres, pstate) = runState (getParser parser) args
+    validate = unless (null pstate) $ Left (PError (fmtLn $ "Unused args:" +| pstate |+ ""))
 
 instance Show a => Buildable (Either ParserError a) where
   build = build . show
@@ -94,17 +94,14 @@ createSimpleOption :: forall a. (Read a, HasDefault a) => Char -> String -> Opt 
 createSimpleOption short l = Opt short l (Just (getDefault @a)) readMaybe
 
 parseOption :: Opt a -> ParserBase a
--- parseOption = undefined
 parseOption opt = P $ do
   pstate <- get
-  case processOption opt pstate of
-    Left e -> return $ Left e
-    Right (pstate', value) -> do
-      put pstate'
-      return $ Right value
+  either
+    (return . Left)
+    (\(pstate', value) -> put pstate' >> return (Right value))
+    $ processOption opt pstate
 
 processOption :: Opt a -> ParserState -> Either ParserError (ParserState, a)
--- processOption = undefined
 processOption (Opt {..}) pstate = case parse of
   -- case: use default if set
   Left e@(PRequierdOptionError _) -> errorOrDefault e
@@ -118,9 +115,8 @@ processOption (Opt {..}) pstate = case parse of
     optionName = shortOpt |+ "|" +| longOpt |+ ""
 
     isOptionMatch arg = arg == longOpt || arg == shortOpt
-    errorOrDefault e = case defaultValue of
-      Just v -> return (pstate, v)
-      Nothing -> Left e
+
+    errorOrDefault e = maybe (Left e) (return . (pstate,)) defaultValue
 
     errorMessage :: String -> String
     errorMessage msg = "Error in " +| optionName |+ ":" +| msg |+ ""
@@ -128,9 +124,9 @@ processOption (Opt {..}) pstate = case parse of
     parse = do
       trace (fmt $ indentF 2 $ pstate |+ " short:" +| optionName |+ "") return ()
       -- step: look for option
-      nameIdx <- case findIndex isOptionMatch pstate of
-        Just i -> return i
-        Nothing -> Left $ PRequierdOptionError $ errorMessage "Missing required option"
+      nameIdx <-
+        let e0 = PRequierdOptionError $ errorMessage "Missing required option"
+         in maybeToEither e0 $ findIndex isOptionMatch pstate
 
       -- step: get value index
       valueIdx <-
@@ -139,10 +135,10 @@ processOption (Opt {..}) pstate = case parse of
           else return $ nameIdx + 1
 
       -- step: read value
-      let rawVal = pstate !! valueIdx
-      val <- case readValue rawVal of
-        Just v -> return v
-        Nothing -> Left $ POptionReadError valueIdx $ errorMessage $ "Failed to parse value:" +| rawVal |+ ""
+      val <-
+        let rawVal = pstate !! valueIdx
+            e = POptionReadError valueIdx $ errorMessage $ "Failed to parse value:" +| rawVal |+ ""
+         in maybeToEither e $ readValue rawVal
       return (removeArg nameIdx 2 pstate, val)
 
 removeArg :: Int -> Int -> [Arg] -> [Arg]
