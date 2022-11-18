@@ -54,13 +54,14 @@ library
 
 library hid-lib
   exposed-modules:
-      Chapter1
-      Chapter2
+      Chapter1_4
+      Chapter2_1
+      Chapter5_1_3
+      Chapter5_2_1
+      Chapter5_2_2_Parser
+      Chapter5_3_1
       Radar
   other-modules:
-      Chapter5
-      Chapter5Parser
-      Chapter5ParserTest
       Paths_haskellInDepth
   autogen-modules:
       Paths_haskellInDepth
@@ -91,11 +92,12 @@ library hid-lib
 executable main
   main-is: main.hs
   other-modules:
-      Chapter1
-      Chapter2
-      Chapter5
-      Chapter5Parser
-      Chapter5ParserTest
+      Chapter1_4
+      Chapter2_1
+      Chapter5_1_3
+      Chapter5_2_1
+      Chapter5_2_2_Parser
+      Chapter5_3_1
       Radar
   hs-source-dirs:
       ./src/main
@@ -169,7 +171,8 @@ test-suite main-test
   type: exitcode-stdio-1.0
   main-is: Main.hs
   other-modules:
-      Chapter2Test
+      Chapter2_1
+      Chapter5_2_2
       Paths_haskellInDepth
   autogen-modules:
       Paths_haskellInDepth

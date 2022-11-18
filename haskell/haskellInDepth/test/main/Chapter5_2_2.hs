@@ -3,50 +3,55 @@
 
 {-# HLINT ignore "Use camelCase" #-}
 
-module Chapter5ParserTest (testShuntingYard) where
+module Chapter5_2_2 (testShuntingYard) where
 
-import Chapter5Parser
+import Chapter5_2_2_Parser
 import Data.Foldable
 import Fmt
 import Utils
 
-testShuntingYard :: IO ()
-testShuntingYard = do
-  printBanner  "Shunting yard algorithm"
-  let printResult r = case r of
-        Left (SYError s msg) ->
-          "ERROR\nmessage:" +| msg |+ "\n"
-            +| logState s |+ "\n"
-        Right (e, s) ->
-          "SUCCESS\nexpression:" +|| e ||+ "\n"
-            +| logState s |+ "\n"
+testShuntingYard :: TestState
+testShuntingYard =
+  createChapterTest
+    "5.2.2"
+    "Shunting yard"
+    ( do
+        printBanner "Shunting yard algorithm"
+        let printResult r = case r of
+              Left (SYError s msg) ->
+                "ERROR\nmessage:" +| msg |+ "\n"
+                  +| logState s |+ "\n"
+              Right (e, s) ->
+                "SUCCESS\nexpression:" +|| e ||+ "\n"
+                  +| logState s |+ "\n"
 
-  let testOne :: Expr Int -> String -> IO ()
-      testOne expected expr = do
-        "expression=" +| expr |+ "\n"
-          +| indentF 2 (printResult res) |+ "\n"
-        case res of
-          Right (e, (stack, _)) -> do
-            assertIsEqual e expected
-            assertIsEqual stack []
-          Left _ -> error "Fail"
-        where
-          res = parse expr
-      testOneCase (e, expr, alts) = traverse_ (testOne e) (expr : alts)
-   in traverse_ testOneCase parseSuccessCases
+        let testOne :: Expr Int -> String -> IO ()
+            testOne expected expr = do
+              "expression=" +| expr |+ "\n"
+                +| indentF 2 (printResult res) |+ "\n"
+              case res of
+                Right (e, (stack, _)) -> do
+                  assertIsEqual e expected
+                  assertIsEqual stack []
+                Left _ -> error "Fail"
+              where
+                res = parse expr
+            testOneCase (e, expr, alts) = traverse_ (testOne e) (expr : alts)
+         in traverse_ testOneCase parseSuccessCases
 
-  let testOne (expectedMsg, expr) = do
-        "expression=" +| expr |+ "\n"
-          +| indentF 2 (printResult res) |+ "\n"
-        case res of
-          Right _ -> error "Fail"
-          Left (SYError _ msg) -> do
-            assertIsEqual msg expectedMsg
-        where
-          res = parse expr
-   in traverse_ testOne parseFailCases
+        let testOne (expectedMsg, expr) = do
+              "expression=" +| expr |+ "\n"
+                +| indentF 2 (printResult res) |+ "\n"
+              case res of
+                Right _ -> error "Fail"
+                Left (SYError _ msg) -> do
+                  assertIsEqual msg expectedMsg
+              where
+                res = parse expr
+         in traverse_ testOne parseFailCases
 
-  pure ()
+        pure ()
+    )
 
 parseSuccessCases :: [(Expr Int, String, [String])]
 parseSuccessCases =

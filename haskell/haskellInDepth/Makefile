@@ -30,16 +30,16 @@ compile-profile: ## Compile with profiler
 
 run:  ## Run test
 	@echo "Chapter 1"
-	@echo 1 | stack exec -- $(MAINEXE_NAME) ./src/data/hamlet.txt 20
-	@echo 1 | stack exec -- $(MAINEXE_NAME) ./src/data/forsyte.txt 20
+	echo 1 $$'\n' | stack exec -- $(MAINEXE_NAME) ./src/data/hamlet.txt 20
+	echo 1 $$'\n'| stack exec -- $(MAINEXE_NAME) ./src/data/forsyte.txt 20
 
 	@echo "Chapter 2"
-	@echo 2 | stack exec -- $(MAINEXE_NAME) -r ./src/data/rotations1.txt North
-	@echo 2 | stack exec -- $(MAINEXE_NAME) -o ./src/data/directions1.txt 
-	@echo 2 | stack exec -- stockquotes ./src/data/quotes.csv -n "My Company" -H "./stockreport.html"
+	@echo 2 $$'\n' | stack exec -- $(MAINEXE_NAME) -r ./src/data/rotations1.txt North
+	@echo 2 $$'\n' | stack exec -- $(MAINEXE_NAME) -o ./src/data/directions1.txt 
+	@echo 2 $$'\n' | stack exec -- stockquotes ./src/data/quotes.csv -n "My Company" -H "./stockreport.html"
 
 	echo "Chapter 5"
-	@echo 3 | stack exec -- $(MAINEXE_NAME) 
+	@echo 3 $$'\n' | stack exec -- $(MAINEXE_NAME) 
 
 	@echo "Tests"
 	@stack test -- $(MAINTEST)

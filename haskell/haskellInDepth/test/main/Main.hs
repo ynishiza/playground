@@ -1,8 +1,10 @@
+import qualified Chapter2_1
+import qualified Chapter5_2_2
 import Radar
-import qualified Chapter2Test
+import Utils
 
 main :: IO ()
 main = do
-  Chapter2Test.test
-  print TNone
-  putStrLn "test"
+  runTest $ do
+    Chapter2_1.test
+    Chapter5_2_2.testShuntingYard

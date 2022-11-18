@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Chapter2
+module Chapter2_1
   ( rotateFromFile,
     orientFromFile,
     run,
@@ -15,17 +15,23 @@ import Fmt
 import Fmt.Internal.Core
 import Radar
 import System.Environment
+import Utils
 
-run :: IO ()
-run = do
-  args <- getArgs
-  case args of
-    ["-o", filename] -> orientFromFile filename
-    ["-r", filename, dir] -> rotateFromFile (read dir) filename
-    ["-t"] -> do
-      testTurn
-    _ -> error "-o FILE | -r FILE DIR"
-  pure ()
+run :: TestState
+run =
+  createChapterTest
+    "2.1"
+    "Radar"
+    ( do
+        args <- getArgs
+        case args of
+          ["-o", filename] -> orientFromFile filename
+          ["-r", filename, dir] -> rotateFromFile (read dir) filename
+          ["-t"] -> do
+            testTurn
+          _ -> error "-o FILE | -r FILE DIR"
+        pure ()
+    )
 
 testTurn :: IO ()
 testTurn = do

@@ -3,7 +3,7 @@
 
 {-# HLINT ignore "Use <&>" #-}
 
-module Chapter5Parser
+module Chapter5_2_2_Parser
   ( parse,
     logState,
     Expr (..),
