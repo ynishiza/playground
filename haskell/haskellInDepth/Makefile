@@ -42,7 +42,7 @@ run:  ## Run test
 	@echo 3 $$'\n' | stack exec -- $(MAINEXE_NAME) 
 
 	@echo "Tests"
-	@stack test -- $(MAINTEST)
+	@stack test 
 
 debug: ## Print variables
 	@echo SHELL=$(SHELL)

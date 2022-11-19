@@ -6,7 +6,11 @@ cradle:
       component: haskellInDepth:exe:main
     - path: "./src/stockquotes"
       component: haskellInDepth:exe:stockquotes
+    - path: "./src/du"
+      component: haskellInDepth:exe:du
     - path: "./test/main"
       component: haskellInDepth:test:main-test
     - path: "./src/main"
       component: haskellInDepth:lib
+    - path: "./test/du"
+      component: haskellInDepth:test:du-test

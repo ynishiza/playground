@@ -25,6 +25,7 @@ testShuntingYard =
                 "SUCCESS\nexpression:" +|| e ||+ "\n"
                   +| logState s |+ "\n"
 
+        -- Success tests
         let testOne :: Expr Int -> String -> IO ()
             testOne expected expr = do
               "expression=" +| expr |+ "\n"
@@ -39,6 +40,7 @@ testShuntingYard =
             testOneCase (e, expr, alts) = traverse_ (testOne e) (expr : alts)
          in traverse_ testOneCase parseSuccessCases
 
+        -- Fail tests
         let testOne (expectedMsg, expr) = do
               "expression=" +| expr |+ "\n"
                 +| indentF 2 (printResult res) |+ "\n"

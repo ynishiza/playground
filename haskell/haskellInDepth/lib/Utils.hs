@@ -99,7 +99,7 @@ runTest tests = do
         io
         putStrLn $
           ""
-            +| nameF "tests" (build $ intercalate "," messages)
+            +| nameF "tests" (build $ intercalate ", " messages)
             |+ "\n"
             +| nameF "count" (build $ length messages)
             |+ "\n"
@@ -120,7 +120,7 @@ createTest x message = do
   modify (++ [message])
 
 createChapterTest :: Message -> Message -> IO () -> TestState
-createChapterTest chapter msg test = createTest test $ "Chapter "+|chapter|+":"+|msg|+""
+createChapterTest chapter msg test = createTest test $ "Chapter " +| chapter |+ ":" +| msg |+ ""
 
 wrapTest :: TestState -> Message -> TestState
 wrapTest tests message = do

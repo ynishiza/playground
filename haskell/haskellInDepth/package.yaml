@@ -20,11 +20,12 @@ extra-source-files:
 description:         Please see the README on GitHub at <https://github.com/githubuser/haskellInDepthProjects#readme>
 
 dependencies:
-- base >= 4.7 && < 5
+- base >= 4.9 && < 5
 - fmt
 - text
 - transformers
 - mtl
+- extra
 
 ghc-options:
 - -Wall
@@ -70,6 +71,22 @@ executables:
     - text
     - fmt
     - random
+    - extra
+
+  du:
+    main: Main.hs
+    source-dirs: src/du/
+    dependencies:
+      - haskellInDepth
+      - filepath >= 1.4.1 && < 1.5
+      - directory >= 1.3 && < 1.4
+      - unix-compat >= 0.5 && < 0.6
+      - optparse-applicative >= 0.14 && < 0.17
+      - text >=1.2 && <1.3
+      - text-show >=3.0 && <4
+      - extra >=1.5 && <1.8
+    default-extensions:
+      - RecordWildCards
 
   stockquotes:
     main:                Main.hs
@@ -100,6 +117,29 @@ executables:
     - filepath
 
 internal-libraries:
+  du-lib:
+    source-dirs: ./src/du
+    exposed-modules:
+      - AppTypes
+      - AppWRST
+      - DuUtils
+      - DirTree
+      - FileCount
+      - DiskUsage
+    dependencies:
+      - haskellInDepth
+      - filepath >= 1.4.1 && < 1.5
+      - directory >= 1.3 && < 1.4
+      - unix-compat >= 0.5 && < 0.6
+      - optparse-applicative >= 0.14 && < 0.17
+      - text >=1.2 && <1.3
+      - text-show >=3.0 && <4
+      - extra >=1.5 && <1.8
+    default-extensions:
+      - RecordWildCards
+    other-extensions:
+      - GeneralizedNewtypeDeriving
+
   hid-lib:
     source-dirs: ./src/main
     exposed-modules:
@@ -114,8 +154,20 @@ internal-libraries:
     dependencies: 
       - haskellInDepth
       - random
+      - extra
 
 tests:
+  du-test: 
+    main:               Main.hs
+    source-dirs:      ./test/du
+    dependencies: 
+    - haskellInDepth
+    - du-lib
+    - fmt
+    - filepath >= 1.4.1 && < 1.5
+    - directory >= 1.3 && < 1.4
+    - unix-compat >= 0.5 && < 0.6
+
   main-test:
     main:               Main.hs
     source-dirs:      ./test/main

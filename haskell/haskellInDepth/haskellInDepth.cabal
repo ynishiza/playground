@@ -45,11 +45,58 @@ library
       TypeSynonymInstances
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
-      base >=4.7 && <5
+      base >=4.9 && <5
+    , extra
     , fmt
     , mtl
     , text
     , transformers
+  default-language: Haskell2010
+
+library du-lib
+  exposed-modules:
+      AppTypes
+      AppWRST
+      DuUtils
+      DirTree
+      FileCount
+      DiskUsage
+  other-modules:
+      App
+      Main
+      Paths_haskellInDepth
+  autogen-modules:
+      Paths_haskellInDepth
+  hs-source-dirs:
+      ./src/du
+  default-extensions:
+      DeriveFoldable
+      DeriveFunctor
+      DeriveTraversable
+      DeriveGeneric
+      DeriveDataTypeable
+      ExplicitForAll
+      ScopedTypeVariables
+      StandaloneDeriving
+      TypeApplications
+      TypeSynonymInstances
+      RecordWildCards
+  other-extensions:
+      GeneralizedNewtypeDeriving
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
+  build-depends:
+      base >=4.9 && <5
+    , directory ==1.3.*
+    , extra >=1.5 && <1.8
+    , filepath >=1.4.1 && <1.5
+    , fmt
+    , haskellInDepth
+    , mtl
+    , optparse-applicative >=0.14 && <0.17
+    , text ==1.2.*
+    , text-show >=3.0 && <4
+    , transformers
+    , unix-compat ==0.5.*
   default-language: Haskell2010
 
 library hid-lib
@@ -80,13 +127,57 @@ library hid-lib
       TypeSynonymInstances
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
-      base >=4.7 && <5
+      base >=4.9 && <5
+    , extra
     , fmt
     , haskellInDepth
     , mtl
     , random
     , text
     , transformers
+  default-language: Haskell2010
+
+executable du
+  main-is: Main.hs
+  other-modules:
+      App
+      AppTypes
+      AppWRST
+      DirTree
+      DiskUsage
+      DuUtils
+      FileCount
+      Paths_haskellInDepth
+  autogen-modules:
+      Paths_haskellInDepth
+  hs-source-dirs:
+      src/du/
+  default-extensions:
+      DeriveFoldable
+      DeriveFunctor
+      DeriveTraversable
+      DeriveGeneric
+      DeriveDataTypeable
+      ExplicitForAll
+      ScopedTypeVariables
+      StandaloneDeriving
+      TypeApplications
+      TypeSynonymInstances
+      RecordWildCards
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
+  build-depends:
+      base >=4.9 && <5
+    , directory ==1.3.*
+    , extra >=1.5 && <1.8
+    , filepath >=1.4.1 && <1.5
+    , fmt
+    , haskellInDepth
+    , mtl
+    , optparse-applicative >=0.14 && <0.17
+    , text ==1.2.*
+    , text-show >=3.0 && <4
+    , transformers
+    , unix-compat ==0.5.*
   default-language: Haskell2010
 
 executable main
@@ -114,8 +205,9 @@ executable main
       TypeSynonymInstances
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
-      base >=4.7 && <5
+      base >=4.9 && <5
     , bytestring
+    , extra
     , fmt
     , haskellInDepth
     , mtl
@@ -150,12 +242,13 @@ executable stockquotes
       Chart >=1.8 && <1.10
     , Chart-cairo >=1.8 && <1.10
     , Chart-diagrams >=1.8 && <1.10
-    , base >=4.7 && <5
+    , base >=4.9 && <5
     , blaze-colonnade >=1.1 && <1.3
     , blaze-html ==0.9.*
     , bytestring >=0.10 && <0.12
     , cassava ==0.5.*
     , colonnade >=1.1 && <1.3
+    , extra
     , filepath
     , fmt
     , haskellInDepth
@@ -165,6 +258,41 @@ executable stockquotes
     , time >=1.8 && <1.12
     , transformers
     , vector
+  default-language: Haskell2010
+
+test-suite du-test
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      Paths_haskellInDepth
+  autogen-modules:
+      Paths_haskellInDepth
+  hs-source-dirs:
+      ./test/du
+  default-extensions:
+      DeriveFoldable
+      DeriveFunctor
+      DeriveTraversable
+      DeriveGeneric
+      DeriveDataTypeable
+      ExplicitForAll
+      ScopedTypeVariables
+      StandaloneDeriving
+      TypeApplications
+      TypeSynonymInstances
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
+  build-depends:
+      base >=4.9 && <5
+    , directory ==1.3.*
+    , du-lib
+    , extra
+    , filepath >=1.4.1 && <1.5
+    , fmt
+    , haskellInDepth
+    , mtl
+    , text
+    , transformers
+    , unix-compat ==0.5.*
   default-language: Haskell2010
 
 test-suite main-test
@@ -191,7 +319,8 @@ test-suite main-test
       TypeSynonymInstances
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
-      base >=4.7 && <5
+      base >=4.9 && <5
+    , extra
     , fmt
     , haskellInDepth
     , hid-lib
