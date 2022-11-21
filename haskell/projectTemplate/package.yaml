@@ -1,0 +1,102 @@
+name:                myproject
+version:             0.1.0.0
+github:              "githubuser/myproject"
+license:             BSD3
+author:              "Author name here"
+maintainer:          "example@example.com"
+copyright:           "2022 Author name here"
+
+extra-source-files:
+- README.md
+- CHANGELOG.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/githubuser/myproject#readme>
+
+dependencies:
+- base >= 4.9 && < 5
+- fmt
+- text
+- transformers
+- mtl
+- extra
+
+ghc-options:
+- -Wall
+- -Wcompat
+- -Widentities
+- -Wincomplete-record-updates
+- -Wincomplete-uni-patterns
+- -Wmissing-export-lists
+- -Wmissing-home-modules
+- -Wpartial-fields
+- -Wredundant-constraints
+
+default-extensions:
+- DeriveFoldable
+- DeriveFunctor
+- DeriveTraversable
+- DeriveGeneric
+- DeriveDataTypeable
+- ExplicitForAll
+- ScopedTypeVariables
+- StandaloneDeriving
+- TypeApplications
+- TypeSynonymInstances
+
+library:
+  source-dirs: ./lib
+
+executables:
+  app1:
+    main:               Main.hs
+    source-dirs:        ./src/app1
+    dependencies: 
+      - myproject
+      - directory >= 1.3 && < 1.4
+      - optparse-applicative >= 0.14 && < 0.17
+  app2:
+    main:               Main.hs
+    source-dirs:        ./src/app2
+    dependencies: 
+      - myproject
+      - directory >= 1.3 && < 1.4
+      - optparse-applicative >= 0.14 && < 0.17
+
+internal-libraries:
+  app1-lib:
+    source-dirs: ./src/app1
+    exposed-modules:
+      - Lib1
+    dependencies:
+      - myproject
+      - directory >= 1.3 && < 1.4
+  app2-lib:
+    source-dirs: ./src/app2
+    exposed-modules:
+      - Lib2
+    dependencies:
+      - myproject
+      - directory >= 1.3 && < 1.4
+
+tests:
+  app1-test: 
+    main:               Main.hs
+    source-dirs:      ./test/app1
+    dependencies: 
+      - app1-lib
+      - myproject
+
+  app2-test: 
+    main:               Main.hs
+    source-dirs:      ./test/app2
+    dependencies: 
+      - app2-lib
+      - myproject
+

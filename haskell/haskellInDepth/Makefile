@@ -48,6 +48,14 @@ run:  ## Run test
 	@echo "Tests"
 	@stack test 
 
+ide: ## IDE
+	haskell-language-server-wrapper ./lib/*.hs
+	haskell-language-server-wrapper ./src/main/*.hs
+	haskell-language-server-wrapper ./test/main/*.hs
+	haskell-language-server-wrapper ./src/stockquotes/*.hs
+	haskell-language-server-wrapper ./src/du/*.hs
+	haskell-language-server-wrapper ./test/du/*.hs
+
 debug: ## Print variables
 	@echo SHELL=$(SHELL)
 

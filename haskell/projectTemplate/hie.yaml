@@ -1,0 +1,12 @@
+cradle:
+  stack:
+    - path: "./lib/"
+      component: myproject:lib
+    - path: "./src/app1/"
+      component: myproject:exe:app1
+    - path: "./src/app2/"
+      component: myproject:exe:app2
+    - path: "./test/app1"
+      component: myproject:test:app1-test
+    - path: "./test/app2"
+      component: myproject:test:app2-test
