@@ -20,12 +20,19 @@ extra-source-files:
 description:         Please see the README on GitHub at <https://github.com/githubuser/haskellInDepthProjects#readme>
 
 dependencies:
-- base >= 4.9 && < 5
+- base >= 4.15 && < 5
 - fmt
-- text
-- transformers
-- mtl
-- extra
+- mtl >= 2.0 && < 2.3
+- transformers >= 0.5 && < 0.6
+- time >=1.8 && <1.12
+- bytestring >=0.10 && <0.12
+- text >=1.2 && <1.3
+- text-show >=3.0 && <4
+- exceptions >= 0.10 && < 0.11
+- extra >=1.5 && <1.8
+- filepath >= 1.4.1 && < 1.5
+- directory >= 1.3 && < 1.4
+- unix-compat >= 0.5 && < 0.6
 
 ghc-options:
 - -Wall
@@ -48,6 +55,7 @@ default-extensions:
 - ScopedTypeVariables
 - StandaloneDeriving
 - TypeApplications
+- MultiParamTypeClasses
 - TypeSynonymInstances
 
 library:
@@ -59,20 +67,17 @@ executables:
     source-dirs:        ./src/main
     dependencies: 
     - haskellInDepth
-    - bytestring
     - text
-    - fmt
     - random
     - extra
+    - exceptions
 
   du:
     main: Main.hs
     source-dirs: src/du
     dependencies:
       - haskellInDepth
-      - filepath >= 1.4.1 && < 1.5
       - directory >= 1.3 && < 1.4
-      - unix-compat >= 0.5 && < 0.6
       - optparse-applicative >= 0.14 && < 0.17
       - text >=1.2 && <1.3
       - text-show >=3.0 && <4
@@ -96,17 +101,26 @@ executables:
     dependencies:
     - haskellInDepth
     - vector
-    - bytestring >=0.10 && <0.12
     - blaze-html >=0.9 && <0.10
     - optparse-applicative >=0.14 && <0.17
-    - time >=1.8 && <1.12
     - Chart >=1.8 && <1.10
     - Chart-diagrams >=1.8 && <1.10
     - Chart-cairo >=1.8 && <1.10
     - cassava >=0.5 && <0.6
     - colonnade >= 1.1 && < 1.3
     - blaze-colonnade >= 1.1 && < 1.3
-    - filepath
+
+  suntimes:
+    source-dirs: src/suntimes
+    main: Main.hs
+    dependencies:
+      - haskellInDepth
+      - aeson >= 1.2 && < 1.6
+      - req >= 2.0 && < 3.10
+      - http-client >= 0.4 && < 0.8
+      - optparse-applicative >= 0.14 && < 0.17
+    default-extensions:
+      - OverloadedStrings
 
 internal-libraries:
   du-lib:
@@ -120,13 +134,7 @@ internal-libraries:
       - DiskUsage
     dependencies:
       - haskellInDepth
-      - filepath >= 1.4.1 && < 1.5
-      - directory >= 1.3 && < 1.4
-      - unix-compat >= 0.5 && < 0.6
       - optparse-applicative >= 0.14 && < 0.17
-      - text >=1.2 && <1.3
-      - text-show >=3.0 && <4
-      - extra >=1.5 && <1.8
     default-extensions:
       - RecordWildCards
     other-extensions:
@@ -142,11 +150,14 @@ internal-libraries:
       - Chapter5_2_1
       - Chapter5_2_2_Parser
       - Chapter5_3_1
+      - Chapter6_2
+      - Chapter7_3
       - Radar
     dependencies: 
       - haskellInDepth
       - random
       - extra
+      - exceptions
 
 tests:
   du-test: 
@@ -155,9 +166,6 @@ tests:
     dependencies: 
     - haskellInDepth
     - du-lib
-    - filepath >= 1.4.1 && < 1.5
-    - directory >= 1.3 && < 1.4
-    - unix-compat >= 0.5 && < 0.6
 
   main-test:
     main:               Main.hs

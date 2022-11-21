@@ -24,4 +24,3 @@ diskUsage = do
         when (depth <= maxDepth config) $ tell [(path, after - before)]
       | isIncludedFile config True path -> modify (+ fileSize status)
       | otherwise -> pure ()
-

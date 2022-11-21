@@ -42,13 +42,18 @@ run:  ## Run test
 	@echo 3 $$'\n' | stack exec -- $(MAINEXE_NAME) 
 
 	echo "Chapter 6"
+	@echo 4 $$'\n' | stack exec -- $(MAINEXE_NAME) 
 	@stack exec -- du test -d 3 -e ".hs" -L
 	@stack exec -- du test --depth 3 --extension ".hs" -L
+
+	@echo "Chapter 7"
+	@echo 5 $$'\n' | stack exec -- $(MAINEXE_NAME) 
+	@echo 6 $$'\n' | stack exec -- $(MAINEXE_NAME) 
 
 	@echo "Tests"
 	@stack test 
 
-ide: ## IDE
+ide: ## Check IDE setup
 	haskell-language-server-wrapper ./lib/*.hs
 	haskell-language-server-wrapper ./src/main/*.hs
 	haskell-language-server-wrapper ./test/main/*.hs

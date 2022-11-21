@@ -9,8 +9,6 @@ module Main
   )
 where
 
-import Text.Read (readMaybe, readEither)
-import Data.Either
 import Charts
 import qualified Colonnade as CL
 import Control.Monad
@@ -67,18 +65,6 @@ processParams params = do
       writeLog $ "HTML saved at path=" +| htmlPath |+ ""
     Nothing -> return ()
 
-f :: String -> String -> Maybe Int
-f s t = do
-  x <- readMaybe s
-  y <- readMaybe t
-  return (x*y)
-g :: String -> String -> Either String Int
-g s t = do
-  x <- h s
-  y <- h t
-  return (x*y)
-    where h s = case readMaybe s of Just x -> return x; Nothing -> Left $ "Failed" ++ s
-
 test :: IO ()
 test = do
   args <- getArgs
@@ -112,14 +98,12 @@ readCsvFile fname = do
 
 quoteDataTableColumns :: CL.Colonnade CL.Headed QuoteData String
 quoteDataTableColumns =
-  mconcat
-    [ CL.headed "Day" (show . day),
-      CL.headed "Volume" (show . volume),
-      CL.headed "Open" (show . open),
-      CL.headed "High" (show . high),
-      CL.headed "Low" (show . low),
-      CL.headed "Close" (show . close)
-    ]
+  CL.headed "Day" (show . day)
+    <> CL.headed "Volume" (show . volume)
+    <> CL.headed "Open" (show . open)
+    <> CL.headed "High" (show . high)
+    <> CL.headed "Low" (show . low)
+    <> CL.headed "Close" (show . close)
 
 toTable :: Vector QuoteData -> Text
 toTable qd = T.pack $ CL.ascii quoteDataTableColumns qd

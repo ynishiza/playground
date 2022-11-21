@@ -35,24 +35,20 @@ toHtmlText = H.text . pretty
 
 quoteStatsTableColumns :: Real a => C.Colonnade C.Headed (QuoteFieldStats a) H.Html
 quoteStatsTableColumns =
-  mconcat
-    [ C.headed "Quote Field" (toHtmlText . show . field),
-      C.headed "Mean" (toHtmlText . mean),
-      C.headed "Min" (toHtmlText . minValue),
-      C.headed "Max" (toHtmlText . maxValue),
-      C.headed "Days between Min/Max" (toHtmlText . daysBetweenMinMax)
-    ]
+  C.headed "Quote Field" (toHtmlText . show . field)
+    <> C.headed "Mean" (toHtmlText . mean)
+    <> C.headed "Min" (toHtmlText . minValue)
+    <> C.headed "Max" (toHtmlText . maxValue)
+    <> C.headed "Days between Min/Max" (toHtmlText . daysBetweenMinMax)
 
 quoteDataTableColumns :: C.Colonnade C.Headed QuoteData H.Html
 quoteDataTableColumns =
-  mconcat
-    [ C.headed "Day" (toHtmlText . day),
-      C.headed "Volume" (toHtmlText . volume),
-      C.headed "Open" (toHtmlText . open),
-      C.headed "High" (toHtmlText . high),
-      C.headed "Low" (toHtmlText . low),
-      C.headed "Close" (toHtmlText . close)
-    ]
+  C.headed "Day" (toHtmlText . day)
+    <> C.headed "Volume" (toHtmlText . volume)
+    <> C.headed "Open" (toHtmlText . open)
+    <> C.headed "High" (toHtmlText . high)
+    <> C.headed "Low" (toHtmlText . low)
+    <> C.headed "Close" (toHtmlText . close)
 
 getHtmlReportText :: Foldable f => T.Text -> f QuoteData -> [FilePath] -> T.Text
 getHtmlReportText reportTitle quotes images = T.pack $ renderHtml $ getHtmlReport reportTitle quotes images

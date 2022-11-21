@@ -42,15 +42,23 @@ library
       ScopedTypeVariables
       StandaloneDeriving
       TypeApplications
+      MultiParamTypeClasses
       TypeSynonymInstances
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
-      base >=4.9 && <5
-    , extra
+      base >=4.15 && <5
+    , bytestring >=0.10 && <0.12
+    , directory ==1.3.*
+    , exceptions ==0.10.*
+    , extra >=1.5 && <1.8
+    , filepath >=1.4.1 && <1.5
     , fmt
-    , mtl
-    , text
-    , transformers
+    , mtl >=2.0 && <2.3
+    , text ==1.2.*
+    , text-show >=3.0 && <4
+    , time >=1.8 && <1.12
+    , transformers ==0.5.*
+    , unix-compat ==0.5.*
   default-language: Haskell2010
 
 library du-lib
@@ -79,23 +87,27 @@ library du-lib
       ScopedTypeVariables
       StandaloneDeriving
       TypeApplications
+      MultiParamTypeClasses
       TypeSynonymInstances
       RecordWildCards
   other-extensions:
       GeneralizedNewtypeDeriving
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
-      base >=4.9 && <5
+      base >=4.15 && <5
+    , bytestring >=0.10 && <0.12
     , directory ==1.3.*
+    , exceptions ==0.10.*
     , extra >=1.5 && <1.8
     , filepath >=1.4.1 && <1.5
     , fmt
     , haskellInDepth
-    , mtl
+    , mtl >=2.0 && <2.3
     , optparse-applicative >=0.14 && <0.17
     , text ==1.2.*
     , text-show >=3.0 && <4
-    , transformers
+    , time >=1.8 && <1.12
+    , transformers ==0.5.*
     , unix-compat ==0.5.*
   default-language: Haskell2010
 
@@ -107,9 +119,12 @@ library hid-lib
       Chapter5_2_1
       Chapter5_2_2_Parser
       Chapter5_3_1
+      Chapter6_2
+      Chapter7_3
       Radar
   other-modules:
-      Chapter6_2
+      Chapter7_2
+      EvalRPNExcept
       Paths_haskellInDepth
   autogen-modules:
       Paths_haskellInDepth
@@ -125,17 +140,25 @@ library hid-lib
       ScopedTypeVariables
       StandaloneDeriving
       TypeApplications
+      MultiParamTypeClasses
       TypeSynonymInstances
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
-      base >=4.9 && <5
+      base >=4.15 && <5
+    , bytestring >=0.10 && <0.12
+    , directory ==1.3.*
+    , exceptions
     , extra
+    , filepath >=1.4.1 && <1.5
     , fmt
     , haskellInDepth
-    , mtl
+    , mtl >=2.0 && <2.3
     , random
-    , text
-    , transformers
+    , text ==1.2.*
+    , text-show >=3.0 && <4
+    , time >=1.8 && <1.12
+    , transformers ==0.5.*
+    , unix-compat ==0.5.*
   default-language: Haskell2010
 
 executable du
@@ -163,21 +186,25 @@ executable du
       ScopedTypeVariables
       StandaloneDeriving
       TypeApplications
+      MultiParamTypeClasses
       TypeSynonymInstances
       RecordWildCards
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
-      base >=4.9 && <5
+      base >=4.15 && <5
+    , bytestring >=0.10 && <0.12
     , directory ==1.3.*
+    , exceptions ==0.10.*
     , extra >=1.5 && <1.8
     , filepath >=1.4.1 && <1.5
     , fmt
     , haskellInDepth
-    , mtl
+    , mtl >=2.0 && <2.3
     , optparse-applicative >=0.14 && <0.17
     , text ==1.2.*
     , text-show >=3.0 && <4
-    , transformers
+    , time >=1.8 && <1.12
+    , transformers ==0.5.*
     , unix-compat ==0.5.*
   default-language: Haskell2010
 
@@ -191,6 +218,9 @@ executable main
       Chapter5_2_2_Parser
       Chapter5_3_1
       Chapter6_2
+      Chapter7_2
+      Chapter7_3
+      EvalRPNExcept
       Radar
       Paths_haskellInDepth
   autogen-modules:
@@ -207,18 +237,25 @@ executable main
       ScopedTypeVariables
       StandaloneDeriving
       TypeApplications
+      MultiParamTypeClasses
       TypeSynonymInstances
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
-      base >=4.9 && <5
-    , bytestring
+      base >=4.15 && <5
+    , bytestring >=0.10 && <0.12
+    , directory ==1.3.*
+    , exceptions
     , extra
+    , filepath >=1.4.1 && <1.5
     , fmt
     , haskellInDepth
-    , mtl
+    , mtl >=2.0 && <2.3
     , random
     , text
-    , transformers
+    , text-show >=3.0 && <4
+    , time >=1.8 && <1.12
+    , transformers ==0.5.*
+    , unix-compat ==0.5.*
   default-language: Haskell2010
 
 executable stockquotes
@@ -241,28 +278,76 @@ executable stockquotes
       ScopedTypeVariables
       StandaloneDeriving
       TypeApplications
+      MultiParamTypeClasses
       TypeSynonymInstances
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       Chart >=1.8 && <1.10
     , Chart-cairo >=1.8 && <1.10
     , Chart-diagrams >=1.8 && <1.10
-    , base >=4.9 && <5
+    , base >=4.15 && <5
     , blaze-colonnade >=1.1 && <1.3
     , blaze-html ==0.9.*
     , bytestring >=0.10 && <0.12
     , cassava ==0.5.*
     , colonnade >=1.1 && <1.3
-    , extra
-    , filepath
+    , directory ==1.3.*
+    , exceptions ==0.10.*
+    , extra >=1.5 && <1.8
+    , filepath >=1.4.1 && <1.5
     , fmt
     , haskellInDepth
-    , mtl
+    , mtl >=2.0 && <2.3
     , optparse-applicative >=0.14 && <0.17
-    , text
+    , text ==1.2.*
+    , text-show >=3.0 && <4
     , time >=1.8 && <1.12
-    , transformers
+    , transformers ==0.5.*
+    , unix-compat ==0.5.*
     , vector
+  default-language: Haskell2010
+
+executable suntimes
+  main-is: Main.hs
+  other-modules:
+      Paths_haskellInDepth
+  autogen-modules:
+      Paths_haskellInDepth
+  hs-source-dirs:
+      src/suntimes
+  default-extensions:
+      DeriveFoldable
+      DeriveFunctor
+      DeriveTraversable
+      DeriveGeneric
+      DeriveDataTypeable
+      ExplicitForAll
+      ScopedTypeVariables
+      StandaloneDeriving
+      TypeApplications
+      MultiParamTypeClasses
+      TypeSynonymInstances
+      OverloadedStrings
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
+  build-depends:
+      aeson >=1.2 && <1.6
+    , base >=4.15 && <5
+    , bytestring >=0.10 && <0.12
+    , directory ==1.3.*
+    , exceptions ==0.10.*
+    , extra >=1.5 && <1.8
+    , filepath >=1.4.1 && <1.5
+    , fmt
+    , haskellInDepth
+    , http-client >=0.4 && <0.8
+    , mtl >=2.0 && <2.3
+    , optparse-applicative >=0.14 && <0.17
+    , req >=2.0 && <3.10
+    , text ==1.2.*
+    , text-show >=3.0 && <4
+    , time >=1.8 && <1.12
+    , transformers ==0.5.*
+    , unix-compat ==0.5.*
   default-language: Haskell2010
 
 test-suite du-test
@@ -284,19 +369,24 @@ test-suite du-test
       ScopedTypeVariables
       StandaloneDeriving
       TypeApplications
+      MultiParamTypeClasses
       TypeSynonymInstances
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
-      base >=4.9 && <5
+      base >=4.15 && <5
+    , bytestring >=0.10 && <0.12
     , directory ==1.3.*
     , du-lib
-    , extra
+    , exceptions ==0.10.*
+    , extra >=1.5 && <1.8
     , filepath >=1.4.1 && <1.5
     , fmt
     , haskellInDepth
-    , mtl
-    , text
-    , transformers
+    , mtl >=2.0 && <2.3
+    , text ==1.2.*
+    , text-show >=3.0 && <4
+    , time >=1.8 && <1.12
+    , transformers ==0.5.*
     , unix-compat ==0.5.*
   default-language: Haskell2010
 
@@ -321,16 +411,24 @@ test-suite main-test
       ScopedTypeVariables
       StandaloneDeriving
       TypeApplications
+      MultiParamTypeClasses
       TypeSynonymInstances
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
-      base >=4.9 && <5
-    , extra
+      base >=4.15 && <5
+    , bytestring >=0.10 && <0.12
+    , directory ==1.3.*
+    , exceptions ==0.10.*
+    , extra >=1.5 && <1.8
+    , filepath >=1.4.1 && <1.5
     , fmt
     , haskellInDepth
     , hid-lib
-    , mtl
+    , mtl >=2.0 && <2.3
     , random
-    , text
-    , transformers
+    , text ==1.2.*
+    , text-show >=3.0 && <4
+    , time >=1.8 && <1.12
+    , transformers ==0.5.*
+    , unix-compat ==0.5.*
   default-language: Haskell2010

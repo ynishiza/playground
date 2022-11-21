@@ -6,6 +6,7 @@
 module Chapter5_2_2 (testShuntingYard) where
 
 import Chapter5_2_2_Parser
+import Control.Monad.Except
 import Data.Foldable
 import Fmt
 import Utils
@@ -52,6 +53,10 @@ testShuntingYard =
                 res = parse expr
          in traverse_ testOne parseFailCases
 
+        printBanner "catchError test"
+        let 
+          p = catchError (createParser "2a") (\e -> trace (show e) $ createParser "2") 
+          in printResult $ processParser p
         pure ()
     )
 

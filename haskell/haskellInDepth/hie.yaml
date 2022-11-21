@@ -8,6 +8,8 @@ cradle:
       component: haskellInDepth:exe:main
     - path: "./src/stockquotes"
       component: haskellInDepth:exe:stockquotes
+    - path: "./src/suntimes"
+      component: haskellInDepth:exe:suntimes
     - path: "./test/main"
       component: haskellInDepth:test:main-test
     - path: "./test/du"

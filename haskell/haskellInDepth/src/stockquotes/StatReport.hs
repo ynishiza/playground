@@ -90,13 +90,11 @@ computeQuoteStatsForField quotes qfield =
 
 colStatData :: Real a => CL.Colonnade CL.Headed (QuoteFieldStats a) String
 colStatData =
-  mconcat
-    [ CL.headed "Quote Field" (show . field),
-      CL.headed "Mean" (pretty . mean),
-      CL.headed "Min" (pretty . minValue),
-      CL.headed "Max" (pretty . maxValue),
-      CL.headed "Days between Min/Max" (pretty . daysBetweenMinMax)
-    ]
+  CL.headed "Quote Field" (show . field)
+    <> CL.headed "Mean" (pretty . mean)
+    <> CL.headed "Min" (pretty . minValue)
+    <> CL.headed "Max" (pretty . maxValue)
+    <> CL.headed "Days between Min/Max" (pretty . daysBetweenMinMax)
 
 quoteStatsToText :: Real a => [QuoteFieldStats a] -> T.Text
 quoteStatsToText st = T.pack $ CL.ascii colStatData st

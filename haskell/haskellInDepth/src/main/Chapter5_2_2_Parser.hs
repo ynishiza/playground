@@ -1,4 +1,7 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleInstances #-}
+
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Use <&>" #-}
@@ -6,15 +9,16 @@
 module Chapter5_2_2_Parser
   ( parse,
     logState,
+    createParser,
+    processParser,
     Expr (..),
     SYError (..),
   )
 where
 
 import Control.Arrow
-import Control.Monad.Trans.Class
-import Control.Monad.Trans.Except
-import Control.Monad.Trans.State
+import Control.Monad.Except
+import Control.Monad.State
 import Data.Char
 import Data.Foldable
 import Data.List (groupBy)
@@ -38,7 +42,19 @@ type SYState = (Stack, Output)
 
 data SYError = SYError !SYState !String deriving (Show, Eq)
 
-type SYParser a = StateT SYState (Except SYError) a
+newtype SYParser a = SYParser {runSYParser :: StateT SYState (Except SYError) a}
+  deriving
+    ( Functor,
+      Applicative,
+      Monad
+    )
+
+instance MonadState SYState SYParser where
+  state f = SYParser $ state f
+
+instance MonadError SYError SYParser where
+  throwError e = SYParser $ throwError e
+  catchError (SYParser p) handler = SYParser $ catchError p (runSYParser . handler)
 
 addOp :: Token
 addOp = "+"
@@ -79,8 +95,8 @@ logState (stack, output) = "state (stack=" +| stack |+ " output" +|| output ||+ 
 createError :: SYState -> String -> SYError
 createError s m = trace ("ERROR:" +| logState s |+ " message=" +| m |+ "") $ SYError s m
 
-throwError :: SYState -> String -> SYParser ()
-throwError s m = lift $ throwE $ createError s m
+myThrowError :: SYState -> String -> SYParser ()
+myThrowError s m = throwError $ createError s m
 
 updateStack :: (Stack -> Stack) -> SYParser ()
 updateStack f = modify (first f)
@@ -93,7 +109,7 @@ popStack = do
   s@(stack, _) <- get
   case stack of
     (x : xs) -> updateStack (const xs) >> return x
-    [] -> throwError s "popStack: empty stack" >> return ""
+    [] -> myThrowError s "popStack: empty stack" >> return ""
 
 pushStack :: Token -> SYParser ()
 pushStack t = updateStack (t :)
@@ -104,8 +120,8 @@ pushOutput t =
     then get >>= pushOp
     else get >>= pushLiteral
   where
-    readError s = throwError s $ "Failed to read token. token=" +| t |+ ""
-    outputError s = throwError s $ "Not enough output. token=" +| t |+ ""
+    readError s = myThrowError s $ "Failed to read token. token=" +| t |+ ""
+    outputError s = myThrowError s $ "Not enough output. token=" +| t |+ ""
     pushLiteral s = maybe (readError s) createLiteral (readMaybe t)
     createLiteral value = updateOutput (Lit value :)
     pushOp s@(stack, output)
@@ -120,10 +136,16 @@ tryGetHead l m = do
   s <- get
   case l of
     (x : _) -> return $ Just x
-    [] -> throwError s m >> return Nothing
+    [] -> myThrowError s m >> return Nothing
 
 processExpression :: String -> Either SYError (Expr Int, SYState)
-processExpression str = runExcept (runStateT proc ([], []))
+processExpression = processParser . createParser
+
+processParser :: SYParser (Expr Int) -> Either SYError (Expr Int, SYState)
+processParser (SYParser p) = runExcept (runStateT p ([], []))
+
+createParser :: String -> SYParser (Expr Int)
+createParser str = proc
   where
     tokens = reverse $ tokenizer str
     isD x = isDigit x || x == '-'
@@ -150,5 +172,5 @@ processToken token
   where
     doWhileTop predicate = doWhileState (\(stack, _) -> not (null stack) && predicate (head stack))
 
-transfer :: StateT SYState (Except SYError) ()
+transfer :: SYParser ()
 transfer = popStack >>= pushOutput

@@ -11,13 +11,9 @@ where
 
 import AppTypes
 import Control.Monad.IO.Class
-import Control.Monad.Reader.Class 
-import Control.Monad.State.Class 
-import Control.Monad.Trans.Class 
-import Control.Monad.Trans.Reader (ReaderT(..))
-import Control.Monad.Trans.State (StateT(..))
-import Control.Monad.Trans.Writer (WriterT(..))
-import Control.Monad.Writer.Class
+import Control.Monad.Reader 
+import Control.Monad.State 
+import Control.Monad.Writer
 
 newtype DuApp l s a = DuApp {runDuApp :: ReaderT AppEnv (WriterT [l] (StateT s IO)) a}
   deriving
