@@ -36,10 +36,14 @@ run:  ## Run test
 	@echo "Chapter 2"
 	@echo 2 $$'\n' | stack exec -- $(MAINEXE_NAME) -r ./src/data/rotations1.txt North
 	@echo 2 $$'\n' | stack exec -- $(MAINEXE_NAME) -o ./src/data/directions1.txt 
-	@echo 2 $$'\n' | stack exec -- stockquotes ./src/data/quotes.csv -n "My Company" -H "./stockreport.html"
+	@stack exec -- stockquotes ./src/data/quotes.csv -n "My Company" -H "./stockreport.html"
 
 	echo "Chapter 5"
 	@echo 3 $$'\n' | stack exec -- $(MAINEXE_NAME) 
+
+	echo "Chapter 6"
+	@stack exec -- du test -d 3 -e ".hs" -L
+	@stack exec -- du test --depth 3 --extension ".hs" -L
 
 	@echo "Tests"
 	@stack test 

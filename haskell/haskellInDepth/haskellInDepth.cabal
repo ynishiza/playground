@@ -109,6 +109,7 @@ library hid-lib
       Chapter5_3_1
       Radar
   other-modules:
+      Chapter6_2
       Paths_haskellInDepth
   autogen-modules:
       Paths_haskellInDepth
@@ -151,7 +152,7 @@ executable du
   autogen-modules:
       Paths_haskellInDepth
   hs-source-dirs:
-      src/du/
+      src/du
   default-extensions:
       DeriveFoldable
       DeriveFunctor
@@ -189,7 +190,11 @@ executable main
       Chapter5_2_1
       Chapter5_2_2_Parser
       Chapter5_3_1
+      Chapter6_2
       Radar
+      Paths_haskellInDepth
+  autogen-modules:
+      Paths_haskellInDepth
   hs-source-dirs:
       ./src/main
   default-extensions:

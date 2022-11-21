@@ -1,77 +1,74 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
 
 import AppTypes
 import AppWRST
-import Data.List (find, nub, sort)
+import Control.Arrow
+import Data.List (sortOn)
+import DirTree
+import DiskUsage
+import FileCount
 import Fmt
 import System.FilePath.Posix
-import System.PosixCompat.Files
-import DirTree
 import Utils
 
 main :: IO ()
 main = do
-  testDefaultConfig
+  testTestDir
 
-  testDirtree
-  pure ()
+testTestDir :: IO ()
+testTestDir = do
+  def <- defaultAppConfig
+  env <-
+    initAppEnv $
+      def
+        { basePath = basePath def </> joinPath ["test", "du", "data"],
+          maxDepth = 3,
+          extension = Just ".txt",
+          followSymLinks = True
+        }
 
-getDefaultEnv :: IO AppEnv
-getDefaultEnv = defaultAppConfig >>= initAppEnv
+  (_, usage, _) <- runAll diskUsage env 0
+  (_, files, _) <- runAll fileCount env 0
+  (_, tree, _) <- runAll dirTree env 0
 
-testDefaultConfig :: IO ()
-testDefaultConfig = do
-  defEnv <- getDefaultEnv
-  let AppConfig {..} = config defEnv
-  assertIsEqual basePath $ path defEnv
-  assertIsEqual (takeFileName $ path defEnv) "haskellInDepth"
-  assertIsEqual (isDirectory $ status defEnv) True
+  assertIsEqual
+    (normalizeOutput (basePath def) tree)
+    [ ("test/du/data", 0),
+      ("test/du/data/a", 1),
+      ("test/du/data/a/b", 2),
+      ("test/du/data/a/bb", 2),
+      ("test/du/data/a/bc", 2),
+      ("test/du/data/a/b/bb", 3),
+      ("test/du/data/a/b/c", 3),
+      ("test/du/data/a/bb/c", 3),
+      ("test/du/data/a/bc/c", 3)
+    ]
+  assertIsEqual
+    (normalizeOutput (basePath def) files)
+    [ ("test/du/data", 0),
+      ("test/du/data/a/b/c", 0),
+      ("test/du/data/a/bc", 0),
+      ("test/du/data/a", 1),
+      ("test/du/data/a/bb/c", 1),
+      ("test/du/data/a/bc/c", 1),
+      ("test/du/data/a/b", 2),
+      ("test/du/data/a/b/bb", 2),
+      ("test/du/data/a/bb", 2)
+    ]
+  assertIsEqual
+    (normalizeOutput (basePath def) usage)
+    [ ("test/du/data/a/bb/c", 101),
+      ("test/du/data/a/bc/c", 101),
+      ("test/du/data/a/bc", 101),
+      ("test/du/data/a/b/bb", 303),
+      ("test/du/data/a/b/c", 303),
+      ("test/du/data/a/bb", 303),
+      ("test/du/data/a/b", 808),
+      ("test/du/data/a", 1313),
+      ("test/du/data", 1313)
+    ]
 
-  envs <- getContentEnvs defEnv
-  fmtLn $ listF envs
-  testEnvByName (filterEnvByName "src") envs $ \e -> do
-    assertIsEqual True $ isDirectory $ status e
-    print e
-  testEnvByName (filterEnvByName "test") envs $ \e -> do
-    assertIsEqual True $ isDirectory $ status e
-    print e
-  testEnvByName (filterEnvByName "package.yaml") envs $ \e -> do
-    print e
-    assertIsEqual False $ isDirectory $ status e
-
-  return ()
-    where 
-      filterEnvByName name env = takeFileName (path env) == name
-      testEnvByName :: (AppEnv -> Bool) -> [AppEnv] -> (AppEnv -> IO ()) -> IO ()
-      testEnvByName f envs test = do
-            let x = find f envs
-            maybe (error "") test x
-
-
-testDirtree :: IO ()
-testDirtree = do
-  testDirtreeDepth 0
-  testDirtreeDepth 1
-  testDirtreeDepth 2
-  return ()
-
-testDirtreeDepth :: Int -> IO ()
-testDirtreeDepth d = do
-  config@AppConfig {..} <- defaultAppConfig
-  env <- initAppEnv $ config { maxDepth = d }
-  result <- runAll dirTree env () >>= traverse (testEach basePath) . v2
-
-  print result
-  assertIsEqual (sort $ nub $ v3 <$> result) [0..d]
-  return ()
-    where
-      v2 (_,x,_) = x
-      v3 (_,_,x) = x
-      testEach basePath (p, depth) = do
-        let 
-          relative = makeRelative basePath p
-          split = filter (/=".") $ splitDirectories relative
-        assertIsEqualSilent depth $ length split
-        return (p, relative, depth)
-
+  fmtLn "done"
+  where
+    normalizeOutput base info = sortOn snd $ first (makeRelative base) <$> info

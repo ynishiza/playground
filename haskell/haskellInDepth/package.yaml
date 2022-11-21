@@ -57,14 +57,6 @@ executables:
   main:
     main:               main.hs
     source-dirs:        ./src/main
-    other-modules:
-    - Chapter1_4
-    - Chapter2_1
-    - Chapter5_1_3
-    - Chapter5_2_1
-    - Chapter5_2_2_Parser
-    - Chapter5_3_1
-    - Radar
     dependencies: 
     - haskellInDepth
     - bytestring
@@ -75,7 +67,7 @@ executables:
 
   du:
     main: Main.hs
-    source-dirs: src/du/
+    source-dirs: src/du
     dependencies:
       - haskellInDepth
       - filepath >= 1.4.1 && < 1.5
@@ -163,7 +155,6 @@ tests:
     dependencies: 
     - haskellInDepth
     - du-lib
-    - fmt
     - filepath >= 1.4.1 && < 1.5
     - directory >= 1.3 && < 1.4
     - unix-compat >= 0.5 && < 0.6
@@ -172,7 +163,6 @@ tests:
     main:               Main.hs
     source-dirs:      ./test/main
     dependencies: 
-    - fmt
-    - random
     - haskellInDepth
     - hid-lib
+    - random
