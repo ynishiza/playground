@@ -1,11 +1,14 @@
-{-# LANGUAGE OverloadedStrings #-} 
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies #-}
 module Main (main) where
 
-import qualified Data.ByteString as B
-import Data.ByteString (ByteString)
-import GHC.Exts
+import App
+import ProcessRequest
+import qualified Playground
+import Types
 
-a = "123" :: ByteString
-b = fromString @ByteString "as"
-
-main = putStrLn ""
+main :: IO ()
+main = do
+  Playground.run
+  runApp ProcessRequest.processInteractive defaultWebAPIAuth
+  return ()

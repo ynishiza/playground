@@ -7,7 +7,10 @@ module Chapter7_2 (run) where
 import Control.Monad.Except
 import Data.Functor.Identity
 import Control.Monad.State
-import Control.Monad.Trans.Except
+import Control.Monad.Reader
+import Control.Monad.Trans.Except 
+import Control.Monad.Trans.Writer (Writer)
+import Control.Monad.Trans.Reader (Reader)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
@@ -190,3 +193,4 @@ testExceptionHandlers = createTest (do
             runAndAssertIO (Left "OOOOPS") (finallyE @IO @String @Int (throwE "OOOOPS") finallyHandler)
         testDone
   ) "testExceptionHandlers"
+

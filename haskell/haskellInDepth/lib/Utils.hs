@@ -15,6 +15,7 @@ module Utils
     assertIsEqual,
     assertIsEqualSilent,
     printBanner,
+    printBannerWrap,
     useIO,
     createTest,
     createChapterTest,
@@ -66,6 +67,9 @@ assertIsEqualBase :: (Eq a, Show a) => Bool -> a -> a -> IO ()
 assertIsEqualBase showMessage x y = do
   unless (x == y) $ error $ fmtLn $ "assertIsEqual:" +|| x ||+ "!=" +|| y ||+ ""
   when showMessage $ fmtLn $ "assertIsEqual:" +|| x ||+ "==" +|| y ||+ ""
+
+printBannerWrap :: T.Text -> IO () -> IO ()
+printBannerWrap name io = printBanner (name |+ " start") >> io >> printBanner (name |+ " end")
 
 printBanner :: T.Text -> IO ()
 printBanner name = fmtLn $ "=====" +| name |+ "====="

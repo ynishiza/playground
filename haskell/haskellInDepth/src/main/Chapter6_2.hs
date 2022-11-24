@@ -1,6 +1,6 @@
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# OPTIONS_GHC -Wno-missing-methods #-}
 
 module Chapter6_2
@@ -18,7 +18,6 @@ module Chapter6_2
   )
 where
 
-import Data.Either
 import Control.Monad.Except
 import Control.Monad.Reader
 import Control.Monad.State
@@ -68,8 +67,7 @@ processMyApp (MyApp1 app) r st = do
 -- mapLevel4 :: MyApp1 r w s a -> ((a, [w]) -> (b, [v])) -> MyApp1 r v s b
 -- mapLevel4 (MyApp1 (ReaderT r)) f = MyApp1 $ ReaderT (WriterT . (f<$>) . runWriterT <$> r)
 
-
-myTask :: MyApp0 Bool Int String String Bool 
+myTask :: MyApp0 Bool Int String String Bool
 myTask = do
   x <- ask
   tell [1]
@@ -82,21 +80,21 @@ myTask = do
 -- i.e. manual lifting
 taskWithManualLift :: MyApp0 Bool Int String String Bool
 taskWithManualLift = do
-  x <- ask                                      -- level1: ReaderT 
-  lift $ tell [0]                               -- level2: WriterT
-  lift $ lift $ put "Hello"                     -- level3: StateT
-  _ <- lift $ lift $ lift $ throwError "Oops"   -- level4: ExceptT
-  lift $ lift $ lift $ lift $ putStr "Hello"    -- level5: IO
+  x <- ask -- level1: ReaderT
+  lift $ tell [0] -- level2: WriterT
+  lift $ lift $ put "Hello" -- level3: StateT
+  _ <- lift $ lift $ lift $ throwError "Oops" -- level4: ExceptT
+  lift $ lift $ lift $ lift $ putStr "Hello" -- level5: IO
   return x
 
 -- same with transformer class
 taskWithTransformLift :: MyApp0 Bool Int String String Bool
 taskWithTransformLift = do
-  x <- ask                      -- MonadReader
-  tell [0]                      -- MonadWriter
-  put "Hello"                   -- MonadState
-  _ <- throwError "Oops"        -- MonadError
-  liftIO $ putStrLn "Hello"     -- MonadIO
+  x <- ask -- MonadReader
+  tell [0] -- MonadWriter
+  put "Hello" -- MonadState
+  _ <- throwError "Oops" -- MonadError
+  liftIO $ putStrLn "Hello" -- MonadIO
   return x
 
 instance MonadWriter [w] (MyApp2 r w s e) where
@@ -120,4 +118,58 @@ instance MonadError e (MyApp2 r w s e) where
   catchError (MyApp2 p) h = MyApp2 $ catchError p (runMyApp2 . h)
 
 main :: IO ()
-main = processMyApp0 myTask True "" >>= print
+main = do
+  processMyApp0 myTask True "" >>= print
+  main0
+
+newtype App0 r w a = App0 {runApp0 :: ReaderT r (Writer [w]) a}
+  deriving
+    ( Functor,
+      Applicative,
+      Monad,
+      MonadWriter [w],
+      MonadReader r
+    )
+
+newtype App0V1 r w a = App0V1 {runApp0v1 :: WriterT [w] (Reader r) a}
+  deriving
+    ( Functor,
+      Applicative,
+      Monad,
+      MonadWriter [w],
+      MonadReader r
+    )
+
+newtype App0v2 e r w a = App0v2 {runApp0v2 :: WriterT [w] (ReaderT r (Except e)) a}
+  deriving
+    ( Functor,
+      Applicative,
+      Monad,
+      MonadWriter [w],
+      MonadReader r
+    )
+
+useApp0Only :: App0 w w w
+useApp0Only = App0 $ do
+  x <- ask
+  lift $ tell [x]
+  return x
+
+useApp0Class :: (MonadReader w m, MonadWriter [w] m) => m w
+useApp0Class = do
+  x <- ask
+  tell [x]
+  return x
+
+main0 :: IO ()
+main0 = do
+  let x0 = useApp0Only @String
+      x = useApp0Class @String @(App0 String String)
+      y = useApp0Class @String @(App0V1 String String)
+      z = useApp0Class @String @(App0v2 () String String)
+
+  print $ runWriter (runReaderT (runApp0 x0) "Hello")
+  print $ runWriter (runReaderT (runApp0 x) "Hello")
+  print $ runReader (runWriterT (runApp0v1 y)) "Hello"
+  print $ runExcept (runReaderT (runWriterT (runApp0v2 z)) "Hello")
+  return ()

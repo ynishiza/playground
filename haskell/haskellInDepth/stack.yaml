@@ -5,7 +5,7 @@ resolver: lts-18.21
 packages:
 - .
 
-allow-newer: true
+allow-newer: false
 
 extra-deps:
   - blaze-colonnade-1.2.2.1

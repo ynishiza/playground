@@ -20,7 +20,7 @@ extra-source-files:
 description:         Please see the README on GitHub at <https://github.com/githubuser/haskellInDepthProjects#readme>
 
 dependencies:
-- base >= 4.15 && < 5
+- base >= 4.14 && < 5
 - fmt
 - mtl >= 2.0 && < 2.3
 - transformers >= 0.5 && < 0.6
@@ -115,9 +115,9 @@ executables:
     main: Main.hs
     dependencies:
       - haskellInDepth
-      - aeson >= 1.2 && < 1.6
+      - aeson >= 1.2 && < 2
       - req >= 2.0 && < 3.10
-      - http-client >= 0.4 && < 0.8
+      - http-client >= 0.6 && < 0.7
       - optparse-applicative >= 0.14 && < 0.17
     default-extensions:
       - OverloadedStrings
@@ -159,6 +159,24 @@ internal-libraries:
       - extra
       - exceptions
 
+  suntimes-lib:
+    source-dirs: src/suntimes
+    exposed-modules:
+      - Types
+      - App
+      - GeoCoordsReq
+      - SunTimes
+      - STExcept
+      - ProcessRequest
+    dependencies:
+      - haskellInDepth
+      - aeson >= 1.2 && < 2
+      - req >= 2.0 && < 3.10
+      - http-client >= 0.6 && < 0.7
+      - optparse-applicative >= 0.14 && < 0.17
+    default-extensions:
+      - OverloadedStrings
+
 tests:
   du-test: 
     main:               Main.hs
@@ -174,3 +192,12 @@ tests:
     - haskellInDepth
     - hid-lib
     - random
+
+  suntimes-test:
+    main:               Main.hs
+    source-dirs:      ./test/suntimes
+    dependencies: 
+    - haskellInDepth
+    - suntimes-lib
+    default-extensions:
+      - OverloadedStrings

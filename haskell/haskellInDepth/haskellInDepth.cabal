@@ -46,7 +46,7 @@ library
       TypeSynonymInstances
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
-      base >=4.15 && <5
+      base >=4.14 && <5
     , bytestring >=0.10 && <0.12
     , directory ==1.3.*
     , exceptions ==0.10.*
@@ -94,7 +94,7 @@ library du-lib
       GeneralizedNewtypeDeriving
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
-      base >=4.15 && <5
+      base >=4.14 && <5
     , bytestring >=0.10 && <0.12
     , directory ==1.3.*
     , exceptions ==0.10.*
@@ -144,7 +144,7 @@ library hid-lib
       TypeSynonymInstances
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
-      base >=4.15 && <5
+      base >=4.14 && <5
     , bytestring >=0.10 && <0.12
     , directory ==1.3.*
     , exceptions
@@ -154,6 +154,57 @@ library hid-lib
     , haskellInDepth
     , mtl >=2.0 && <2.3
     , random
+    , text ==1.2.*
+    , text-show >=3.0 && <4
+    , time >=1.8 && <1.12
+    , transformers ==0.5.*
+    , unix-compat ==0.5.*
+  default-language: Haskell2010
+
+library suntimes-lib
+  exposed-modules:
+      Types
+      App
+      GeoCoordsReq
+      SunTimes
+      STExcept
+      ProcessRequest
+  other-modules:
+      Main
+      Playground
+      Paths_haskellInDepth
+  autogen-modules:
+      Paths_haskellInDepth
+  hs-source-dirs:
+      src/suntimes
+  default-extensions:
+      DeriveFoldable
+      DeriveFunctor
+      DeriveTraversable
+      DeriveGeneric
+      DeriveDataTypeable
+      ExplicitForAll
+      ScopedTypeVariables
+      StandaloneDeriving
+      TypeApplications
+      MultiParamTypeClasses
+      TypeSynonymInstances
+      OverloadedStrings
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
+  build-depends:
+      aeson >=1.2 && <2
+    , base >=4.14 && <5
+    , bytestring >=0.10 && <0.12
+    , directory ==1.3.*
+    , exceptions ==0.10.*
+    , extra >=1.5 && <1.8
+    , filepath >=1.4.1 && <1.5
+    , fmt
+    , haskellInDepth
+    , http-client ==0.6.*
+    , mtl >=2.0 && <2.3
+    , optparse-applicative >=0.14 && <0.17
+    , req >=2.0 && <3.10
     , text ==1.2.*
     , text-show >=3.0 && <4
     , time >=1.8 && <1.12
@@ -191,7 +242,7 @@ executable du
       RecordWildCards
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
-      base >=4.15 && <5
+      base >=4.14 && <5
     , bytestring >=0.10 && <0.12
     , directory ==1.3.*
     , exceptions ==0.10.*
@@ -241,7 +292,7 @@ executable main
       TypeSynonymInstances
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
-      base >=4.15 && <5
+      base >=4.14 && <5
     , bytestring >=0.10 && <0.12
     , directory ==1.3.*
     , exceptions
@@ -285,7 +336,7 @@ executable stockquotes
       Chart >=1.8 && <1.10
     , Chart-cairo >=1.8 && <1.10
     , Chart-diagrams >=1.8 && <1.10
-    , base >=4.15 && <5
+    , base >=4.14 && <5
     , blaze-colonnade >=1.1 && <1.3
     , blaze-html ==0.9.*
     , bytestring >=0.10 && <0.12
@@ -310,6 +361,13 @@ executable stockquotes
 executable suntimes
   main-is: Main.hs
   other-modules:
+      App
+      GeoCoordsReq
+      Playground
+      ProcessRequest
+      STExcept
+      SunTimes
+      Types
       Paths_haskellInDepth
   autogen-modules:
       Paths_haskellInDepth
@@ -330,8 +388,8 @@ executable suntimes
       OverloadedStrings
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
-      aeson >=1.2 && <1.6
-    , base >=4.15 && <5
+      aeson >=1.2 && <2
+    , base >=4.14 && <5
     , bytestring >=0.10 && <0.12
     , directory ==1.3.*
     , exceptions ==0.10.*
@@ -339,7 +397,7 @@ executable suntimes
     , filepath >=1.4.1 && <1.5
     , fmt
     , haskellInDepth
-    , http-client >=0.4 && <0.8
+    , http-client ==0.6.*
     , mtl >=2.0 && <2.3
     , optparse-applicative >=0.14 && <0.17
     , req >=2.0 && <3.10
@@ -373,7 +431,7 @@ test-suite du-test
       TypeSynonymInstances
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
-      base >=4.15 && <5
+      base >=4.14 && <5
     , bytestring >=0.10 && <0.12
     , directory ==1.3.*
     , du-lib
@@ -415,7 +473,7 @@ test-suite main-test
       TypeSynonymInstances
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
-      base >=4.15 && <5
+      base >=4.14 && <5
     , bytestring >=0.10 && <0.12
     , directory ==1.3.*
     , exceptions ==0.10.*
@@ -426,6 +484,47 @@ test-suite main-test
     , hid-lib
     , mtl >=2.0 && <2.3
     , random
+    , text ==1.2.*
+    , text-show >=3.0 && <4
+    , time >=1.8 && <1.12
+    , transformers ==0.5.*
+    , unix-compat ==0.5.*
+  default-language: Haskell2010
+
+test-suite suntimes-test
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      Paths_haskellInDepth
+  autogen-modules:
+      Paths_haskellInDepth
+  hs-source-dirs:
+      ./test/suntimes
+  default-extensions:
+      DeriveFoldable
+      DeriveFunctor
+      DeriveTraversable
+      DeriveGeneric
+      DeriveDataTypeable
+      ExplicitForAll
+      ScopedTypeVariables
+      StandaloneDeriving
+      TypeApplications
+      MultiParamTypeClasses
+      TypeSynonymInstances
+      OverloadedStrings
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
+  build-depends:
+      base >=4.14 && <5
+    , bytestring >=0.10 && <0.12
+    , directory ==1.3.*
+    , exceptions ==0.10.*
+    , extra >=1.5 && <1.8
+    , filepath >=1.4.1 && <1.5
+    , fmt
+    , haskellInDepth
+    , mtl >=2.0 && <2.3
+    , suntimes-lib
     , text ==1.2.*
     , text-show >=3.0 && <4
     , time >=1.8 && <1.12

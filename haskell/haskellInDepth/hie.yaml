@@ -14,3 +14,5 @@ cradle:
       component: haskellInDepth:test:main-test
     - path: "./test/du"
       component: haskellInDepth:test:du-test
+    - path: "./test/suntime"
+      component: haskellInDepth:test:suntimes-test

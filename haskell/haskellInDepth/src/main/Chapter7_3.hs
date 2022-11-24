@@ -80,6 +80,17 @@ run =
               catch badDivPureM (catchFallbackTo0 @MyError)
             ]
 
+          printMany
+            "catches multiple i.e. every error"
+            [ catches
+                (evaluate badDivNative)
+                [ Handler (catchFallbackTo0 @Deadlock),
+                  Handler (catchFallbackTo0 @MyError),
+                  Handler (catchFallbackTo0 @ArithException),
+                  Handler (\(e :: MyError) -> throwIO e)
+                ]
+            ]
+
           let
 
           printMany
@@ -247,6 +258,21 @@ catchSample = do
     >>= print
   -- catch c2 (logAndSuppress @AssertionFailed) >>= print
 
+  printBanner "catches"
+  catches
+    c1
+    [ Handler (logAndSuppress @Deadlock),
+      Handler (logAndRethrow @SomeException),
+      Handler (logAndSuppress @ArithException)
+    ] >>= print
+  catches
+    c2
+    [ Handler (logAndSuppress @Deadlock),
+      Handler (logAndRethrow @SomeException),
+      Handler (logAndSuppress @ArithException)
+    ] >>= print
+
+  printBanner "try"
   let logAndSuppress2 :: Exception e => Either e Int -> IO Int
       logAndSuppress2 (Left e) = print e >> return (-1)
       logAndSuppress2 (Right v) = return v

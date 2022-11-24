@@ -60,13 +60,11 @@ initAppEnvWith :: AppConfig -> FilePath -> IO AppEnv
 initAppEnvWith c p = AppEnv c p 0 <$> getFileStatusFromConfig c p
 
 getContentEnvs :: AppEnv -> IO [AppEnv]
-getContentEnvs env@AppEnv {..} = do
-  listContents path
-    >>= traverse createEnv
+getContentEnvs env@AppEnv {..} = listContents path >>= traverse createEnv
   where
-    createEnv name =
-      getFileStatusFromConfig config p
-        >>= \s -> return $ env {path = p, status = s, depth = depth + 1}
+    createEnv name = do
+      s <- getFileStatusFromConfig config p
+      return $ env {path = p, status = s, depth = depth + 1}
       where
         p = path </> name
 
