@@ -49,7 +49,12 @@ run:  ## Run test
 	@echo "Chapter 7"
 	@echo 5 $$'\n' | stack exec -- $(MAINEXE_NAME) 
 	@echo 6 $$'\n' | stack exec -- $(MAINEXE_NAME) 
+	@stack exec -- suntimes -f ./src/data/suntimes/input.txt -c ./src/data/suntimes/config.json
+	
+	make test
 
+
+test: ## Run tests
 	@echo "Tests"
 	@stack test 
 
@@ -71,4 +76,4 @@ clean: ## Clean
 help: ## Display this help
 	@grep -E '^[0-9a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-.PHONY: hello debug run clean watch unwatch compile help
+.PHONY: hello debug test run clean watch unwatch compile help

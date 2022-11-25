@@ -1,15 +1,13 @@
 module ProcessRequest
   ( processInteractive,
+    processFile,
     processManyLines,
     RequestError,
-    parseLine,
   )
 where
 
 import App
-import Control.Monad
-import Control.Monad.Catch
-import Control.Monad.Except
+import Data.Foldable
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Data.Time.Format
@@ -20,51 +18,96 @@ import STExcept
 import SunTimes
 import Types
 
-parseLine :: T.Text -> Either RequestError (Address, When)
-parseLine line = case T.breakOn "@" (cleanse line) of
-  (addr, "") -> onlyAddress addr
-  (da, addr) -> toDate (cleanse (T.tail addr), cleanse da)
+type Request = (Address, When)
+
+requestFormat :: T.Text
+requestFormat = "[yyyy-mm-dd@]ADDRESS"
+
+whenFormat :: String
+whenFormat = "%Y-%m-%d"
+
+lineDelimiter :: Char
+lineDelimiter = '@'
+
+parseInput :: T.Text -> Either RequestError Request
+parseInput line =
+  case T.findIndex (== lineDelimiter) line of
+    Just i -> (,) <$> processAddr (T.drop (i + 1) line) <*> processDay (T.take i line)
+    Nothing -> (,) <$> processAddr line <*> processDay ""
   where
     cleanse = T.strip
-    onlyAddress addr = Right (addr, Now)
-
-    toDate :: (Address, T.Text) -> Either RequestError (Address, When)
-    toDate (addr, v) = case v of
-      "" -> onlyAddress addr
+    createMessage :: T.Text -> T.Text
+    createMessage msg = "Failed to process line='" +| line |+ "'\t " +| msg |+ ""
+    processAddr addr = case cleanse addr of
+      "" -> Left (BadAddress $ createMessage "Missing address")
+      _ -> Right addr
+    processDay :: T.Text -> Either RequestError When
+    processDay v = case cleanse v of
+      "" -> Right Now
       t ->
-        ( case parseTimeM False defaultTimeLocale "%Y-%m-%d" (T.unpack t) of
-            Nothing -> Left (BadDay $ "Invalid date = '" +| t |+ "''. Must be of the form yyyy-mm-dd.")
-            Just d -> Right (addr, On d)
+        ( case parseTimeM False defaultTimeLocale whenFormat (T.unpack t) of
+            Nothing -> Left (BadDay $ createMessage $ "Invalid date = " +| t |+ "")
+            Just d -> Right (On d)
         )
 
-processRequest :: (Address, When) -> SuntimesApp (SunTimes ZonedTime)
+processInput :: T.Text -> SuntimesApp ()
+processInput line = either (throwM . FormatError) proc (parseInput line)
+  where
+    proc rq = processRequest rq >>= liftIO . prettyLn . formatResult rq
+
+processRequest :: Request -> SuntimesApp (GeoCoords, SunTimes ZonedTime)
 processRequest (location, w) = do
   g <- getGeoCoords location
-  getSuntimesLocal g w
+  t <- getSuntimesLocal g w
+  return (g, t)
+
+formatResult :: Request -> (GeoCoords, SunTimes ZonedTime) -> T.Text
+formatResult (addr, _) (GeoCoords {..}, SunTimes {..}) =
+  fmtDate sunrise |+ "@" +| addr |+ ""
+    +| "\t("
+    +| lat |+ ","
+    +| lon |+ ")\n"
+      <> indentF
+        2
+        ( ""
+            +| fmtTime sunrise |+ "\n"
+            +| fmtTime sunset |+ "\n"
+        )
+  where
+    fmtDate = formatTime defaultTimeLocale "%F"
+    fmtTime = formatTime defaultTimeLocale "%X %EZ"
+
+processManyLines :: [T.Text] -> SuntimesApp ()
+processManyLines = traverse_ (handle handleError . procOne)
+  where
+    procOne :: T.Text -> SuntimesApp ()
+    procOne line = case T.uncons (T.strip line) of
+      Just ('#', _) -> pure ()
+      _ -> processInput line
+
+handleError :: SuntimeException -> SuntimesApp ()
+handleError e
+  | (UnknownLocation _) <- e = p e
+  | (UnknownTime _) <- e = p e
+  | (FormatError _) <- e = p e
+  | otherwise = throwM e
+  where
+    p e' = liftIO (print e')
 
 processInteractive :: SuntimesApp ()
-processInteractive = catch @SuntimesApp @SomeException (action >> prompt) handle
+processInteractive = mainProc `catch` handleError >> onDone
   where
-    action = do
-      p "Enter request"
+    p :: T.Text -> SuntimesApp ()
+    p = liftIO . prettyLn
 
+    mainProc = do
+      p $ "Enter request: " +| requestFormat |+ ""
       l <- liftIO T.getLine
-      case parseLine l of
-        Right v -> do
-          r <- processRequest v
-          p $ "result=" +| r |+ ""
-        Left e -> do
-          throwM e
-    prompt = do
+      processInput l `catch` handleError
+    onDone = do
       p "Another request? (y/n)"
       l <- liftIO T.getLine
       when (l == "y" || l == "yes") processInteractive
 
-    handle :: Exception e => e -> SuntimesApp ()
-    handle e = do
-      p $ "error" +|| e ||+ ""
-      prompt
-    p = liftIO . fmtLn
-
-processManyLines :: [T.Text] -> SuntimesApp ()
-processManyLines = undefined
+processFile :: FilePath -> SuntimesApp ()
+processFile fpath = liftIO (T.lines <$> T.readFile fpath) >>= processManyLines

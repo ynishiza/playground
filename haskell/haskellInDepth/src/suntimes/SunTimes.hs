@@ -1,5 +1,4 @@
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE RecordWildCards #-}
 
 module SunTimes
   ( getSuntimesUTC,
@@ -10,12 +9,12 @@ module SunTimes
 where
 
 import App
-import Control.Monad.Catch
-import Control.Monad.Reader
 import Data.Aeson
 import qualified Data.Text as T
 import Data.Time hiding (getTimeZone)
+import Fmt
 import GHC.Generics
+import STExcept
 import Types
 
 suntimeUri :: T.Text
@@ -42,24 +41,28 @@ getSuntimesUTC GeoCoords {..} w = do
 
 getSuntimesLocal :: GeoCoords -> When -> SuntimesApp (SunTimes ZonedTime)
 getSuntimesLocal coords w = do
-  tz <- defaultToUtc $ getTimeZone coords
+  tz <- getTimeZone coords
   res <- getSuntimesUTC coords w
   return $ sunTimeToZonedTime tz res
-  where
-    defaultToUtc v = catchAll v (const (return utc))
 
 getTimeZone :: GeoCoords -> SuntimesApp TimeZone
-getTimeZone GeoCoords {..} = do
-  wauth <- ask
-  let uri = https timezoneDBUri /: "v2.1" /: "get-time-zone"
-      params =
-        "key" =: timezoneDBKey wauth
-          <> "lat" =: lat
-          <> "lng" =: lon
-          <> "by" =: ("position" :: T.Text)
-          <> "format" =: ("json" :: T.Text)
-          <> "fields" =: ("gmtOffset,abbreviation,dst" :: T.Text)
-  timeZoneResponseToTimeZone . responseBody . snd <$> appGET @(JsonResponse TimeZoneResponse) uri params jsonResponse
+getTimeZone GeoCoords {..} =
+  do
+    wauth <- ask
+    let uri = https timezoneDBUri /: "v2.1" /: "get-time-zone"
+        params =
+          "key" =: timezoneDBKey wauth
+            <> "lat" =: lat
+            <> "lng" =: lon
+            <> "by" =: ("position" :: T.Text)
+            <> "format" =: ("json" :: T.Text)
+            <> "fields" =: ("gmtOffset,abbreviation,dst" :: T.Text)
+    timeZoneResponseToTimeZone . responseBody . snd <$> appGET @(JsonResponse TimeZoneResponse) uri params jsonResponse
+    `catch` onErr
+  where
+    onErr (ServiceAPIError m) = do
+      throwM (ServiceAPIError $ "Failed to access timezone DB. Is a valid API key set in your config?\n" +| m |+ "")
+    onErr e = throwM e
 
 data TimeZoneResponse = TimeZoneResponse
   { dst :: !T.Text,

@@ -4,11 +4,9 @@ module GeoCoordsReq
 where
 
 import App
-import STExcept
-import Control.Monad.Reader
-import Control.Monad.Catch
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
+import STExcept
 import Types
 
 baseUri :: T.Text

@@ -59,18 +59,18 @@ main = do
 
 testSuntimes :: IO ()
 testSuntimes = do
-  sres <- runApp (getSuntimesUTC coords0 (On suntimesDate0)) defaultWauth
+  sres <- runApp (getSuntimesUTC coords0 (On suntimesDate0)) LevelDebug defaultWauth
   assertIsEqual sres suntimes0UTC
 
-  tres <- runApp (getTimeZone coords0) defaultWauth
+  tres <- runApp (getTimeZone coords0) LevelDebug defaultWauth
   assertIsEqual tres timezoneLocal
 
-  sres2 <- runApp (getSuntimesLocal coords0 (On suntimesDate0)) defaultWauth
+  sres2 <- runApp (getSuntimesLocal coords0 (On suntimesDate0)) LevelDebug defaultWauth
   assertIsEqual (show sres2) (show suntimes0Local)
   pure ()
 
 testGeoCoords :: IO ()
 testGeoCoords = do
-  res <- runApp (getGeoCoords loc0) defaultWauth
+  res <- runApp (getGeoCoords loc0) LevelDebug defaultWauth
   assertIsEqual res coords0
   pure ()

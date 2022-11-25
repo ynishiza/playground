@@ -190,6 +190,7 @@ library suntimes-lib
       MultiParamTypeClasses
       TypeSynonymInstances
       OverloadedStrings
+      RecordWildCards
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
       aeson >=1.2 && <2
@@ -202,6 +203,7 @@ library suntimes-lib
     , fmt
     , haskellInDepth
     , http-client ==0.6.*
+    , monad-logger
     , mtl >=2.0 && <2.3
     , optparse-applicative >=0.14 && <0.17
     , req >=2.0 && <3.10
@@ -386,6 +388,7 @@ executable suntimes
       MultiParamTypeClasses
       TypeSynonymInstances
       OverloadedStrings
+      RecordWildCards
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
       aeson >=1.2 && <2
@@ -398,6 +401,7 @@ executable suntimes
     , fmt
     , haskellInDepth
     , http-client ==0.6.*
+    , monad-logger
     , mtl >=2.0 && <2.3
     , optparse-applicative >=0.14 && <0.17
     , req >=2.0 && <3.10

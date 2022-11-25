@@ -3,12 +3,17 @@
 {-# LANGUAGE ExplicitForAll #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Chapter7_3
   ( run,
     divPure,
     divPureIO,
     divPureM,
+    catchSample,
+    finallySample,
+    bracketSample,
+    catchByTypeTest,
     MyError,
   )
 where
@@ -30,6 +35,9 @@ instance Buildable () where
 
 catchFallbackTo :: Exception e => String -> a -> e -> IO a
 catchFallbackTo label v e = ("[" +| label |+ "] catch fallback on error:" +|| e ||+ "\n") >> return v
+
+catchFallbackTo0All :: SomeException -> IO Int
+catchFallbackTo0All = catchFallbackTo0
 
 catchFallbackTo0 :: Exception e => e -> IO Int
 catchFallbackTo0 = catchFallbackTo "" 0
@@ -60,8 +68,8 @@ run =
 
           printMany
             "catch @SomeException i.e. every error"
-            [ catch (do let !x = badFold in return 30) (catchFallbackTo0 @SomeException),
-              catch (evaluate badFold) (catchFallbackTo0 @SomeException),
+            [ catch (do let !x = badFold in return 30) catchFallbackTo0All,
+              catch (evaluate badFold) catchFallbackTo0All,
               catch (evaluate badDivNative) (catchFallbackTo0 @SomeException),
               catch (evaluate badDivPure) (catchFallbackTo0 @SomeException),
               catch (evaluate badDivPureText1) (catchFallbackTo0 @SomeException),
@@ -139,9 +147,9 @@ run =
 
           printMany
             "finally"
-            [ alwaysCatch $ finally (deadlock) (putStrLn "FINALLY"),
+            [ alwaysCatch $ finally deadlock (putStrLn "FINALLY"),
               alwaysCatch $ finally (putStrLn "Success") (putStrLn "FINALLY"),
-              alwaysCatch $ onException (deadlock) (putStrLn "ONEXCEPTION"),
+              alwaysCatch $ onException deadlock (putStrLn "ONEXCEPTION"),
               alwaysCatch $ onException (putStrLn "Success") (putStrLn "ONEXCEPTION")
             ]
 
@@ -166,6 +174,7 @@ run =
           testDone
       )
 
+deadlock :: IO a
 deadlock = throwIO Deadlock
 
 badFold :: a
@@ -232,100 +241,52 @@ catchSample = do
   let c1 = return 100
       c2 = throwIO Deadlock
 
-  let logAndSuppress :: Exception e => e -> IO Int
+  let logAndSuppress :: SomeException -> IO Int
       logAndSuppress e = print e >> return 0
 
-      logAndRethrow :: Exception e => e -> IO Int
+      logAndRethrow :: SomeException -> IO Int
       logAndRethrow e = print e >> throwIO e
 
-  catch
-    c1
-    (logAndSuppress @SomeException)
-    >>= print
-  catch
-    c2
-    (logAndSuppress @SomeException)
-    >>= print
-  catch
-    c1
-    (logAndRethrow @SomeException)
-    >>= print
-  -- catch c2 (logAndRethrow @SomeException) >>= print
-
-  catch
-    c2
-    (logAndSuppress @Deadlock)
-    >>= print
-  -- catch c2 (logAndSuppress @AssertionFailed) >>= print
-
-  printBanner "catches"
-  catches
-    c1
-    [ Handler (logAndSuppress @Deadlock),
-      Handler (logAndRethrow @SomeException),
-      Handler (logAndSuppress @ArithException)
-    ] >>= print
-  catches
-    c2
-    [ Handler (logAndSuppress @Deadlock),
-      Handler (logAndRethrow @SomeException),
-      Handler (logAndSuppress @ArithException)
-    ] >>= print
+  c1 `catch` logAndSuppress >>= print
+  c2 `catch` logAndSuppress >>= print
+  c1 `catch` logAndRethrow >>= print
+  -- c2 `catch` logAndRethrow >>= print
 
   printBanner "try"
-  let logAndSuppress2 :: Exception e => Either e Int -> IO Int
+  let logAndSuppress2 :: Either SomeException Int -> IO Int
       logAndSuppress2 (Left e) = print e >> return (-1)
       logAndSuppress2 (Right v) = return v
-      logAndRethrow2 :: Exception e => Either e Int -> IO Int
+      logAndRethrow2 :: Either SomeException Int -> IO Int
       logAndRethrow2 (Left e) = print e >> throwIO e
       logAndRethrow2 (Right v) = return v
 
-  try
-    c1
-    >>= logAndSuppress2 @SomeException
+  try c1 >>= logAndSuppress2
     >>= print
-  try
-    c2
-    >>= logAndSuppress2 @SomeException
+  try c2 >>= logAndSuppress2
     >>= print
-  try
-    c2
-    >>= logAndSuppress2 @Deadlock
+  try c1 >>= logAndRethrow2
     >>= print
-  try
-    c2
-    >>= logAndSuppress2 @ArithException
-    >>= print
-  try
-    c1
-    >>= logAndRethrow2 @SomeException
-    >>= print
-  -- try c2 >>= logAndRethrow2 @SomeException >>= print
+  -- try c2 >>= logAndRethrow2  >>= print
 
+  putStrLn "Done"
   pure ()
 
 finallySample :: IO ()
 finallySample = do
   let cerror = throwIO @Deadlock @Int Deadlock
 
-  finally
-    (putStrLn "start")
-    (putStrLn "finally")
+  putStrLn "start" `finally` putStrLn "finally"
   -- finally (cerror) (putStrLn "finally")
-  onException
-    (putStrLn "start")
-    (putStrLn "onException")
+  putStrLn "start" `onException` putStrLn "onException"
   -- onException (cerror) (putStrLn "onException")
 
-  let onError :: Exception e => e -> IO Int
+  let onError :: SomeException -> IO Int
       onError e = print e >> return 0
-  catch
-    (finally cerror (putStrLn "finally"))
-    (onError @SomeException)
+  cerror `finally` putStrLn "finally"
+    `catch` onError
     >>= print
-  catch
-    (finally (return 10) (putStrLn "finally"))
-    (onError @SomeException)
+  return 10 `finally` putStrLn "finally"
+    `catch` onError
     >>= print
 
   pure ()
@@ -344,3 +305,47 @@ bracketSample = do
   bracket cerror cfinally cprocess >>= print
 
   pure ()
+
+handleGeneric1 :: SomeException -> IO ()
+-- handleGeneric1 DivideByZero = putStrLn "Divide"
+handleGeneric1 e = putStrLn $ "handleGeneric1:" ++ show e
+
+handleGeneric2 :: Exception e => e -> IO ()
+-- handleGeneric2 DivideByZero = putStrLn "Divide"
+handleGeneric2 e = putStrLn $ "handleGeneric2:" ++ show e
+
+handleAsync :: AsyncException -> IO ()
+handleAsync StackOverflow = putStrLn "Overflow!"
+handleAsync HeapOverflow = putStrLn "Heap!"
+handleAsync e = putStrLn $ "Other async exception:" ++ show e
+
+handleArith :: ArithException -> IO ()
+handleArith DivideByZero = putStrLn "Zero!"
+handleArith LossOfPrecision = putStrLn "Precision!"
+handleArith e = putStrLn $ "Other arith exception:" ++ show e
+
+rethrowArith :: ArithException -> IO ()
+rethrowArith e = putStrLn ("rethrowArith:" ++ show e) >> throwIO e
+
+rethrowGeneric1 :: SomeException -> IO ()
+rethrowGeneric1 e = putStrLn ("rethrowGeneric1:" ++ show e) >> throwIO e
+
+catchByTypeTest :: IO ()
+catchByTypeTest = do
+  let handlers =
+        [ Handler handleAsync,
+          Handler handleArith,
+          Handler handleGeneric1,
+          Handler (handleGeneric2 @SomeException)
+        ]
+  throw DivideByZero `catches` handlers
+  throw LossOfPrecision `catches` handlers
+  throw Denormal `catches` handlers
+  throw StackOverflow `catches` handlers
+  throw Deadlock `catches` handlers
+
+  (throw DivideByZero `catch` rethrowArith) `catch` rethrowGeneric1
+  throw DivideByZero `catches` [Handler rethrowArith, Handler rethrowGeneric1]
+
+  putStrLn "Done"
+  return ()

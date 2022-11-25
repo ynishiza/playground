@@ -41,11 +41,12 @@ requestGoogle path = runReq defaultHttpConfig $ createGoogleRequest path
 
 printRequestInfo :: C.Request -> IO ()
 printRequestInfo rq =
-  printBannerWrap "Request info: start" $ do
-    "uri:" +|| C.getUri rq ||+ "\n"
-    +|"method:" +|| C.method rq ||+ "\n"
-    +|"host:" +|| C.host rq ||+ "\n"
-    +|"path:" +|| C.path rq ||+ "\n"
+  printBannerWrap "Request info: start" $
+    do
+      "uri:" +|| C.getUri rq ||+ "\n"
+      +| "method:" +|| C.method rq ||+ "\n"
+      +| "host:" +|| C.host rq ||+ "\n"
+      +| "path:" +|| C.path rq ||+ "\n"
 
 printResponseInfo :: C.Response ByteString -> IO ()
 printResponseInfo resp = printBannerWrap "ResponseInfo" $ do

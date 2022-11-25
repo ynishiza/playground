@@ -119,8 +119,10 @@ executables:
       - req >= 2.0 && < 3.10
       - http-client >= 0.6 && < 0.7
       - optparse-applicative >= 0.14 && < 0.17
+      - monad-logger
     default-extensions:
       - OverloadedStrings
+      - RecordWildCards
 
 internal-libraries:
   du-lib:
@@ -174,8 +176,10 @@ internal-libraries:
       - req >= 2.0 && < 3.10
       - http-client >= 0.6 && < 0.7
       - optparse-applicative >= 0.14 && < 0.17
+      - monad-logger
     default-extensions:
       - OverloadedStrings
+      - RecordWildCards
 
 tests:
   du-test: 

@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE RecordWildCards #-}
 
 module Types
   ( When (..),
@@ -46,9 +45,6 @@ sunTimeToZonedTime tz SunTimes {..} =
 instance Show d => TextShow (SunTimes d) where
   showb = build . show
 
-instance Show d => Buildable (SunTimes d) where
-  build = build . show
-
 data WebAPIAuth = WebAPIAuth
   { timezoneDBKey :: !T.Text,
     email :: !T.Text,
@@ -58,3 +54,6 @@ data WebAPIAuth = WebAPIAuth
 
 defaultWebAPIAuth :: WebAPIAuth
 defaultWebAPIAuth = WebAPIAuth "WK58Y5KBT5AX" "test@mail.com" "suntimes"
+
+instance Buildable WebAPIAuth where
+  build = build . show
