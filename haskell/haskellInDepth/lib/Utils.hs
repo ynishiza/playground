@@ -12,6 +12,7 @@ module Utils
     trace,
     traceShow,
     traceShowId,
+    assertIsEqualType,
     assertIsEqual,
     assertIsEqualSilent,
     printBanner,
@@ -33,6 +34,7 @@ import Data.Functor.Identity
 import Data.List (intercalate)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
+import Data.Typeable
 import Debug.Trace (trace)
 import Fmt
 
@@ -56,17 +58,21 @@ promptRun message action = do
       return False
 
 assertIsEqual :: (Eq a, Show a) => a -> a -> IO ()
-assertIsEqual x y = do
-  assertIsEqualBase True x y
+assertIsEqual = assertIsEqualWithShow True
+
+assertIsEqualType :: (Typeable a, Typeable b) => a -> b -> IO ()
+assertIsEqualType x y = assertIsEqualWithShow True (typeOf x) (typeOf y)
 
 assertIsEqualSilent :: (Eq a, Show a) => a -> a -> IO ()
-assertIsEqualSilent x y = do
-  assertIsEqualBase False x y
+assertIsEqualSilent = assertIsEqualWithShow False
 
-assertIsEqualBase :: (Eq a, Show a) => Bool -> a -> a -> IO ()
-assertIsEqualBase showMessage x y = do
-  unless (x == y) $ error $ fmtLn $ "assertIsEqual:" +|| x ||+ "!=" +|| y ||+ ""
-  when showMessage $ fmtLn $ "assertIsEqual:" +|| x ||+ "==" +|| y ||+ ""
+assertIsEqualWithShow :: (Eq a, Show a) => Bool -> a -> a -> IO ()
+assertIsEqualWithShow showMessage x y = assertIsEqualBase showMessage x (show x) y (show y)
+
+assertIsEqualBase :: (Eq a) => Bool -> a -> String -> a -> String -> IO ()
+assertIsEqualBase showMessage x xm y ym = do
+  unless (x == y) $ error $ fmtLn $ "assertIsEqual:" +|| xm ||+ "!=" +|| ym ||+ ""
+  when showMessage $ fmtLn $ "assertIsEqual:" +|| xm ||+ "==" +|| ym ||+ ""
 
 printBannerWrap :: T.Text -> IO () -> IO ()
 printBannerWrap name io = printBanner (name |+ " start") >> io >> printBanner (name |+ " end")
@@ -86,10 +92,10 @@ whileLoop :: Monad m => m Bool -> m () -> m ()
 whileLoop mpred mcall = mpred >>= when .@ (mcall >> whileLoop mpred mcall)
 
 pauseIO :: IO ()
-pauseIO = do
+pauseIO =
   putStrLn "Press any key to continue"
-  _ <- getChar
-  putStrLn ""
+    >> getChar
+    >> putStrLn ""
 
 type Message = String
 
@@ -99,15 +105,15 @@ runTest :: TestState -> IO ()
 runTest tests = do
   let inner = runStateT tests []
       (((), messages), io) = runIdentity $ runStateT inner (pure ())
-   in do
-        io
-        putStrLn $
-          ""
-            +| nameF "tests" (build $ intercalate ", " messages)
-            |+ "\n"
-            +| nameF "count" (build $ length messages)
-            |+ "\n"
-            +| "success"
+   in io
+        >> putStrLn
+          ( ""
+              +| nameF "tests" (build $ intercalate ", " messages)
+              |+ "\n"
+              +| nameF "count" (build $ length messages)
+              |+ "\n"
+              +| "success"
+          )
 
 useIO :: IO () -> TestState
 useIO next = lift $ modify (>> next)

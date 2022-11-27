@@ -203,6 +203,7 @@ library suntimes-lib
     , fmt
     , haskellInDepth
     , http-client ==0.6.*
+    , http-types ==0.12.*
     , monad-logger
     , mtl >=2.0 && <2.3
     , optparse-applicative >=0.14 && <0.17
@@ -401,6 +402,7 @@ executable suntimes
     , fmt
     , haskellInDepth
     , http-client ==0.6.*
+    , http-types ==0.12.*
     , monad-logger
     , mtl >=2.0 && <2.3
     , optparse-applicative >=0.14 && <0.17

@@ -24,6 +24,7 @@ import qualified Data.Text as T
 import Fmt
 import qualified Network.HTTP.Client as L
 import Network.HTTP.Req as Exports
+import qualified Network.HTTP.Types as L
 import STExcept
 import Types
 
@@ -53,8 +54,11 @@ newtype SuntimesApp a = SuntimesApp
 instance MonadHttp SuntimesApp where
   handleHttpException excp
     | (JsonHttpException s) <- excp = logAndRethrow (ServiceAPIError $ T.pack s)
-    | (VanillaHttpException (L.HttpExceptionRequest _ (L.StatusCodeException resp _))) <- excp =
-      logAndRethrow $ ServiceAPIError $ T.pack $ show $ L.responseStatus resp
+    | (VanillaHttpException (L.HttpExceptionRequest _ (L.StatusCodeException res _))) <- excp =
+      let st = L.responseStatus res
+       in case L.statusCode st of
+            429 -> logAndRethrow $ ServiceAPIError $ "Exceeded request limit. Please wait for a bit and try again. " +|| st ||+ ""
+            _ -> logAndRethrow $ ServiceAPIError $ st ||+ ""
     | otherwise = logAndRethrow excp
     where
       logAndRethrow e = do

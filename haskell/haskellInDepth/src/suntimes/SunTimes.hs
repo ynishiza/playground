@@ -9,6 +9,7 @@ module SunTimes
 where
 
 import App
+import Control.Concurrent
 import Data.Aeson
 import qualified Data.Text as T
 import Data.Time hiding (getTimeZone)
@@ -22,6 +23,9 @@ suntimeUri = "api.sunrise-sunset.org"
 
 timezoneDBUri :: T.Text
 timezoneDBUri = "api.timezonedb.com"
+
+timezoneDelay :: Int
+timezoneDelay = 2 * 1000 * 1000
 
 newtype SuntimesFormat dt = SuntimesFormat {results :: SunTimes dt}
   deriving (Generic, Show, Eq, FromJSON)
@@ -57,7 +61,12 @@ getTimeZone GeoCoords {..} =
             <> "by" =: ("position" :: T.Text)
             <> "format" =: ("json" :: T.Text)
             <> "fields" =: ("gmtOffset,abbreviation,dst" :: T.Text)
-    timeZoneResponseToTimeZone . responseBody . snd <$> appGET @(JsonResponse TimeZoneResponse) uri params jsonResponse
+    res <- timeZoneResponseToTimeZone . responseBody . snd <$> appGET @(JsonResponse TimeZoneResponse) uri params jsonResponse
+
+    -- note: timezone API has a 1 request/s rate limit
+    liftIO $ threadDelay timezoneDelay
+
+    return res
     `catch` onErr
   where
     onErr (ServiceAPIError m) = do

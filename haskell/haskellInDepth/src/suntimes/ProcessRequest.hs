@@ -1,6 +1,7 @@
 module ProcessRequest
   ( processInteractive,
     processFile,
+    processInput,
     processManyLines,
     RequestError,
   )
@@ -50,10 +51,13 @@ parseInput line =
             Just d -> Right (On d)
         )
 
-processInput :: T.Text -> SuntimesApp ()
-processInput line = either (throwM . FormatError) proc (parseInput line)
+processInput :: T.Text -> SuntimesApp (GeoCoords, SunTimes ZonedTime)
+processInput line = either (throwM . FormatError) proc (parseInput line) 
   where
-    proc rq = processRequest rq >>= liftIO . prettyLn . formatResult rq
+    proc rq = do 
+      x <- processRequest rq 
+      liftIO $ prettyLn $ formatResult rq x
+      return x
 
 processRequest :: Request -> SuntimesApp (GeoCoords, SunTimes ZonedTime)
 processRequest (location, w) = do
@@ -83,7 +87,7 @@ processManyLines = traverse_ (handle handleError . procOne)
     procOne :: T.Text -> SuntimesApp ()
     procOne line = case T.uncons (T.strip line) of
       Just ('#', _) -> pure ()
-      _ -> processInput line
+      _ -> processInput line >> pure ()
 
 handleError :: SuntimeException -> SuntimesApp ()
 handleError e
@@ -103,7 +107,7 @@ processInteractive = mainProc `catch` handleError >> onDone
     mainProc = do
       p $ "Enter request: " +| requestFormat |+ ""
       l <- liftIO T.getLine
-      processInput l `catch` handleError
+      processInput l >> pure () `catch` handleError 
     onDone = do
       p "Another request? (y/n)"
       l <- liftIO T.getLine

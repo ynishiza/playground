@@ -118,6 +118,7 @@ executables:
       - aeson >= 1.2 && < 2
       - req >= 2.0 && < 3.10
       - http-client >= 0.6 && < 0.7
+      - http-types >= 0.12 && < 0.13
       - optparse-applicative >= 0.14 && < 0.17
       - monad-logger
     default-extensions:
@@ -175,6 +176,7 @@ internal-libraries:
       - aeson >= 1.2 && < 2
       - req >= 2.0 && < 3.10
       - http-client >= 0.6 && < 0.7
+      - http-types >= 0.12 && < 0.13
       - optparse-applicative >= 0.14 && < 0.17
       - monad-logger
     default-extensions:
