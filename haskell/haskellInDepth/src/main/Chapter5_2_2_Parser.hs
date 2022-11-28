@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Use <&>" #-}
+{-# HLINT ignore "Eta reduce" #-}
 
 module Chapter5_2_2_Parser
   ( parse,
@@ -94,6 +95,7 @@ logState (stack, output) = "state (stack=" +| stack |+ " output" +|| output ||+ 
 
 createError :: SYState -> String -> SYError
 createError s m = trace ("ERROR:" +| logState s |+ " message=" +| m |+ "") $ SYError s m
+-- createError s m = SYError s m
 
 myThrowError :: SYState -> String -> SYParser ()
 myThrowError s m = throwError $ createError s m

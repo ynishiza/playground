@@ -57,6 +57,7 @@ default-extensions:
 - TypeApplications
 - MultiParamTypeClasses
 - TypeSynonymInstances
+- RecordWildCards
 
 library:
   source-dirs: ./lib
@@ -82,8 +83,7 @@ executables:
       - text >=1.2 && <1.3
       - text-show >=3.0 && <4
       - extra >=1.5 && <1.8
-    default-extensions:
-      - RecordWildCards
+    default-extensions: []
 
   stockquotes:
     main:                Main.hs
@@ -123,7 +123,16 @@ executables:
       - monad-logger
     default-extensions:
       - OverloadedStrings
-      - RecordWildCards
+
+  iplookup:
+    source-dirs: src/ip/lookup
+    main: Main.hs
+    dependencies:
+      - haskellInDepth 
+      - split >= 0.2 && < 0.3
+      - fingertree >= 0.1 && < 0.2
+    default-extensions:
+      - OverloadedStrings
 
 internal-libraries:
   du-lib:
@@ -138,8 +147,7 @@ internal-libraries:
     dependencies:
       - haskellInDepth
       - optparse-applicative >= 0.14 && < 0.17
-    default-extensions:
-      - RecordWildCards
+    default-extensions: []
     other-extensions:
       - GeneralizedNewtypeDeriving
 
@@ -183,6 +191,19 @@ internal-libraries:
       - OverloadedStrings
       - RecordWildCards
 
+  iplookup-lib:
+    source-dirs: src/ip/lookup
+    exposed-modules:
+      - IPTypes
+      - IPParse
+      - IPLookup
+    dependencies:
+      - haskellInDepth 
+      - split >= 0.2 && < 0.3
+      - fingertree >= 0.1 && < 0.2
+    default-extensions:
+      - OverloadedStrings
+
 tests:
   du-test: 
     main:               Main.hs
@@ -198,6 +219,8 @@ tests:
     - haskellInDepth
     - hid-lib
     - random
+    - tasty >= 0.11 && < 1.5
+    - tasty-hspec >= 1.1 && < 1.2
 
   suntimes-test:
     main:               Main.hs
@@ -205,5 +228,25 @@ tests:
     dependencies: 
     - haskellInDepth
     - suntimes-lib
+    - tasty >= 0.11 && < 1.5
+    - tasty-hspec >= 1.1 && < 1.2
+    default-extensions:
+      - OverloadedStrings
+
+  iplookup-test:
+    main: Main.hs
+    source-dirs: test/iplookup
+    dependencies:
+      - haskellInDepth
+      - iplookup-lib
+      - tasty >= 0.11 && < 1.5
+      - tasty-hspec >= 1.1 && < 1.2
+      - tasty-hedgehog >= 0.1 && <= 1.2
+      - hedgehog >= 0.5 && < 1.1
+      - tasty-golden >= 2.3 && < 2.4
+      - filepath >= 1.4.1 && < 1.5
+      - random
+    ghc-options:
+      - -Wno-type-defaults
     default-extensions:
       - OverloadedStrings

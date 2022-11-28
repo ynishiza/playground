@@ -23,7 +23,7 @@ import qualified TestMonad
 import qualified Transformer.TestBase as Transformer
 import qualified Modules.TestOptparseApplicative 
 import qualified Mtl.TestBase as Mtl
-import qualified TestTypeClass
+import qualified GHCExts.TestTypeClass
 import qualified TestReadShow
 {- ORMOLU_ENABLE -}
 import TestUtils
@@ -45,7 +45,7 @@ allTests =
         Transformer.allTests
         Mtl.allTests
 
-        TestTypeClass.allTests
+        GHCExts.TestTypeClass.allTests
         TestReadShow.allTests
         Modules.TestOptparseApplicative.test
     )

@@ -1,7 +1,6 @@
-module Main (main, testRequestProcessor) where
+module Main (main) where
 
 import App
-import Control.Concurrent
 import qualified Data.Text as T
 import Data.Time.Calendar
 import Data.Time.Calendar.OrdinalDate
@@ -12,15 +11,17 @@ import GeoCoordsReq
 import ProcessRequest
 import STExcept
 import SunTimes
+import Test.Tasty
+import Test.Tasty.Hspec
 import Types
-import Utils
 
 defaultWauth :: WebAPIAuth
 defaultWauth = defaultWebAPIAuth
 
 defaultLogLevel :: LogLevel
--- defaultLogLevel = LevelInfo
-defaultLogLevel = LevelDebug
+defaultLogLevel = LevelInfo
+
+-- defaultLogLevel = LevelDebug
 
 runWithDefaults :: SuntimesApp a -> IO a
 runWithDefaults app = runApp app defaultLogLevel defaultWauth
@@ -65,77 +66,74 @@ tzInfo0 =
 
 main :: IO ()
 main = do
-  testGeoCoords
-  testSuntimes
-  testRequestProcessor
+  testSpec "Suntimes" specs >>= defaultMain
 
-testSuntimes :: IO ()
-testSuntimes = printBannerWrap "Time lookup API" $ do
-  sres <- runWithDefaults (getSuntimesUTC coords0 (On suntimesDate0))
-  assertIsEqual sres suntimes0UTC
+specs :: SpecWith ()
+specs = describe "Suntimes" $ do
+  describe "GeoCoords API" $ do
+    it "should get coordinates" $ do
+      res <- runWithDefaults (getGeoCoords loc0)
+      shouldBe res coords0
 
-  tres <- runWithDefaults (getTimeZone coords0)
-  assertIsEqual tres timezoneLocal
+  describe "Time lookup API" $ do
+    it "Should get the suntimes in UTC" $ do
+      sres <- runWithDefaults (getSuntimesUTC coords0 (On suntimesDate0))
+      sres `shouldBe` suntimes0UTC
+    it "Should get the suntimes in local timezone" $ do
+      tres <- runWithDefaults (getTimeZone coords0)
+      shouldBe tres timezoneLocal
 
-  sres2 <- runWithDefaults (getSuntimesLocal coords0 (On suntimesDate0))
-  assertIsEqual (show sres2) (show suntimes0Local)
-  pure ()
+    it "should get the timezone" $ do
+      sres2 <- runWithDefaults (getSuntimesLocal coords0 (On suntimesDate0))
+      shouldBe (show sres2) (show suntimes0Local)
 
-testGeoCoords :: IO ()
-testGeoCoords = printBannerWrap "GeoCoords API" $ do
-  res <- runWithDefaults (getGeoCoords loc0)
-  assertIsEqual res coords0
-  pure ()
+  describe "requestProcessor" $ do
+    let testError config input message = do
+          x <- runApp ((ProcessRequest.processInput input >> return "") `catch` handleError) defaultLogLevel config
+          x `shouldBe` message
+        handleError :: SuntimeException -> SuntimesApp T.Text
+        handleError = return . T.pack . show
 
-testRequestProcessor :: IO ()
-testRequestProcessor = printBannerWrap "ProcessRequest.processInput" $ do
-  printBannerWrap "Success" $ do
-    res1 <- runWithDefaults (ProcessRequest.processInput "2000-01-01@kobe")
-    assertIsEqual (fst res1) coords0
-    assertIsEqual (show $ snd res1) (show suntimes0Local)
+    it "determines the suntimes of a given location on a given date" $ do
+      res1 <- runWithDefaults (ProcessRequest.processInput "2000-01-01@kobe")
+      shouldBe (fst res1) coords0
+      shouldBe (show $ snd res1) (show suntimes0Local)
 
-    res2 <- runWithDefaults (ProcessRequest.processInput "kobe")
-    assertIsEqual (fst res2) coords0
-    pure ()
+    it "determines the suntimes of a given location with the current date" $ do
+      res2 <- runWithDefaults (ProcessRequest.processInput "kobe")
+      shouldBe (fst res2) coords0
 
-  printBannerWrap "Fail" $ do
-    _ <-
+    it "fails if the input is empty" $ do
       testError
         defaultWauth
         ""
         "Invalid address: Failed to process line=''\t Missing address"
-    _ <-
+
+    it "fails if only a date is provided" $ do
       testError
         defaultWauth
         "2000-01-01@"
         "Invalid address: Failed to process line='2000-01-01@'\t Missing address"
 
-    _ <-
+    it "fails if the date format is invalid" $ do
       testError
         defaultWauth
         "2000@kobe"
         "Invalid date format: Failed to process line='2000@kobe'\t Invalid date = 2000"
-
-    _ <-
+    it "fails if the location is not found" $ do
       testError
         defaultWauth
         "aidalskfjaskdljfasdkfj"
         "Failed while determining coordinates :aidalskfjaskdljfasdkfj"
 
-    _ <-
+    it "fails if the timezone API config is invalid" $ do
       testError
         (defaultWauth {timezoneDBKey = ""})
         "kobe"
         "Error while communicating with external services: Failed to access timezone DB. Is a valid API key set in your config?\nStatus {statusCode = 400, statusMessage = \"Bad Request\"}"
-    _ <-
+
+    it "fails if Timezone API config is invalid" $ do
       testError
         (defaultWauth {email = "", agent = ""})
         "kobe"
         "Error while communicating with external services: Failed to lookup coordinates. Are email and agent set in your config?\nStatus {statusCode = 404, statusMessage = \"Not Found\"}"
-    pure ()
-  where
-    testError config input message = do
-      x <- runApp ((ProcessRequest.processInput input >> return "") `catch` handleError) defaultLogLevel config
-      assertIsEqual x message
-    handleError :: SuntimeException -> SuntimesApp T.Text
-    handleError = return . T.pack . show

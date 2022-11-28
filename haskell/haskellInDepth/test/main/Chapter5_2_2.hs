@@ -3,13 +3,20 @@
 
 {-# HLINT ignore "Use camelCase" #-}
 
-module Chapter5_2_2 (testShuntingYard) where
+module Chapter5_2_2 (testShuntingYard, main, specs) where
 
+import Data.Either
 import Chapter5_2_2_Parser
 import Control.Monad.Except
 import Data.Foldable
 import Fmt
 import Utils
+import Test.Tasty
+import Test.Tasty.Hspec
+
+main :: IO ()
+main = 
+  testSpec "Shunting yard" specs >>= defaultMain
 
 testShuntingYard :: TestState
 testShuntingYard =
@@ -17,48 +24,44 @@ testShuntingYard =
     "5.2.2"
     "Shunting yard"
     ( do
-        printBanner "Shunting yard algorithm"
-        let printResult r = case r of
-              Left (SYError s msg) ->
-                "ERROR\nmessage:" +| msg |+ "\n"
-                  +| logState s |+ "\n"
-              Right (e, s) ->
-                "SUCCESS\nexpression:" +|| e ||+ "\n"
-                  +| logState s |+ "\n"
+        main
+    )
 
-        -- Success tests
-        let testOne :: Expr Int -> String -> IO ()
-            testOne expected expr = do
-              "expression=" +| expr |+ "\n"
-                +| indentF 2 (printResult res) |+ "\n"
+specs :: SpecWith ()
+specs = describe "Chapter 5.2.2 Shunting yard" $ do
+  describe "success" $ do
+    let testOne :: Expr Int -> String -> Spec 
+        testOne expected expr = it
+          ("" +| expr |+ " => "+||expected||+"") $ do
               case res of
                 Right (e, (stack, _)) -> do
-                  assertIsEqual e expected
-                  assertIsEqual stack []
+                  shouldBe e expected
+                  shouldBe stack []
                 Left _ -> error "Fail"
-              where
-                res = parse expr
-            testOneCase (e, expr, alts) = traverse_ (testOne e) (expr : alts)
-         in traverse_ testOneCase parseSuccessCases
+            where
+              res = parse expr
+        testOneCase (e, expr, alts) = traverse_ (testOne e) (expr : alts)
+     in traverse_ testOneCase parseSuccessCases
 
-        -- Fail tests
-        let testOne (expectedMsg, expr) = do
-              "expression=" +| expr |+ "\n"
-                +| indentF 2 (printResult res) |+ "\n"
-              case res of
-                Right _ -> error "Fail"
-                Left (SYError _ msg) -> do
-                  assertIsEqual msg expectedMsg
-              where
-                res = parse expr
-         in traverse_ testOne parseFailCases
+  describe "fail" $ do
+    let testOne (expectedMsg, expr) = it 
+          ("expression=" +| expr |+ " error="+|expectedMsg|+"") $ do
+          case res of
+            Right _ -> error "Fail"
+            Left (SYError _ msg) -> do
+              shouldBe msg expectedMsg
+          where
+            res = parse expr
+     in traverse_ testOne parseFailCases
 
-        printBanner "catchError test"
-        let 
-          p = catchError (createParser "2a") (\e -> trace (show e) $ createParser "2") 
-          in printResult $ processParser p
-        pure ()
-    )
+  describe "error" $ do
+    it "can catch an error" $ do
+      let 
+        p = catchError (createParser "2b") (\(SYError s msg) -> throwError (SYError s ("caught error msg="+|msg|+""))) 
+        result = processParser p
+      result `shouldSatisfy` isLeft
+      fromLeft shouldNeverHappen result `shouldSatisfy` (\(SYError _ m) -> m == "caught error msg=Failed to read token. token=b")
+
 
 parseSuccessCases :: [(Expr Int, String, [String])]
 parseSuccessCases =

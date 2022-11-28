@@ -1,0 +1,12 @@
+[[remove]]
+directory = "src"
+
+# [[check]]
+# type = "Exclude"
+# scope = "all"
+# id = "STAN-0212"
+
+# [[check]]
+# type = "Exclude"
+# scope = "all"
+# id = "STAN-0213"

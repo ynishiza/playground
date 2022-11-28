@@ -69,6 +69,13 @@ executables:
       - directory >= 1.3 && < 1.4
       - optparse-applicative >= 0.14 && < 0.17
 
+# IMPORTANT: try to avoid using internal-libraries.
+# stack + hie.yaml does not support internal libraries well.
+# In particular, haskell-language-server (HSL)
+#   e.g. HSL does not automatically rebuild updates in an internal library.
+#        You have to run `stack build` manually and possibly restart HSL.
+#
+# Ref: https://github.com/haskell/hie-bios#internal-libraries
 internal-libraries:
   app1-lib:
     source-dirs: ./src/app1

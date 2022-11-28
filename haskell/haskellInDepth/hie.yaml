@@ -10,9 +10,13 @@ cradle:
       component: haskellInDepth:exe:stockquotes
     - path: "./src/suntimes"
       component: haskellInDepth:exe:suntimes
+    - path: "./src/ip/lookup"
+      component: haskellInDepth:exe:iplookup
     - path: "./test/main"
       component: haskellInDepth:test:main-test
     - path: "./test/du"
       component: haskellInDepth:test:du-test
     - path: "./test/suntime"
       component: haskellInDepth:test:suntimes-test
+    - path: "./test/iplookup"
+      component: haskellInDepth:test:iplookup-test

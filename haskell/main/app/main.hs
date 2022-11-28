@@ -18,8 +18,10 @@ import Fmt
 -- import Modules.TestOptparseApplicative qualified
 import TestBase qualified
 import TestMyOptParse qualified
+import GHCExts.TestTypeFamilies
 -- import TestMyOptParse2 qualified
 -- import TestReadShow qualified
+import Modules.TestRandom
 import TestUtils
 -- import Transformer.TestState qualified
 
@@ -44,7 +46,9 @@ main = do
     else
       runTest
         ( do
-            TestMyOptParse.runAll
+            -- GHCExts.TestTypeFamilies.testTypeFamily
+            -- TestMyOptParse.runAll
+            Modules.TestRandom.runAll
             -- TestMyOptParse2.runAll
             -- Modules.TestOptparseApplicative.test
             -- TestReadShow.unittestEquationReadShow

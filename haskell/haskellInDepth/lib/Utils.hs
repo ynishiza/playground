@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -24,9 +25,13 @@ module Utils
     runTest,
     TestState,
     testDone,
+    UtilErrors (..),
+    shouldNeverHappen,
+    shouldNeverHappenIO,
   )
 where
 
+import Control.Exception
 import Control.Monad
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.State
@@ -38,11 +43,19 @@ import Data.Typeable
 import Debug.Trace (trace)
 import Fmt
 
+data UtilErrors = ShouldNeverHappen | NotImplemented deriving (Show, Exception)
+
+shouldNeverHappen :: a
+shouldNeverHappen = throw ShouldNeverHappen
+
+shouldNeverHappenIO :: IO a
+shouldNeverHappenIO = throwIO ShouldNeverHappen
+
 traceShow :: Show a1 => a1 -> a2 -> a2
 traceShow x = trace (show x)
 
 traceShowId :: Show a1 => String -> a1 -> a1
-traceShowId label x = trace (label |+ " " +|| x ||+ "") x
+traceShowId label x = trace (label |+ " " +|| x ||+ "\n") x
 
 promptRun :: T.Text -> IO () -> IO Bool
 promptRun message action = do

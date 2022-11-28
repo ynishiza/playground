@@ -4,7 +4,7 @@
 {-# HLINT ignore "Redundant bracket" #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
-module TestTypeClass
+module GHCExts.TestTypeClass
   ( testTypeClass,
     testMultiParameters,
     testDerivedInstance,
