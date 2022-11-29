@@ -555,6 +555,8 @@ test-suite iplookup-test
   type: exitcode-stdio-1.0
   main-is: Main.hs
   other-modules:
+      Gen
+      Properties
       Spec
       Paths_haskellInDepth
   autogen-modules:
@@ -679,6 +681,7 @@ test-suite suntimes-test
     , filepath >=1.4.1 && <1.5
     , fmt
     , haskellInDepth
+    , hspec >=2.5 && <=2.10
     , mtl >=2.0 && <2.3
     , suntimes-lib
     , tasty >=0.11 && <1.5

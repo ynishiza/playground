@@ -19,6 +19,7 @@ import Fmt
 import TestBase qualified
 import TestMyOptParse qualified
 import GHCExts.TestTypeFamilies
+import qualified Modules.TestHspec
 -- import TestMyOptParse2 qualified
 -- import TestReadShow qualified
 import Modules.TestRandom
@@ -37,7 +38,9 @@ import TestUtils
 -- in undefined)
 
 main :: IO ()
-main = do
+-- main = Modules.TestHspec.main
+main = main0
+main0 = do
   scratchSpace
   putStrLn "Run all? (y/n)"
   response <- getChar

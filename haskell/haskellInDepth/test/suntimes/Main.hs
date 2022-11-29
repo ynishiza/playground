@@ -1,4 +1,4 @@
-module Main (main) where
+module Main (main, specs) where
 
 import App
 import qualified Data.Text as T

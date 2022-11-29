@@ -6,24 +6,18 @@ module IPTypes
     ParserError (..),
     Byte,
     ByteSeq,
-    minIP,
-    maxIP,
     serializeIP,
     unserializeIP,
+    ipModify,
+    module X
   )
 where
 
-import Data.Bits
+import Data.Bits as X
 import Data.List (intercalate)
-import Data.Word
+import Data.Word as X
 import Fmt
 import Utils
-
-minIP :: IP
-minIP = IP minBound
-
-maxIP :: IP
-maxIP = IP maxBound
 
 type LineNumber = Int
 
@@ -32,7 +26,7 @@ type Byte = Word8
 type ByteSeq = [Byte]
 
 newtype IP = IP {unIP :: Word32}
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Bounded)
 
 serializeIP :: ByteSeq -> Word32
 serializeIP v = sum $ zipWith shiftb v [24, 16, 8, 0]
@@ -54,6 +48,9 @@ unserializeIP v0 = fromIntegral <$> [v4, v3, v2, v1]
     -- s' :: Word32 -> Int -> Word32
     -- s' = shiftb
     extract v = shiftb @Word32 @Word32 (shiftb v0 v) (-24)
+
+ipModify :: IP -> (Word32 -> Word32) -> IP
+ipModify (IP v) f = IP (f v)
 
 instance Show IP where
   show (IP v) = case unserializeIP v of

@@ -1,8 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Spec (main, mainTasty, mainHspec) where
+module Spec (specs, mainHspec) where
 
+import Control.Exception
 import Data.Bits
 import qualified Data.Text as T
 import Data.Typeable
@@ -12,7 +13,8 @@ import IPLookup
 import IPParse
 import System.Random
 import System.Random.Stateful
-import Test.Tasty
+-- import Test.Tasty
+-- import Test.Tasty.Hspec
 import Test.Tasty.Hspec
 import Utils
 
@@ -26,18 +28,21 @@ randomTestSize = 100
 randomFile :: FilePath
 randomFile = "./random.iplookup-test.txt"
 
-main :: IO ()
-main = do
-  writeFile randomFile "# Random values used by ./test/iplookup/Spec.hs\n"
-  mainHspec
-  "Random values logged in:" +| randomFile |+ ""
-
-mainTasty :: IO ()
-mainTasty = 
-  testSpec "IP" specs >>= defaultMain
-
 mainHspec :: IO ()
 mainHspec = hspec specs
+
+specs :: SpecWith ()
+specs = aroundAll f baseSpecs
+  where 
+    f run = bracket onBefore (const onAfter) run
+
+onBefore :: IO ()
+onBefore = do
+  fmtLn "Start"
+  writeFile randomFile "# Random values used by ./test/iplookup/Spec.hs\n"
+onAfter :: IO ()
+onAfter = do
+  fmtLn $ "Random values logged in:" +| randomFile |+ ""
 
 logRandom :: (Typeable a, Show a) => IO a -> IO a
 logRandom io = do
@@ -78,8 +83,8 @@ instance Uniform IPRange where
     when (ip1 == ip2) shouldNeverHappen
     return $ if ip1 < ip2 then IPRange ip1 ip2 else IPRange ip2 ip1
 
-specs :: Spec
-specs = describe "iplookup" $ do
+baseSpecs :: Spec
+baseSpecs = describe "iplookup" $ do
   describe "serialization" $ do
     it "is invertible" $ assertManyWith (\x -> unserializeIP (serializeIP x) `shouldBe` x) (manyRandom randomByteSeq)
 
@@ -142,6 +147,9 @@ specs = describe "iplookup" $ do
     it "parses a range" $
       parseIPRange "0.0.0.0,0.0.0.1" `shouldBe` Just (IPRange (IP 0) (IP 1))
 
+    it "parses empty range" $
+      assertManyWith (\ip -> parseIPRange (ip|+","+|ip|+"") `shouldBe` Just (IPRange ip ip)) (manyRandom randomIP)
+
     it "parses with whitespaces" $ do
       parseIPRange "0.0.0.0,  0.0.0.1" `shouldBe` Just (IPRange (IP 0) (IP 1))
       parseIPRange "0.0.0.0,  0.0.0.1" `shouldBe` Just (IPRange (IP 0) (IP 1))
@@ -155,6 +163,9 @@ specs = describe "iplookup" $ do
       parseIPRange "0.0.0.1,0.0.0.0" `shouldBe` Nothing
 
   describe "parseIPRangeDB" $ do
+    it "parses empty list" $ do
+      parseIPRangeDB "" `shouldBe` Right (IPRangeDB [])
+
     it "parses" $ do
       let txt =
             T.unlines
@@ -204,12 +215,21 @@ specs = describe "iplookup" $ do
                 IPRange (buildIP [10, 9, 1, 3]) (buildIP [10, 9, 1, 255]),
                 IPRange (buildIP [25, 8, 1, 3]) (buildIP [30, 8, 1, 255])
               ]
+      it "looksup empty list" $ do
+        let emptyDb = IPRangeDB []
+        assertManyWith (\x -> x `shouldNotSatisfy` lookupIP emptyDb) (manyRandom randomIP)
+      it "looksup empty ranges" $ do
+        let testDb = IPRangeDB [
+              IPRange (IP 0) (IP 0)
+                                ]
+        assertManyWith (\x -> x `shouldNotSatisfy` lookupIP testDb) (manyRandom randomIP)
+
       it "looksup IP" $ do
-        minIP `shouldSatisfy` lookupIP db
+        minBound `shouldSatisfy` lookupIP db
         buildIP [10, 8, 1, 10] `shouldSatisfy` lookupIP db
         buildIP [25, 8, 4, 10] `shouldSatisfy` lookupIP db
 
       it "reports an error if it fails on lookup" $ do
-        maxIP `shouldNotSatisfy` lookupIP db
+        maxBound `shouldNotSatisfy` lookupIP db
         buildIP [10, 8, 1, 1] `shouldNotSatisfy` lookupIP db
         buildIP [30, 8, 2, 1] `shouldNotSatisfy` lookupIP db

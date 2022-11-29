@@ -46,11 +46,14 @@ parseIPRange t = do
   [ip1, ip2] <-
     guarded (isLengthOf 2) (T.splitOn "," t)
       >>= mapM parseIP
-  guard (ip1 < ip2)
+  guard (ip1 <= ip2)
   return $ IPRange ip1 ip2
 
+validIPRange :: IP -> IP -> Bool
+validIPRange = (<=)
+
 validateIPRangeIO :: IPRange -> IO () 
-validateIPRangeIO (IPRange ip1 ip2) = guard (ip1 < ip2) 
+validateIPRangeIO (IPRange ip1 ip2) = guard (ip1 `validIPRange` ip2) 
 
 unparseIPRange :: IPRange -> T.Text
 unparseIPRange = T.pack . show

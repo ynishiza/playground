@@ -54,6 +54,9 @@ library:
   dependencies:
   - random
   - optparse-applicative
+  - hspec >= 2.9 && < 3
+  - hedgehog >= 1.1 && < 2
+  - random
 
 executables:
   hello:
