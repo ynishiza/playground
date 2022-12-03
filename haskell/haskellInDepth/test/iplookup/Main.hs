@@ -6,10 +6,10 @@ import Test.Tasty.Hspec
 
 main :: IO ()
 main = do
-  specs <- testSpec "Hspec" Spec.specs
+  specs <- testSpecs Spec.specs
   defaultMain $
     testGroup
       "iplookup"
-      [ specs,
+      $ specs ++ [ 
         fromGroup Properties.group
       ]

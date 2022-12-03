@@ -23,7 +23,7 @@ dependencies:
 - base >= 4.7 && < 5
 - mtl >= 2.2
 - transformers
-- ghc-prim
+- ghc-prim >= 0.8 && < 1
 - ghc-bignum
 - text
 - text-show

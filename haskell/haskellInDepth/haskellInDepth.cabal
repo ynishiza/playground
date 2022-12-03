@@ -54,6 +54,7 @@ library
     , extra >=1.5 && <1.8
     , filepath >=1.4.1 && <1.5
     , fmt
+    , ghc-prim >=0.6.0
     , mtl >=2.0 && <2.3
     , text ==1.2.*
     , text-show >=3.0 && <4
@@ -102,6 +103,7 @@ library du-lib
     , extra >=1.5 && <1.8
     , filepath >=1.4.1 && <1.5
     , fmt
+    , ghc-prim >=0.6.0
     , haskellInDepth
     , mtl >=2.0 && <2.3
     , optparse-applicative >=0.14 && <0.17
@@ -125,6 +127,7 @@ library hid-lib
       Radar
   other-modules:
       Chapter7_2
+      Chapter9_2
       EvalRPNExcept
       Paths_haskellInDepth
   autogen-modules:
@@ -153,6 +156,7 @@ library hid-lib
     , extra
     , filepath >=1.4.1 && <1.5
     , fmt
+    , ghc-prim >=0.6.0
     , haskellInDepth
     , mtl >=2.0 && <2.3
     , random
@@ -199,6 +203,7 @@ library iplookup-lib
     , filepath >=1.4.1 && <1.5
     , fingertree ==0.1.*
     , fmt
+    , ghc-prim >=0.6.0
     , haskellInDepth
     , mtl >=2.0 && <2.3
     , split ==0.2.*
@@ -250,6 +255,7 @@ library suntimes-lib
     , extra >=1.5 && <1.8
     , filepath >=1.4.1 && <1.5
     , fmt
+    , ghc-prim >=0.6.0
     , haskellInDepth
     , http-client ==0.6.*
     , http-types ==0.12.*
@@ -301,6 +307,7 @@ executable du
     , extra >=1.5 && <1.8
     , filepath >=1.4.1 && <1.5
     , fmt
+    , ghc-prim >=0.6.0
     , haskellInDepth
     , mtl >=2.0 && <2.3
     , optparse-applicative >=0.14 && <0.17
@@ -346,6 +353,7 @@ executable iplookup
     , filepath >=1.4.1 && <1.5
     , fingertree ==0.1.*
     , fmt
+    , ghc-prim >=0.6.0
     , haskellInDepth
     , mtl >=2.0 && <2.3
     , split ==0.2.*
@@ -368,6 +376,7 @@ executable main
       Chapter6_2
       Chapter7_2
       Chapter7_3
+      Chapter9_2
       EvalRPNExcept
       Radar
       Paths_haskellInDepth
@@ -397,6 +406,7 @@ executable main
     , extra
     , filepath >=1.4.1 && <1.5
     , fmt
+    , ghc-prim >=0.6.0
     , haskellInDepth
     , mtl >=2.0 && <2.3
     , random
@@ -446,6 +456,7 @@ executable stockquotes
     , extra >=1.5 && <1.8
     , filepath >=1.4.1 && <1.5
     , fmt
+    , ghc-prim >=0.6.0
     , haskellInDepth
     , mtl >=2.0 && <2.3
     , optparse-applicative >=0.14 && <0.17
@@ -496,6 +507,7 @@ executable suntimes
     , extra >=1.5 && <1.8
     , filepath >=1.4.1 && <1.5
     , fmt
+    , ghc-prim >=0.6.0
     , haskellInDepth
     , http-client ==0.6.*
     , http-types ==0.12.*
@@ -542,6 +554,7 @@ test-suite du-test
     , extra >=1.5 && <1.8
     , filepath >=1.4.1 && <1.5
     , fmt
+    , ghc-prim >=0.6.0
     , haskellInDepth
     , mtl >=2.0 && <2.3
     , text ==1.2.*
@@ -586,6 +599,7 @@ test-suite iplookup-test
     , extra >=1.5 && <1.8
     , filepath >=1.4.1 && <1.5
     , fmt
+    , ghc-prim >=0.6.0
     , haskellInDepth
     , hedgehog >=0.5 && <1.1
     , iplookup-lib
@@ -635,6 +649,7 @@ test-suite main-test
     , extra >=1.5 && <1.8
     , filepath >=1.4.1 && <1.5
     , fmt
+    , ghc-prim >=0.6.0
     , haskellInDepth
     , hid-lib
     , mtl >=2.0 && <2.3
@@ -680,6 +695,7 @@ test-suite suntimes-test
     , extra >=1.5 && <1.8
     , filepath >=1.4.1 && <1.5
     , fmt
+    , ghc-prim >=0.6.0
     , haskellInDepth
     , hspec >=2.5 && <=2.10
     , mtl >=2.0 && <2.3

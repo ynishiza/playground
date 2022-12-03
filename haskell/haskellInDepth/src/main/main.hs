@@ -9,8 +9,10 @@ import qualified Chapter5_3_1
 import qualified Chapter6_2
 import qualified Chapter7_2
 import qualified Chapter7_3
+import qualified Chapter9_2
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
+import Control.Exception
 import Fmt
 import Text.Read
 import Utils
@@ -20,13 +22,13 @@ main = do
   let chapterList :: [(T.Text, Int)]
       chapterList =
         zip
-          [ 
-            "Chapter1",
+          [ "Chapter1",
             "Chapter2",
             "Chapter5",
             "Chapter6",
             "Chapter7.2",
-            "Chapter7.3"
+            "Chapter7.3",
+            "Chapter9.2"
           ]
           [1 ..]
 
@@ -49,5 +51,10 @@ main = do
       Chapter6_2.main
     Just 5 -> runTest Chapter7_2.run
     Just 6 -> runTest Chapter7_3.run
+    Just 7 -> runTest Chapter9_2.run
     Just _ -> error $ "Unknown chapter" +| res |+ ""
     Nothing -> error $ "Unknown chapter" +| res |+ ""
+
+  `catch` handler
+    where handler :: SomeException -> IO ()
+          handler e = fmtLn ("error:" +||e||+"") >> throw e

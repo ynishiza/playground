@@ -8,7 +8,6 @@ module Chapter5_3_1 (run) where
 import Control.Monad.Extra (ifM)
 import Data.Foldable
 import Data.IORef
-import Data.Maybe
 import Data.Monoid
 import Data.STRef
 import Fmt
@@ -80,7 +79,7 @@ testFiles =
         srcFiles <- listAllContent "src"
         libFiles <- listAllContent "lib"
         assertIsEqual True ("src/main" `elem` srcFiles)
-        assertIsEqual True (elem "lib/Utils.hs" libFiles)
+        assertIsEqual True ("lib/Utils.hs" `elem` libFiles)
     )
 
 listAllContent :: FilePath -> IO [FilePath]

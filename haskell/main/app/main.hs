@@ -18,8 +18,8 @@ import Fmt
 -- import Modules.TestOptparseApplicative qualified
 import TestBase qualified
 import TestMyOptParse qualified
-import GHCExts.TestTypeFamilies
 import qualified Modules.TestHspec
+import qualified GHCExts.TestGHCPrim
 -- import TestMyOptParse2 qualified
 -- import TestReadShow qualified
 import Modules.TestRandom
@@ -49,7 +49,7 @@ main0 = do
     else
       runTest
         ( do
-            -- GHCExts.TestTypeFamilies.testTypeFamily
+            GHCExts.TestGHCPrim.testBasic
             -- TestMyOptParse.runAll
             Modules.TestRandom.runAll
             -- TestMyOptParse2.runAll
