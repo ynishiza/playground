@@ -1,0 +1,12 @@
+2022-01-01@kobe
+kobe
+2022-01-01@victoria
+
+# Some comment
+# Missing location
+2022-01-01@
+# Bad time
+2022@victoria
+# Bad location
+ddaklsjflkdsajfaklsdajfosdifu
+

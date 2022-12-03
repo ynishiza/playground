@@ -4,8 +4,6 @@ cradle:
       component: haskellInDepth:lib
     - path: "./src/du/"
       component: haskellInDepth:exe:du
-    - path: "./src/main/"
-      component: haskellInDepth:exe:main
     - path: "./src/stockquotes"
       component: haskellInDepth:exe:stockquotes
     - path: "./src/suntimes"
@@ -14,8 +12,6 @@ cradle:
       component: haskellInDepth:exe:iplookup
     - path: "./src/isprime"
       component: haskellInDepth:exe:isprime
-    - path: "./test/main"
-      component: haskellInDepth:test:main-test
     - path: "./test/du"
       component: haskellInDepth:test:du-test
     - path: "./test/suntime"
@@ -26,5 +22,7 @@ cradle:
       component: haskellInDepth:bench:iplookup-benchmark
     - path: "./test/isprime"
       component: haskellInDepth:test:isprime-test
+    - path: "./test/template"
+      component: haskellInDepth:test:template-test
     - path: "./benchmark/isprime"
       component: haskellInDepth:bench:isprime-benchmark

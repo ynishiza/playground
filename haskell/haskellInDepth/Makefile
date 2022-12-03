@@ -6,9 +6,6 @@ COMPILER=ghc
 EXEC=runhaskell
 
 PROJECTNAME=haskellInDepth
-MAINEXE_NAME=main
-MAINEXE=$(PROJECTNAME):exe:$(MAINEXE_NAME)
-MAINTEST=$(PROJECTNAME):test:main-test
 
 HELLOSRC=hellomain.hs
 HELLOBIN=$(HELLOSRC:.hs=.out)
@@ -26,29 +23,17 @@ compile: ## Compile
 	stack build 
 
 compile-profile: ## Compile with profiler
-	stack build --profile $(MAINEXE)
+	stack build --profile 
 
 run:  ## Run test
-	@echo "Chapter 1"
-	echo 1 $$'\n' | stack exec -- $(MAINEXE_NAME) ./src/data/hamlet.txt 20
-	echo 1 $$'\n'| stack exec -- $(MAINEXE_NAME) ./src/data/forsyte.txt 20
-
 	@echo "Chapter 2"
-	@echo 2 $$'\n' | stack exec -- $(MAINEXE_NAME) -r ./src/data/rotations1.txt North
-	@echo 2 $$'\n' | stack exec -- $(MAINEXE_NAME) -o ./src/data/directions1.txt 
 	@stack exec -- stockquotes ./src/data/quotes.csv -n "My Company" -H "./stockreport.html"
 
-	echo "Chapter 5"
-	@echo 3 $$'\n' | stack exec -- $(MAINEXE_NAME) 
-
 	echo "Chapter 6"
-	@echo 4 $$'\n' | stack exec -- $(MAINEXE_NAME) 
 	@stack exec -- du test -d 3 -e ".hs" -L
 	@stack exec -- du test --depth 3 --extension ".hs" -L
 
 	@echo "Chapter 7"
-	@echo 5 $$'\n' | stack exec -- $(MAINEXE_NAME) 
-	@echo 6 $$'\n' | stack exec -- $(MAINEXE_NAME) 
 	@stack exec -- suntimes -f ./src/data/suntimes/input.txt -c ./src/data/suntimes/config.json
 
 	@echo "Chapter 8"
@@ -56,21 +41,11 @@ run:  ## Run test
 	@stack exec -- iplookup -d benchmark/data/iplookup/3.iprs -n 500000
 
 	@echo "Chapter 9"
-	@echo 7 $$'\n' | stack exec -- $(MAINEXE_NAME) 
 	@stack exec -- isprime 7
-
-	@echo "Chapter 11"
-	@echo 8 $$'\n' | stack exec -- $(MAINEXE_NAME) 
-
-	@echo "Chapter 12"
-	@echo 9 $$'\n' | stack exec -- $(MAINEXE_NAME) 
 	
 	@make test
 
 	@make benchmark
-
-run-profile:
-	stack exec --profile -- $(MAINEXE_NAME) +RTS -p
 
 benchmark: ## Run benchmark
 	@stack bench
@@ -81,9 +56,7 @@ test: ## Run tests
 
 ide: ## Check IDE setup
 	haskell-language-server-wrapper ./lib/*.hs
-	haskell-language-server-wrapper ./src/main/*.hs
-	haskell-language-server-wrapper ./test/main/*.hs
-	haskell-language-server-wrapper ./src/stockquotes/*.hs
+	# haskell-language-server-wrapper ./src/stockquotes/*.hs
 	haskell-language-server-wrapper ./src/du/*.hs
 	haskell-language-server-wrapper ./test/du/*.hs
 	haskell-language-server-wrapper ./src/ip/lookup/*.hs

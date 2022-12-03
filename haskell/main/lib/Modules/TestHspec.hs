@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell #-}
 module Modules.TestHspec
   ( main,
     runTests,
@@ -9,6 +10,7 @@ import Control.Exception
 import System.Random
 import Test.Hspec
 import TestUtils
+import Modules.TestTemplate
 
 runTests :: TestState
 runTests =
@@ -69,6 +71,10 @@ specs1 = describe "My tests" $ do
 
     it "TODO 2" $ do
       pendingWith "TODO"
+
+  it "template" $ do
+    $(myProject 3 0) (1,2,3) `shouldBe` 1
+    $(myProject 3 0) (1,2,3) `shouldBe` 1
 
   before testSetup $
     after testCleanup $

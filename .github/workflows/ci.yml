@@ -102,6 +102,19 @@ jobs:
         working-directory: ${{ github.workspace }}/haskell/main
         run: make clean
 
+      # Haskell In Depth main (GHC9)
+      - name: Install HID
+        working-directory: ${{ github.workspace }}/haskell/haskellInDepthGHC9
+        run: make install
+
+      - name: Run test HID
+        working-directory: ${{ github.workspace }}/haskell/haskellInDepthGHC9
+        run: make run
+
+      - name: Cleanup HID
+        working-directory: ${{ github.workspace }}/haskell/haskellInDepthGHC9
+        run: make clean
+
       # Haskell In Depth
       - name: Install HID
         working-directory: ${{ github.workspace }}/haskell/haskellInDepth
@@ -114,6 +127,7 @@ jobs:
       - name: Cleanup HID
         working-directory: ${{ github.workspace }}/haskell/haskellInDepth
         run: make clean
+
 
   swift:
     runs-on: macos-latest

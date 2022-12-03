@@ -71,21 +71,6 @@ library:
   source-dirs: ./lib
 
 executables:
-  main:
-    main:               main.hs
-    source-dirs:        ./src/main
-    dependencies: 
-    - haskellInDepth
-    - text
-    - random
-    - aeson >= 1.2 && < 2
-    - criterion >= 1.5.12 && < 2
-    - timeit >= 2.0 && < 3
-    ghc-options:
-    # - -ddump-to-file
-    # - -ddump-file-prefix=mydump
-    - -ddump-deriv
-
   du:
     main: Main.hs
     source-dirs: src/du
@@ -104,6 +89,7 @@ executables:
       - haskellInDepth
       - timeit >= 2.0 && < 3
     default-extensions: []
+
 
   stockquotes:
     main:                Main.hs
@@ -172,25 +158,6 @@ internal-libraries:
     other-extensions:
       - GeneralizedNewtypeDeriving
 
-  hid-lib:
-    source-dirs: ./src/main
-    exposed-modules:
-      - Chapter1_4
-      - Chapter2_1
-      - Chapter5_1_3
-      - Chapter5_2_1
-      - Chapter5_2_2_Parser
-      - Chapter5_3_1
-      - Chapter6_2
-      - Chapter7_3
-      - Chapter12.GenericsSQL
-      - Radar
-    dependencies: 
-      - haskellInDepth
-      - aeson >= 1.2 && < 2
-      - criterion
-      - random
-
   suntimes-lib:
     source-dirs: src/suntimes
     exposed-modules:
@@ -243,18 +210,6 @@ tests:
     dependencies: 
     - haskellInDepth
     - du-lib
-
-  main-test:
-    main:               Main.hs
-    source-dirs:      ./test/main
-    dependencies: 
-    - haskellInDepth
-    - hid-lib
-    - random
-    - tasty >= 0.11 && < 1.5
-    - tasty-hspec >= 1.1 && < 1.2
-    - tasty-hedgehog >= 0.1 && <= 1.2
-    - hedgehog >= 0.5 && < 1.1
 
   suntimes-test:
     main:               Main.hs

@@ -1,0 +1,20 @@
+:set -w             -- reset warnings
+:set -W             -- minimal warnings
+-- :set -XOverloadedStrings     -- Disabled since it may break loaded modules
+:set -XMagicHash
+:set -XNoStarIsType
+:set -fprint-explicit-foralls
+:set prompt "ghci> "
+:set editor "nvim"
+:set +m             -- multine
+:set +s             -- time
+:set +t
+
+import Data.Text(Text)
+import qualified Data.Text as T
+import Data.Maybe
+import Data.Foldable
+import Data.Traversable
+import Control.Applicative
+import Control.Monad
+import Control.Monad.Trans.Class

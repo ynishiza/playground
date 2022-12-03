@@ -57,6 +57,7 @@ library:
   - hspec >= 2.9 && < 3
   - hedgehog >= 1.1 && < 2
   - random
+  - template-haskell
 
 executables:
   hello:
@@ -87,7 +88,7 @@ executables:
 
 tests:
   maintest:
-    main:                ./test.hs
+    main:                ./main.hs
     source-dirs:         ./test
     ghc-options:
     - -threaded
@@ -96,3 +97,5 @@ tests:
     # - -fprof-auto
     dependencies:
     - playground
+    - tasty-hspec >=1.2 && <2
+    - hspec >=2.5

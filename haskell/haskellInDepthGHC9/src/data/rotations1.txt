@@ -1,0 +1,7 @@
+TLeft
+TLeft
+TLeft
+TLeft
+TRight
+TNone
+TAround
