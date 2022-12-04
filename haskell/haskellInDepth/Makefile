@@ -50,6 +50,10 @@ run:  ## Run test
 	@echo 5 $$'\n' | stack exec -- $(MAINEXE_NAME) 
 	@echo 6 $$'\n' | stack exec -- $(MAINEXE_NAME) 
 	@stack exec -- suntimes -f ./src/data/suntimes/input.txt -c ./src/data/suntimes/config.json
+
+	@echo "Chapter 9"
+	@echo 7 $$'\n' | stack exec -- $(MAINEXE_NAME) 
+	@stack exec -- isprime 7
 	
 	make test
 
@@ -65,6 +69,9 @@ ide: ## Check IDE setup
 	haskell-language-server-wrapper ./src/stockquotes/*.hs
 	haskell-language-server-wrapper ./src/du/*.hs
 	haskell-language-server-wrapper ./test/du/*.hs
+	haskell-language-server-wrapper ./src/ip/lookup/*.hs
+	haskell-language-server-wrapper ./test/iplookup/*.hs
+	haskell-language-server-wrapper ./src/isprime/*.hs
 
 debug: ## Print variables
 	@echo SHELL=$(SHELL)

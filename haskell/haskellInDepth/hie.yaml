@@ -12,6 +12,8 @@ cradle:
       component: haskellInDepth:exe:suntimes
     - path: "./src/ip/lookup"
       component: haskellInDepth:exe:iplookup
+    - path: "./src/isprime"
+      component: haskellInDepth:exe:isprime
     - path: "./test/main"
       component: haskellInDepth:test:main-test
     - path: "./test/du"
