@@ -71,8 +71,7 @@ executables:
     - haskellInDepth
     - text
     - random
-    - extra
-    - exceptions
+    - criterion
 
   du:
     main: Main.hs
@@ -167,9 +166,8 @@ internal-libraries:
       - Radar
     dependencies: 
       - haskellInDepth
+      - criterion
       - random
-      - extra
-      - exceptions
 
   suntimes-lib:
     source-dirs: src/suntimes
