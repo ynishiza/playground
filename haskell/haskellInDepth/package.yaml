@@ -274,8 +274,10 @@ tests:
     dependencies:
       - haskellInDepth
       - isprime-lib
+      - hedgehog >= 0.5 && < 1.1
       - tasty >= 0.11 && < 1.5
       - tasty-hspec >= 1.1 && < 1.2
+      - tasty-hedgehog >= 0.1 && <= 1.2
 
 benchmarks:
   isprime-benchmark:
