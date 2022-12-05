@@ -9,6 +9,7 @@ pn = 16183
 main :: IO ()
 main = defaultMainWith (defaultConfig { reportFile = Just "bench.prime.html" } ) [
   bench "isPrime (list)" (whnf isPrime pn),
+  bench "isPrimeV2 (list)" (whnf isPrimeV2 pn),
   bench "isPrime" (whnf isPrime1 pn)
                    ]
 
