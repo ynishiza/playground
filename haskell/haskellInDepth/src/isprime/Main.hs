@@ -1,10 +1,15 @@
-module Main (main) where
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-import System.TimeIt
+module Main
+  ( main,
+    module X,
+  )
+where
+
+import Control.Monad.Reader
+import Prime as X
 import System.Environment
+import System.TimeIt
 
 main :: IO ()
-main = getArgs >>= timeIt . print . isPrime . read . head
-
-isPrime :: Integer -> Bool
-isPrime n  = all (\x -> n `mod` x /= 0) [2..(n-1)] 
+main = getArgs >>= timeIt . print . isPrime1 . read . head

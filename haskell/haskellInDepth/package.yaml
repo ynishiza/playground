@@ -211,6 +211,15 @@ internal-libraries:
     default-extensions:
       - OverloadedStrings
 
+  isprime-lib:
+    source-dirs: src/isprime
+    exposed-modules:
+      - Prime
+    dependencies:
+      - haskellInDepth
+      - timeit >= 2.0 && < 3
+    default-extensions: []
+
 tests:
   du-test: 
     main:               Main.hs
@@ -258,3 +267,21 @@ tests:
       - -Wno-type-defaults
     default-extensions:
       - OverloadedStrings
+
+  isprime-test:
+    main: Main.hs
+    source-dirs: test/isprime
+    dependencies:
+      - haskellInDepth
+      - isprime-lib
+      - tasty >= 0.11 && < 1.5
+      - tasty-hspec >= 1.1 && < 1.2
+
+benchmarks:
+  isprime-benchmark:
+    main: Main.hs
+    source-dirs: benchmark/isprime
+    dependencies:
+      - haskellInDepth
+      - isprime-lib
+      - criterion >= 1.5.12 && < 2

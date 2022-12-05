@@ -46,6 +46,7 @@ run =
         test
         testStrictVariantFunctions
         testStrictWithFibonacci
+        testStrcitWithSum
         testUnpacking
     )
     "Chpater 9"
@@ -114,7 +115,7 @@ testStrcitWithSum =
         let x0 = 10 ^ 6
          in do
               defaultMainWith
-                (defaultConfig {reportFile = Just "sumN.html", timeLimit = 2})
+                (defaultConfig {reportFile = Just "bench.sumN.html", timeLimit = 2})
                 [ bench "sumN" (whnf sumN x0),
                   bench "sumNAp" (whnf sumNAp x0),
                   bench "sumNSeq" (whnf sumNSeq x0),
@@ -184,7 +185,7 @@ testStrictWithFibonacci =
         let x1 = 10 ^ 5
          in do
               defaultMainWith
-                (defaultConfig {timeLimit = 2, reportFile = Just "Fibonacci.html"})
+                (defaultConfig {timeLimit = 2, reportFile = Just "bench.Fibonacci.html"})
                 [ bench "fibFast" (whnf fibFast x1),
                   bench "fibSeq" (whnf fibSeq x1),
                   bench "fibBang" (whnf fibBang x1),

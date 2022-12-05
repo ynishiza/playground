@@ -55,8 +55,12 @@ run:  ## Run test
 	@echo 7 $$'\n' | stack exec -- $(MAINEXE_NAME) 
 	@stack exec -- isprime 7
 	
-	make test
+	@make test
 
+	@make benchmark
+
+benchmark: ## Run benchmark
+	@stack bench
 
 test: ## Run tests
 	@echo "Tests"
@@ -83,4 +87,4 @@ clean: ## Clean
 help: ## Display this help
 	@grep -E '^[0-9a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-.PHONY: hello debug test run clean watch unwatch compile help
+.PHONY: hello debug test benchmark run clean watch unwatch compile help
