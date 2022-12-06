@@ -6,12 +6,19 @@ import Criterion.Main
 import Criterion.Types
 
 main :: IO ()
-main = do
-  manyDB <- BenchParseIP.benchParseIPRangeDBMany
-  defaultMainWith
-    (defaultConfig {reportFile = Just "bench.iplookup.html"})
-    [ BenchBuildIP.fixIP,
-      BenchBuildIP.randomIPs,
-      BenchParseIP.benchParseIP,
-      manyDB
+main =
+  sequence
+    [ BenchParseIP.benchFileRead,
+      BenchParseIP.benchParseIPRangeDBMany,
+      BenchParseIP.benchParseIPRangeDBManyBad
     ]
+    >>= defaultMainWith
+      c
+      . ( [ BenchBuildIP.fixIP,
+            BenchBuildIP.randomIPs,
+            BenchParseIP.benchParseIP
+          ]
+            ++
+        )
+  where
+    c = defaultConfig {reportFile = Just "bench.iplookup.html"}
