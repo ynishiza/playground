@@ -22,6 +22,8 @@ cradle:
       component: haskellInDepth:test:suntimes-test
     - path: "./test/iplookup"
       component: haskellInDepth:test:iplookup-test
+    - path: "./benchmark/iplookup"
+      component: haskellInDepth:bench:iplookup-benchmark
     - path: "./test/isprime"
       component: haskellInDepth:test:isprime-test
     - path: "./benchmark/isprime"

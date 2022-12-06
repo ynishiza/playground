@@ -13,11 +13,13 @@ module IPTypes
   )
 where
 
+import Data.Foldable
 import Data.Bits as X
 import Data.List (intercalate)
 import Data.Word as X
 import Fmt
 import Utils
+import Control.DeepSeq
 
 type LineNumber = Int
 
@@ -28,7 +30,17 @@ type ByteSeq = [Byte]
 newtype IP = IP {unIP :: Word32}
   deriving (Eq, Ord, Bounded)
 
+instance NFData IP where
+  rnf (IP p) = rnf p
+
+instance NFData IPRange where
+  rnf (IPRange ip1 ip2) = deepseq (rnf ip1) $ rnf ip2
+
+instance NFData IPRangeDB where
+  rnf (IPRangeDB r) = rnf r
+
 serializeIP :: ByteSeq -> Word32
+-- serializeIP = foldl' (\a x -> shiftb a 8 + fromIntegral x) 0
 serializeIP v = sum $ zipWith shiftb v [24, 16, 8, 0]
 
 shiftb :: (Integral a, Bits b, Integral b) => a -> Int -> b
@@ -41,12 +53,6 @@ unserializeIP v0 = fromIntegral <$> [v4, v3, v2, v1]
     v3 = extract 8
     v2 = extract 16
     v1 = extract 24
-    -- v4 = s' v0 (-24)
-    -- v3 = s' (s' v0 8) (-24)
-    -- v2 = s' (s' v0 16) (-24)
-    -- v1 = s' (s' v0 24) (-24)
-    -- s' :: Word32 -> Int -> Word32
-    -- s' = shiftb
     extract v = shiftb @Word32 @Word32 (shiftb v0 v) (-24)
 
 ipModify :: IP -> (Word32 -> Word32) -> IP

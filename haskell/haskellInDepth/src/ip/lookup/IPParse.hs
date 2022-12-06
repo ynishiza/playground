@@ -33,17 +33,17 @@ parseIP t = do
     parseByte = readMaybe @Integer >=> toIntegralSized
 
 {-# INLINE buildIP_foldr #-}
-buildIP_foldr :: [Word8] -> IP
+buildIP_foldr :: ByteSeq -> IP
 buildIP_foldr = IP . fst . foldr go (0, 1)
   where
     go b (s, k) = (s + fromIntegral b * k, k*256)
 
 {-# INLINE buildIP_foldl #-}
-buildIP_foldl :: [Word8] -> IP
+buildIP_foldl :: ByteSeq -> IP
 buildIP_foldl = IP . foldl (\s b -> s*256 + fromIntegral b) 0
 
 {-# INLINE buildIP_foldl_shl #-}
-buildIP_foldl_shl :: [Word8] -> IP
+buildIP_foldl_shl :: ByteSeq -> IP
 buildIP_foldl_shl = IP . foldl (\s b -> shiftL s 8 + fromIntegral b) 0
 
 unparseIP :: IP -> T.Text

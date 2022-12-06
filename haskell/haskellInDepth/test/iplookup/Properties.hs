@@ -9,7 +9,15 @@ group :: Group
 group =
   Group
     "IP properties"
-    [ ( "Parse IP",
+    [ 
+      ( "buildIP variants",
+        property $ do
+          ipSeq <- forAll generateByteSeq
+          buildIP ipSeq === buildIP_foldl ipSeq
+          buildIP ipSeq === buildIP_foldr ipSeq
+          buildIP ipSeq === buildIP_foldl_shl ipSeq
+          ),
+      ( "Parse IP",
         property $ do
           ip <- forAll generateIP
           tripping ip unparseIP parseIP
