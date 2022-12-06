@@ -1,9 +1,17 @@
-module BenchBuildIP (fixIP, randomIPs) where
+module BenchBuildIP (fixIP, randomIPs, benchGroup) where
 
 import Control.Monad
 import Criterion
 import IPParse
 import System.Random
+
+benchGroup :: Benchmark
+benchGroup =
+  bgroup
+    "BenchBuildIP"
+    [ fixIP,
+      randomIPs
+    ]
 
 randomSeq :: IO ByteSeq
 randomSeq = replicateM 4 (getStdRandom genWord8)

@@ -296,3 +296,5 @@ benchmarks:
       - iplookup-lib
       - criterion >= 1.5.12 && < 2
       - random
+    default-extensions:
+      - OverloadedStrings
