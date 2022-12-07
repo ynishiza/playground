@@ -140,6 +140,7 @@ executables:
       - haskellInDepth 
       - split >= 0.2 && < 0.3
       - fingertree >= 0.1 && < 0.2
+      - optparse-applicative >= 0.14 && < 0.17
     default-extensions:
       - OverloadedStrings
 
@@ -209,6 +210,7 @@ internal-libraries:
       - haskellInDepth 
       - split >= 0.2 && < 0.3
       - fingertree >= 0.1 && < 0.2
+      - optparse-applicative >= 0.14 && < 0.17
     default-extensions:
       - OverloadedStrings
 
