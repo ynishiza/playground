@@ -4,19 +4,19 @@ import Gen
 import Hedgehog
 import qualified Hedgehog.Gen as G
 import IPLookup
+import IPLookupFast
 
 group :: Group
 group =
   Group
     "IP properties"
-    [ 
-      ( "buildIP variants",
+    [ ( "buildIP variants",
         property $ do
           ipSeq <- forAll generateByteSeq
           buildIP ipSeq === buildIP_foldl ipSeq
           buildIP ipSeq === buildIP_foldr ipSeq
           buildIP ipSeq === buildIP_foldl_shl ipSeq
-          ),
+      ),
       ( "Parse IP",
         property $ do
           ip <- forAll generateIP
@@ -43,7 +43,6 @@ group =
           assert $ lookupIP db ipGood
           assert $ not $ lookupIP db ipLow
           assert $ not $ lookupIP db ipHigh
-          pure ()
       ),
       ( "lookup IP boundaries",
         property $ do
@@ -51,6 +50,12 @@ group =
           (IPRange ip1 ip2) <- forAll $ G.element l
           lookupIP db ip1 === True
           lookupIP db ip2 === True
-          pure ()
+      ),
+      ( "lookup IP fast == lookup IP",
+        property $ do
+          db <- forAll generateIPRangeDB
+          let dbFast = toFastRangeDB db
+          ip <- forAll generateIP
+          lookupIP db ip === lookupIPFast dbFast ip
       )
     ]

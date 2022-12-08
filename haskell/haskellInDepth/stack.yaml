@@ -28,6 +28,8 @@ extra-deps:
   - cairo-0.13.8.2
   - gtk2hs-buildtools-0.13.8.3
 
+  - hp2pretty-0.10
+
   # HLS test
   # - haskell-language-server-1.7.0.0
   # - ghcide-1.7.0.0@sha256:bf9895f409db151c08607729a9d395cddb71a00207ca649dd79f4af820fe92c8,14227

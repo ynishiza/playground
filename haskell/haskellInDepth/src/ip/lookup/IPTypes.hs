@@ -71,6 +71,11 @@ data IPRange = IPRange !IP !IP
 instance Show IPRange where
   show (IPRange ip1 ip2) = ip1 |+ "," +| ip2 |+ ""
 
+instance Ord IPRange where
+  compare (IPRange (IP l1) (IP h1)) (IPRange (IP l2) (IP h2)) 
+    | l1 /= l2 = compare l1 l2
+    | otherwise = compare (h1 - l1) (h2 - l2)
+
 instance Buildable IPRange where build = build . show
 
 newtype IPRangeDB = IPRangeDB [IPRange]

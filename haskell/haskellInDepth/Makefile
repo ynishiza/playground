@@ -51,6 +51,10 @@ run:  ## Run test
 	@echo 6 $$'\n' | stack exec -- $(MAINEXE_NAME) 
 	@stack exec -- suntimes -f ./src/data/suntimes/input.txt -c ./src/data/suntimes/config.json
 
+	@echo "Chapter 8"
+	@stack exec -- iplookup -d benchmark/data/iplookup/3.iprs -i 1.1.1.1,2.2.2.2 
+	@stack exec -- iplookup -d benchmark/data/iplookup/3.iprs -n 500000
+
 	@echo "Chapter 9"
 	@echo 7 $$'\n' | stack exec -- $(MAINEXE_NAME) 
 	@stack exec -- isprime 7

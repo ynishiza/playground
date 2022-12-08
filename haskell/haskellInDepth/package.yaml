@@ -37,6 +37,12 @@ dependencies:
 - deepseq
 
 ghc-options:
+- -rtsopts=all
+- -fprof-auto
+- -fprof-auto-top
+- -fprof-auto-calls
+- -fprof-auto-exported
+- -fprof-auto-calls
 - -Wall
 - -Wcompat
 - -Widentities
@@ -206,6 +212,7 @@ internal-libraries:
       - IPTypes
       - IPParse
       - IPLookup
+      - IPLookupFast
     dependencies:
       - haskellInDepth 
       - split >= 0.2 && < 0.3

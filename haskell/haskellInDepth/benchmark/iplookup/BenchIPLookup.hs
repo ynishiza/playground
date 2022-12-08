@@ -3,9 +3,11 @@
 module BenchIPLookup
   ( benchGroup,
     benchIPLookup,
+    benchIPLookupFast,
   )
 where
 
+import Control.DeepSeq
 import Criterion
 import qualified Data
 import Data.Either
@@ -14,6 +16,7 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Fmt
 import IPLookup
+import IPLookupFast
 import IPParse
 import Utils
 
@@ -39,11 +42,27 @@ ipRangeDB = fromRight shouldNeverHappen . parseIPRangeDB <$> T.readFile p
     p = snd $ last Data.iPRangeDBFiles
 
 benchIPLookup :: Benchmark
-benchIPLookup =
+benchIPLookup = benchIPLookupWith "lookupIP" id lookupIP
+
+benchIPLookupFast :: Benchmark
+benchIPLookupFast = benchIPLookupWith "lookupIPFast" toFastRangeDB lookupIPFast
+
+benchIPLookupWith :: String -> (IPRangeDB -> db) -> (db -> IP -> Bool) -> Benchmark
+benchIPLookupWith name getDB lkup =
   bgroup
-    "IPLookup"
-    [ env ipRangeDB $ \db -> bgroup "single" $ (\ip -> bench ("ip:" +| ip |+ "") (nf (lookupWithDB db) ip)) <$> iptexts,
-      env ipRangeDB (\db -> bench "multiple" $ nf (lookupWithDB db <$>) iptexts)
+    name
+    [ 
+      env ipRangeDB $ \rawdb ->
+        let db = getDB rawdb
+         in bgroup "single" $ (\(t, ip) -> bench ("ip:" +| t |+ "") (nf (lkup db) ip)) <$> ipInfo,
+      env
+        ipRangeDB
+        ( \rawdb ->
+            let db = getDB rawdb
+             in bench "multiple" $ nf (lkup db . snd <$>) ipInfo
+        )
     ]
   where
-    lookupWithDB db = lookupIP db . fromJust . parseIP
+    ipInfo =
+      let x = (\t -> (t, fromJust (parseIP t))) <$> iptexts
+       in deepseq x x

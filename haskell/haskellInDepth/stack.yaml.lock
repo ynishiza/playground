@@ -116,6 +116,13 @@ packages:
       size: 3588
   original:
     hackage: gtk2hs-buildtools-0.13.8.3
+- completed:
+    hackage: hp2pretty-0.10@sha256:f020176ec16006bf3148508a14087a0d89edffc19eb8d04f480730aecf141480,4816
+    pantry-tree:
+      sha256: c8aa411e86bb4e4c57d6b32e8904667e66ecc06ab65a8240dc2cc807195149cb
+      size: 1211
+  original:
+    hackage: hp2pretty-0.10
 snapshots:
 - completed:
     sha256: ce4fb8d44f3c6c6032060a02e0ebb1bd29937c9a70101c1517b92a87d9515160
