@@ -56,7 +56,7 @@ instance Num Turn where
   (*) = enumApplyBinaryOp (*)
 
 getEnumLength :: forall a. (Enum a, Bounded a) => a -> Int
-getEnumLength _ = fromEnum (maxBound :: a) - fromEnum (minBound :: a) + 1
+getEnumLength _ = fromEnum (maxBound @a) - fromEnum (minBound @a) + 1
 
 enumApplyUnaryOp :: (Bounded a, Enum a) => (Int -> Int) -> a -> a
 enumApplyUnaryOp op x = toEnum $ mod (op $ fromEnum x) (getEnumLength x)

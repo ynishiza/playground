@@ -170,7 +170,6 @@ internal-libraries:
   hid-lib:
     source-dirs: ./src/main
     exposed-modules:
-      # - Utils
       - Chapter1_4
       - Chapter2_1
       - Chapter5_1_3
