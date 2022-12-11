@@ -58,6 +58,9 @@ run:  ## Run test
 	@echo "Chapter 9"
 	@echo 7 $$'\n' | stack exec -- $(MAINEXE_NAME) 
 	@stack exec -- isprime 7
+
+	@echo "Chapter 11"
+	@echo 8 $$'\n' | stack exec -- $(MAINEXE_NAME) 
 	
 	@make test
 

@@ -28,6 +28,7 @@ module Utils
     UtilErrors (..),
     shouldNeverHappen,
     shouldNeverHappenIO,
+    showBuilder,
   )
 where
 
@@ -35,7 +36,6 @@ import Control.Exception
 import Control.Monad
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.State
-import Data.Functor.Identity
 import Data.List (intercalate)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
@@ -50,6 +50,9 @@ shouldNeverHappen = throw ShouldNeverHappen
 
 shouldNeverHappenIO :: IO a
 shouldNeverHappenIO = throwIO ShouldNeverHappen
+
+showBuilder :: Show a => a -> Builder
+showBuilder = build . show
 
 traceShow :: Show a1 => a1 -> a2 -> a2
 traceShow x = trace (show x)
@@ -112,14 +115,14 @@ pauseIO =
 
 type Message = String
 
-type TestState = StateT [Message] (State (IO ())) ()
+type TestState = StateT [Message] IO ()
 
 runTest :: TestState -> IO ()
 runTest tests = do
   let inner = runStateT tests []
-      (((), messages), io) = runIdentity $ runStateT inner (pure ())
-   in io
-        >> putStrLn
+   in do
+        ((), messages) <- inner
+        putStrLn
           ( ""
               +| nameF "tests" (build $ intercalate ", " messages)
               |+ "\n"
@@ -129,7 +132,7 @@ runTest tests = do
           )
 
 useIO :: IO () -> TestState
-useIO next = lift $ modify (>> next)
+useIO = lift 
 
 createTest :: IO () -> Message -> TestState
 createTest x message = do

@@ -1,7 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Chapter11.Temp2
+module Chapter11.Temperature2
   ( run,
     Temp (..),
     UnitName (..),
@@ -15,11 +15,12 @@ run :: TestState
 run =
   createChapterTest
     "11.1.3"
-    ""
+    "Temperature2"
     ( do
-        let x = Temp @C 1
-            y = Temp @F 1
-        fmtLn $ nameF "x" (build x) <> nameF "y" (build y)
+        fmtLn $ nameF "freezing (C)" (build $ show freezing)
+        fmtLn $ nameF "freezing (F)" (build $ show $ c2f freezing)
+        fmtLn $ nameF "boiling (C)" (build $ show boiling)
+        fmtLn $ nameF "boiling (F)" (build $ show $ c2f boiling)
         pure ()
     )
 
@@ -46,3 +47,12 @@ instance UnitName u => Show (Temp u) where
 
 instance UnitName u => Buildable (Temp u) where
   build = build . show
+
+c2f :: Temp C -> Temp F
+c2f (Temp t) = Temp $ (t * 9 / 5) + 32
+
+freezing :: Temp C
+freezing = Temp @C 0
+
+boiling :: Temp C
+boiling = Temp @C 100

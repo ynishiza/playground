@@ -5,7 +5,7 @@
 {-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Chapter11.Temp
+module Chapter11.Temperature
   ( run,
     Temp (..),
     F,
@@ -20,6 +20,18 @@ import Data.Proxy as X
 import Fmt
 import GHC.Exts (Constraint)
 import Utils
+
+testPhantom :: TestState
+testPhantom =
+  createTest
+    ( do
+        fmtLn $ nameF "freezing (C)" (build $ show freezing)
+        fmtLn $ nameF "freezing (F)" (build $ show $ c2f freezing)
+        fmtLn $ nameF "boiling (C)" (build $ show boiling)
+        fmtLn $ nameF "boiling (F)" (build $ show $ c2f boiling)
+        pure ()
+    )
+    "testPhantom"
 
 newtype Temp u = Temp {getTemp :: Double}
   deriving (Eq)
@@ -56,8 +68,14 @@ instance UnitName Temp where
 instance UnitName u => Show (Temp u) where
   show (Temp v) = show v ++ unitName (Proxy @(Temp u))
 
-f2c :: Temp F -> Temp C
-f2c (Temp v) = Temp $ (v - 32) * 5 / 9
+c2f :: Temp C -> Temp F
+c2f (Temp t) = Temp $ (t * 9 / 5) + 32
+
+freezing :: Temp C
+freezing = Temp @C 0
+
+boiling :: Temp C
+boiling = Temp @C 100
 
 run :: TestState
 run =
@@ -66,16 +84,3 @@ run =
         testPhantom
     )
     "11.1"
-
-testPhantom :: TestState
-testPhantom =
-  createTest
-    ( do
-        let f1 = Temp @F 10
-            f2 = Temp @F 10
-        fmtLn $ "f:" +| f1 |+ " c:" +| f2c f1 |+ ""
-        fmtLn $ "f:" +| f2 |+ " c:" +| f2c f2 |+ ""
-
-        pure ()
-    )
-    "testPhantom"

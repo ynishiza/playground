@@ -238,6 +238,13 @@ testStrictVariantFunctions =
                 Showable a2,
                 Showable ()
               ]
+
+        printBanner "Existential number"
+        let
+          x = SomeNum (1::Int)
+          y = SomeNum (1.2::Double)
+         in do
+           print $ x + y
         testDone
     )
 
@@ -266,7 +273,7 @@ data MyPoint = MyPoint !Int !Int deriving (Show)
 data MyUnpackedPoint = MyUnpackedPoint {x :: {-# UNPACK #-} !Int, y :: {-# UNPACK #-} !Int}
   deriving (Show, Eq)
 
-data MyUnpackedPoint2 = MyUnpackedPoint2 {-# UNPACK #-} (Int, Int)
+data MyUnpackedPoint2 = MyUnpackedPoint2 {-# UNPACK #-} !(Int, Int)
 
 testUnpacking :: TestState
 testUnpacking =
@@ -297,3 +304,16 @@ testUnpacking =
               printSum (nonNegative 1)
         testDone
     )
+
+data SomeNum = forall a. (Show a, Real a) => SomeNum a 
+
+instance Show SomeNum where show (SomeNum v) = "SomeNum " ++ show v
+
+instance Num SomeNum where
+  (SomeNum x) + (SomeNum y) = SomeNum ((realToFrac x + realToFrac y) :: Double)
+  (SomeNum x) * (SomeNum y) = SomeNum ((realToFrac x * realToFrac y) :: Double)
+  abs (SomeNum x) = SomeNum (abs x)
+  signum (SomeNum x) = SomeNum (signum x)
+  negate (SomeNum x) = SomeNum (negate x)
+  fromInteger x = SomeNum x
+

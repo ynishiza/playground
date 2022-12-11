@@ -9,9 +9,11 @@ module Radar
     orientMany,
     rotateManyInSteps,
     getEnumLength,
+    module X
   )
 where
 
+import Data.Proxy as X
 import Fmt
 
 class (Bounded a, Enum a, Eq a) => CyclicEnum a where
@@ -55,14 +57,14 @@ instance Num Turn where
   (+) = enumApplyBinaryOp (+)
   (*) = enumApplyBinaryOp (*)
 
-getEnumLength :: forall a. (Enum a, Bounded a) => a -> Int
+getEnumLength :: forall a. (Enum a, Bounded a) => Proxy a -> Int
 getEnumLength _ = fromEnum (maxBound @a) - fromEnum (minBound @a) + 1
 
-enumApplyUnaryOp :: (Bounded a, Enum a) => (Int -> Int) -> a -> a
-enumApplyUnaryOp op x = toEnum $ mod (op $ fromEnum x) (getEnumLength x)
+enumApplyUnaryOp :: forall a. (Bounded a, Enum a) => (Int -> Int) -> a -> a
+enumApplyUnaryOp op x = toEnum $ mod (op $ fromEnum x) (getEnumLength (Proxy @a))
 
-enumApplyBinaryOp :: (Bounded a, Enum a) => (Int -> Int -> Int) -> a -> a -> a
-enumApplyBinaryOp op x y = toEnum $ mod (fromEnum x `op` fromEnum y) (getEnumLength x)
+enumApplyBinaryOp :: forall a. (Bounded a, Enum a) => (Int -> Int -> Int) -> a -> a -> a
+enumApplyBinaryOp op x y = toEnum $ mod (fromEnum x `op` fromEnum y) (getEnumLength (Proxy @a))
 
 -- f :: forall a .a -> a
 -- f x = (x::a)

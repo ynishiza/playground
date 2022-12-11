@@ -2,7 +2,7 @@
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Chapter11.TypeOperator
+module Chapter11.TypeOperators
   ( run,
     (+),
   )
@@ -25,7 +25,7 @@ run :: TestState
 run =
   createChapterTest
     "11.1.3"
-    "type operator"
+    "TypeOperators"
     ( do
         let x = 1 :*: 2 :*: 3 :: Int * Int * Int
             y = Inl (Inr 2) :: (Char + Int) + Char            

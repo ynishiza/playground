@@ -3,19 +3,21 @@ module Chapter11.Base
   )
 where
 
-import qualified Chapter11.PolymorphicKind
-import qualified Chapter11.Temp
-import qualified Chapter11.Temp2
-import qualified Chapter11.TypeOperator
+import qualified Chapter11.PolyKinds
+import qualified Chapter11.Temperature
+import qualified Chapter11.Temperature2
+import qualified Chapter11.TypeOperators
+import qualified Chapter11.DataKinds
 import Utils
 
 run :: TestState
 run =
   wrapTest
     ( do
-        Chapter11.TypeOperator.run
-        Chapter11.Temp.run
-        Chapter11.Temp2.run
-        Chapter11.PolymorphicKind.run
+        Chapter11.TypeOperators.run
+        Chapter11.Temperature.run
+        Chapter11.Temperature2.run
+        Chapter11.PolyKinds.run
+        Chapter11.DataKinds.run
     )
     "Chapter 11"
