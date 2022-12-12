@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -34,8 +34,7 @@ where
 
 import Control.Exception
 import Control.Monad
-import Control.Monad.Trans.Class
-import Control.Monad.Trans.State
+import Control.Monad.State
 import Data.List (intercalate)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
@@ -43,7 +42,9 @@ import Data.Typeable
 import Debug.Trace (trace)
 import Fmt
 
-data UtilErrors = ShouldNeverHappen | NotImplemented deriving (Show, Exception)
+data UtilErrors = ShouldNeverHappen | NotImplemented deriving (Show)
+
+instance Exception UtilErrors where
 
 shouldNeverHappen :: a
 shouldNeverHappen = throw ShouldNeverHappen
@@ -115,11 +116,20 @@ pauseIO =
 
 type Message = String
 
-type TestState = StateT [Message] IO ()
+newtype TestStateBase a = TestState {runTestState :: StateT [Message] IO a}
+  deriving
+    ( Functor,
+      Applicative,
+      Monad,
+      MonadIO,
+      MonadState [Message]
+    )
+
+type TestState = TestStateBase ()
 
 runTest :: TestState -> IO ()
 runTest tests = do
-  let inner = runStateT tests []
+  let inner = runStateT (runTestState tests) []
    in do
         ((), messages) <- inner
         putStrLn
@@ -132,7 +142,7 @@ runTest tests = do
           )
 
 useIO :: IO () -> TestState
-useIO = lift 
+useIO = liftIO
 
 createTest :: IO () -> Message -> TestState
 createTest x message = do
