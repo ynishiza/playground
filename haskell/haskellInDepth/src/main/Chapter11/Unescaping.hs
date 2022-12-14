@@ -1,11 +1,12 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ConstraintKinds #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
 {-# HLINT ignore "Use print" #-}
 
 module Chapter11.Unescaping
@@ -19,7 +20,6 @@ where
 
 import GHC.Show (showLitChar)
 import Unsafe.Coerce
-import Utils
 
 testValue :: Char
 testValue = 'あ'

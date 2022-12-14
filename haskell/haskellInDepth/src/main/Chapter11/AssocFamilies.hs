@@ -1,11 +1,11 @@
--- {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Chapter11.AssocFamilies (run) where
 
+import Chapter11.SimpleGraph
 import Data.List (nub, sort)
 import Fmt
 import Utils
@@ -51,21 +51,12 @@ run =
         testDone
     )
 
--- case: graph with type families
 class Graph g where
   type Vertex g
   data Edge g
   src, tgt :: Edge g -> Vertex g
   outEdges :: g -> Vertex g -> [Edge g]
   inEdges :: g -> Vertex g -> [Edge g]
-
--- case: graph without type families
-class SimpleEdge e v => SimpleGraph g e v where
-  soutEdges :: g -> v -> [e]
-  sinEdges :: g -> v -> [e]
-
-class SimpleEdge e v where
-  ssrc, stgt :: e -> v
 
 neighborVertices :: (Ord (Vertex g), Graph g) => g -> Vertex g -> [Vertex g]
 neighborVertices g v =
@@ -78,6 +69,7 @@ newtype GGraph a = GGraph [Edge (GGraph a)] deriving (Show, Eq)
 
 type IntEdge = Edge (GGraph Int)
 
+-- case: graph with type families
 instance Ord a => Graph (GGraph a) where
   type Vertex (GGraph a) = a
   data Edge (GGraph a) = GEdge (Vertex (GGraph a)) (Vertex (GGraph a))
@@ -87,6 +79,7 @@ instance Ord a => Graph (GGraph a) where
   outEdges (GGraph l) v = sort $ filter ((== v) . src) l
   inEdges (GGraph l) v = sort $ filter ((== v) . tgt) l
 
+-- case: graph without type families
 instance SimpleEdge (Edge (GGraph a)) a where
   ssrc (GEdge v _) = v
   stgt (GEdge _ v) = v

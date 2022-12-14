@@ -3,9 +3,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE NoStarIsType #-}
 
-module Chapter11.DataKinds (run, Temp(..), TUnit(..)) where
+module Chapter11.DataKinds (run, Temp (..), TUnit (..)) where
 
 import Data.Proxy
 import Fmt
@@ -16,7 +15,7 @@ run :: TestState
 run =
   createChapterTest
     "11.2"
-    ""
+    "DataKinds"
     ( do
         printBanner "Tempeature"
         fmtLn $ nameF "freezing (C)" (build $ show freezing)
@@ -109,7 +108,7 @@ instance (KnownSymbol p, KnownSymbol s) => Show (SurroundedString p s) where
 newtype FixedPoint (f :: Nat) = MkFixedPoint Integer
 
 instance KnownNat f => Show (FixedPoint f) where
-  show = show . (getValue)
+  show = (show @Double) . getValue
 
 getValue :: (KnownNat f, Fractional b) => FixedPoint f -> b
 getValue p@(MkFixedPoint v) = fromInteger v / fromInteger (natVal p)

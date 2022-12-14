@@ -21,10 +21,10 @@ run =
     "DataFamily"
     ( do
         let ts =
-              [ TS [(), ()],
-                TS [True, False, True, False, False]
+              [ TestValue [(), ()],
+                TestValue [True, False, True, False, False]
               ]
-            testSingle :: TSC a => a -> IO (Int, XList a) -> IO (Int, XList a)
+            testSingle :: Testable a => a -> IO (Int, XList a) -> IO (Int, XList a)
             testSingle v io = do
               (n, l) <- io
               let l' = v `xcons` l
@@ -36,7 +36,7 @@ run =
               assertIsEqual (xhead l') (Just v)
               assertIsEqual (xlength l') (n + 1)
               return (n + 1, l')
-            testMany (TS l) = do
+            testMany (TestValue l) = do
               let l0 = xempty
               assertIsEqual (xhead l0) Nothing
               assertIsEqual (xlength l0) 0
@@ -46,9 +46,9 @@ run =
         testDone
     )
 
-type TSC a = (Show a, Eq a, XListable a, Show (XList a))
+type Testable a = (Show a, Eq a, XListable a, Show (XList a))
 
-data TS = forall a. TSC a => TS [a]
+data TestValue = forall a. Testable a => TestValue [a]
 
 data family XList a
 

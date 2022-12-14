@@ -11,16 +11,6 @@ where
 import Fmt
 import Utils
 
-data a + b = Inl !a | Inr !b deriving (Show)
-
-data a * b = !a :*: !b deriving (Show)
-
-type Point a = a + a * a + a * a * a
--- type Point a = (a + (a * a)) + ((a * a) * a)
-
-infixl 6 +
-infixl 7 *
-
 run :: TestState
 run =
   createChapterTest
@@ -48,3 +38,14 @@ run =
               <> nameF "p2" (build $ show p2)
               <> nameF "p3" (build $ show p3)
     )
+
+data a + b = Inl !a | Inr !b deriving (Show)
+
+data a * b = !a :*: !b deriving (Show)
+
+type Point a = a + a * a + a * a * a
+-- type Point a = (a + (a * a)) + ((a * a) * a)
+
+infixl 6 +
+infixl 7 *
+
