@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -8,6 +9,7 @@ module Chapter11.DataFamily
   )
 where
 
+import Data.Bits
 import Data.Foldable
 import Fmt
 import Utils
@@ -19,26 +21,34 @@ run =
     "DataFamily"
     ( do
         let ts =
-              [ TS (),
-                TS True
+              [ TS [(), ()],
+                TS [True, False, True, False, False]
               ]
-            test (TS v) = do
-              let l1 = v `xcons` xempty
-                  l0 = asTypeOf xempty l1
+            testSingle :: TSC a => a -> IO (Int, XList a) -> IO (Int, XList a)
+            testSingle v io = do
+              (n, l) <- io
+              let l' = v `xcons` l
               fmtLn $
-                  nameF "l0" (showBuilder l0)
-                  <> nameF "l1" (showBuilder l1)
-                  <> nameF "xhead l0" (showBuilder $ xhead l0)
-                  <> nameF "xhead l1" (showBuilder $ xhead l1)
-                  <> nameF "xcons" (showBuilder $ v `xcons` l0)
-                  <> nameF "xcons" (showBuilder $ v `xcons` (v `xcons` l0))
-              assertIsEqual 0 (xlength l0)
-              assertIsEqual 1 (xlength l1)
-         in traverse_ test ts
+                nameF "l'" (showBuilder l)
+                  <> nameF "xlength" (showBuilder $ xlength l)
+                  <> nameF "xhead l1" (showBuilder $ xhead l)
+                  <> nameF "xcons" (showBuilder l')
+              assertIsEqual (xhead l') (Just v)
+              assertIsEqual (xlength l') (n + 1)
+              return (n + 1, l')
+            testMany (TS l) = do
+              let l0 = xempty
+              assertIsEqual (xhead l0) Nothing
+              assertIsEqual (xlength l0) 0
+              _ <- foldr testSingle (return (0, l0)) l
+              pure ()
+         in traverse_ testMany ts
         testDone
     )
 
-data TS = forall a. (Show a, Eq a, XListable a, Show (XList a)) => TS a
+type TSC a = (Show a, Eq a, XListable a, Show (XList a))
+
+data TS = forall a. TSC a => TS [a]
 
 data family XList a
 
@@ -60,6 +70,6 @@ instance XListable () where
 
 instance XListable Bool where
   xempty = MkXListBool 0 0
-  xcons v (MkXListBool t f) = if v then MkXListBool (t + 1) f else MkXListBool t (f + 1)
-  xhead (MkXListBool t _) = if t > 0 then Just True else Nothing
-  xlength (MkXListBool t f) = t + f
+  xcons v (MkXListBool b n) = MkXListBool (shift b 1 + if v then 1 else 0) (n + 1)
+  xhead (MkXListBool b n) = if n > 0 then Just (b `mod` 2 == 1) else Nothing
+  xlength (MkXListBool _ n) = n

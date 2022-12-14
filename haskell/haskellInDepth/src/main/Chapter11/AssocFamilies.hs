@@ -1,12 +1,12 @@
+-- {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
 
 module Chapter11.AssocFamilies (run) where
 
-import Data.List (nub)
+import Data.List (nub, sort)
 import Fmt
 import Utils
 
@@ -16,27 +16,42 @@ run =
     "11.3.4"
     "AssocFamilies"
     ( do
-        let l :: [(Int, Int)]
-            l = filter (uncurry (<)) $ (,) <$> [1 .. 10] <*> [1 .. 10]
-            g :: EdgeList Int
-            g = EdgeList $ map (uncurry MyEdge) l
+        let edges :: [(Int, Int)]
+            edges =
+              filter (uncurry (<)) $
+                (,) <$> [1 .. 10] <*> [1 .. 10]
+            grph :: GGraph Int
+            grph = GGraph $ map (uncurry GEdge) edges
             v1 = 3 :: Int
-            e1 = MyEdge v1 v1
+            e1 = GEdge v1 v1
+            eLoop = GEdge v1 10
+            wrapText :: Show a => String -> a -> Builder
+            wrapText label v = label |+ " [" +|| v ||+ "]"
          in do
+              printBanner "Graph with type family"
               fmtLn $
-                nameF ("outEdges:" +|| v1 ||+ "") (showBuilder $ outEdges g v1)
-                  <> nameF ("inEdges:" +|| v1 ||+ "") (showBuilder $ inEdges g v1)
-                  <> nameF ("neighborVertices:" +|| v1 ||+ "") (showBuilder $ neighborVertices g v1)
-                  <> nameF ("isLoopEdge:" +|| e1 ||+ "") (showBuilder $ isLoopEdge e1)
+                nameF "graph" (showBuilder grph)
+                  <> nameF (wrapText "outEdges" v1) (showBuilder $ outEdges grph v1)
+                  <> nameF (wrapText "inEdges" v1) (showBuilder $ inEdges grph v1)
+                  <> nameF (wrapText "neighborVertices" v1) (showBuilder $ neighborVertices grph v1)
+                  <> nameF (wrapText "isLoopEdge" eLoop) (showBuilder $ isLoopEdge eLoop)
 
-              let 
-                x :: [IntEdge]
-                x = soutEdges g v1
+              assertIsEqual (outEdges grph v1) (GEdge 3 <$> [4 .. 10])
+              assertIsEqual (inEdges grph v1) (flip GEdge 3 <$> [1, 2])
+              assertIsEqual (neighborVertices grph v1) ([1, 2] ++ [4 .. 10])
+
+              printBanner "Graph without type family"
               fmtLn $
-                nameF ("outEdges:" +|| v1 ||+ "") (showBuilder $ (soutEdges g v1 :: [IntEdge]))
+                nameF (wrapText "soutEdges" v1) (showBuilder (soutEdges grph v1 :: [IntEdge]))
+                  <> nameF (wrapText "sinEdges" v1) (showBuilder (sinEdges grph v1 :: [IntEdge]))
+              assertIsEqual (src e1) (ssrc e1)
+              assertIsEqual (tgt e1) (stgt e1)
+              assertIsEqual (soutEdges grph v1) (outEdges grph v1)
+              assertIsEqual (sinEdges grph v1) (inEdges grph v1)
         testDone
     )
 
+-- case: graph with type families
 class Graph g where
   type Vertex g
   data Edge g
@@ -44,35 +59,38 @@ class Graph g where
   outEdges :: g -> Vertex g -> [Edge g]
   inEdges :: g -> Vertex g -> [Edge g]
 
-type MyVertex a = a
+-- case: graph without type families
+class SimpleEdge e v => SimpleGraph g e v where
+  soutEdges :: g -> v -> [e]
+  sinEdges :: g -> v -> [e]
 
-newtype EdgeList a = EdgeList [Edge (EdgeList a)]
+class SimpleEdge e v where
+  ssrc, stgt :: e -> v
 
-type IntEdge = Edge (EdgeList Int)
-
-instance Eq a => Graph (EdgeList a) where
-  type Vertex (EdgeList a) = MyVertex a
-  data Edge (EdgeList a) = MyEdge (Vertex (EdgeList a)) (Vertex (EdgeList a))
-    deriving (Show, Eq)
-  src (MyEdge v _) = v
-  tgt (MyEdge _ v) = v
-  outEdges (EdgeList l) v = filter ((== v) . src) l
-  inEdges (EdgeList l) v = filter ((== v) . tgt) l
-
-neighborVertices :: (Eq (Vertex g), Graph g) => g -> Vertex g -> [Vertex g]
+neighborVertices :: (Ord (Vertex g), Graph g) => g -> Vertex g -> [Vertex g]
 neighborVertices g v =
-  nub $ map src (outEdges g v) <> map src (inEdges g v)
+  sort $ nub $ map tgt (outEdges g v) <> map src (inEdges g v)
 
 isLoopEdge :: (Eq (Vertex g), Graph g) => Edge g -> Bool
 isLoopEdge e = src e == tgt e
 
-class SGraph g e v where
-  ssrc, stgt :: e -> v
-  soutEdges :: g -> v -> [e]
-  sinEdges :: g -> v -> [e]
+newtype GGraph a = GGraph [Edge (GGraph a)] deriving (Show, Eq)
 
-instance (Eq a) => SGraph (EdgeList a) (Edge (EdgeList a)) (MyVertex a) where
-  ssrc (MyEdge v _) = v
-  stgt (MyEdge _ v) = v
-  soutEdges (EdgeList l) v = filter ((== v) . src) l
-  sinEdges (EdgeList l) v = filter ((== v) . tgt) l
+type IntEdge = Edge (GGraph Int)
+
+instance Ord a => Graph (GGraph a) where
+  type Vertex (GGraph a) = a
+  data Edge (GGraph a) = GEdge (Vertex (GGraph a)) (Vertex (GGraph a))
+    deriving (Show, Eq, Ord)
+  src (GEdge v _) = v
+  tgt (GEdge _ v) = v
+  outEdges (GGraph l) v = sort $ filter ((== v) . src) l
+  inEdges (GGraph l) v = sort $ filter ((== v) . tgt) l
+
+instance SimpleEdge (Edge (GGraph a)) a where
+  ssrc (GEdge v _) = v
+  stgt (GEdge _ v) = v
+
+instance (Ord a) => SimpleGraph (GGraph a) (Edge (GGraph a)) a where
+  soutEdges g v = outEdges g v
+  sinEdges g v = inEdges g v
