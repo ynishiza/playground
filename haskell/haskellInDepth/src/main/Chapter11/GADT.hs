@@ -3,9 +3,16 @@
 {-# OPTIONS_GHC -Wno-partial-fields #-}
 {-# OPTIONS_GHC -Wno-type-defaults #-}
 
-module Chapter11.GADT (run) where
+module Chapter11.GADT
+  ( run,
+  Dyn(..),
+    MyException (..),
+    MyType (..),
+  )
+where
 
 import Data.Char
+import Control.Exception
 import Data.Foldable
 import GHC.Exts
 import Utils
@@ -54,10 +61,16 @@ data Dyn a where
   C :: {getC :: Char} -> Dyn Char
   N :: Num a => {getN :: a} -> Dyn a
 
+data MyException where
+  MyException :: forall a. Exception a => a -> MyException
+
+instance Show MyException where show (MyException e) = "MyException " ++ show e
+
 getDynValue :: Dyn a -> a
 getDynValue v@(S _) = getS v
 getDynValue v@(C _) = getC v
 getDynValue v@(N _) = getN v
+
 
 isEmpty :: Eq a => Dyn a -> Bool
 isEmpty (S v) = v == fromString ""
@@ -69,3 +82,6 @@ data DynWrapped where
 
 isEmptyWrapped :: DynWrapped -> Bool
 isEmptyWrapped (DynWrapped v) = isEmpty v
+
+data MyType where
+   MyType :: { v1 :: Int, v2 :: Int } -> MyType

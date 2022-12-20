@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 
 module Types
   ( When (..),
@@ -15,10 +16,12 @@ where
 import Data.Aeson
 import qualified Data.Text as T
 import Data.Time
+import Data.Kind
 import Fmt
 import GHC.Generics
 import TextShow
 
+type Address :: Type
 type Address = T.Text
 
 data When = Now | On !Day deriving (Show)

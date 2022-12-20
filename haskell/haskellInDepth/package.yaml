@@ -78,8 +78,13 @@ executables:
     - haskellInDepth
     - text
     - random
+    - aeson >= 1.2 && < 2
     - criterion >= 1.5.12 && < 2
     - timeit >= 2.0 && < 3
+    ghc-options:
+    - -ddump-to-file
+    - -ddump-file-prefix=mydump
+    - -ddump-deriv
 
   du:
     main: Main.hs
@@ -181,6 +186,7 @@ internal-libraries:
       - Radar
     dependencies: 
       - haskellInDepth
+      - aeson >= 1.2 && < 2
       - criterion
       - random
 

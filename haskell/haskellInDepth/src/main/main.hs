@@ -10,6 +10,7 @@ import qualified Chapter6_2
 import qualified Chapter7_2
 import qualified Chapter7_3
 import qualified Chapter9_2
+import qualified Chapter12.Base
 import qualified Chapter11.Base
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
@@ -30,7 +31,8 @@ main = do
             "Chapter7.2",
             "Chapter7.3",
             "Chapter9.2",
-            "Chapter11.1"
+            "Chapter11.1",
+            "Chapter12"
           ]
           [1 ..]
 
@@ -55,6 +57,7 @@ main = do
     Just 6 -> runTest Chapter7_3.run
     Just 7 -> runTest Chapter9_2.run
     Just 8 -> runTest Chapter11.Base.run
+    Just 9 -> runTest Chapter12.Base.run
     Just _ -> error $ "Unknown chapter" +| res |+ ""
     Nothing -> error $ "Unknown chapter" +| res |+ ""
 

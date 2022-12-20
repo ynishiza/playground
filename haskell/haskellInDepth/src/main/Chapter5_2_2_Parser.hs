@@ -1,7 +1,8 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleInstances #-}
-
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Use <&>" #-}
@@ -22,6 +23,7 @@ import Control.Monad.Except
 import Control.Monad.State
 import Data.Char
 import Data.Foldable
+import Data.Kind
 import Data.List (groupBy)
 import Data.Maybe
 import Fmt
@@ -31,7 +33,14 @@ import Utils
 parse :: String -> Either SYError (Expr Int, SYState)
 parse = processExpression
 
-data Expr a = Lit !a | Add !(Expr a) !(Expr a) | Mult !(Expr a) !(Expr a) deriving (Show, Eq)
+data Expr (a :: Type) where
+  Lit :: a -> Expr a
+  Add :: Expr a -> Expr a -> Expr a
+  Mult :: Expr a -> Expr a -> Expr a
+
+deriving instance Eq a => Eq (Expr a)
+
+deriving instance Show a => Show (Expr a)
 
 type Token = String
 
@@ -41,14 +50,20 @@ type Output = [Expr Int]
 
 type SYState = (Stack, Output)
 
-data SYError = SYError !SYState !String deriving (Show, Eq)
+data SYError where
+  SYError :: SYState -> String -> SYError
 
-newtype SYParser a = SYParser {runSYParser :: StateT SYState (Except SYError) a}
-  deriving
-    ( Functor,
-      Applicative,
-      Monad
-    )
+deriving instance Show SYError
+
+deriving instance Eq SYError
+
+newtype SYParser (a :: Type) = SYParser {runSYParser :: StateT SYState (Except SYError) a}
+
+deriving instance Functor SYParser
+
+deriving instance Applicative SYParser
+
+deriving instance Monad SYParser
 
 instance MonadState SYState SYParser where
   state f = SYParser $ state f
@@ -95,6 +110,7 @@ logState (stack, output) = "state (stack=" +| stack |+ " output" +|| output ||+ 
 
 createError :: SYState -> String -> SYError
 createError s m = trace ("ERROR:" +| logState s |+ " message=" +| m |+ "") $ SYError s m
+
 -- createError s m = SYError s m
 
 myThrowError :: SYState -> String -> SYParser ()

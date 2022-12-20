@@ -1,6 +1,9 @@
 resolver: lts-18.21
+compiler: ghc-8.10.7
 
 # compiler: ghc-9.2.4
+#
+system-ghc: true
 
 packages:
 - .

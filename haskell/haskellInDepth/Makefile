@@ -61,10 +61,16 @@ run:  ## Run test
 
 	@echo "Chapter 11"
 	@echo 8 $$'\n' | stack exec -- $(MAINEXE_NAME) 
+
+	@echo "Chapter 12"
+	@echo 9 $$'\n' | stack exec -- $(MAINEXE_NAME) 
 	
 	@make test
 
 	@make benchmark
+
+run-profile:
+	stack exec --profile -- $(MAINEXE_NAME) +RTS -p
 
 benchmark: ## Run benchmark
 	@stack bench
@@ -90,8 +96,13 @@ debug: ## Print variables
 clean: ## Clean
 	stack clean
 	rm -f *.hi *.o *.cabal *.png *.svg *.html
+	find src test benchmark \
+		-iname '*.o' \
+		-o -iname '*.hi' \
+		-o -iname '*dump-*' \
+		-delete
 
 help: ## Display this help
 	@grep -E '^[0-9a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-.PHONY: hello debug test benchmark run clean watch unwatch compile help
+.PHONY: default install uninstall compile compile-profile run  run-profile benchmark test ide debug clean help
