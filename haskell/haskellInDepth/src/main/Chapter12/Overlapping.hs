@@ -1,30 +1,27 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE DefaultSignatures #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE DeriveAnyClass #-}
 
-module ScratchSpace (
-  MyShow(..),
-  MyShow2(..)
+module Chapter12.Overlapping (
+  run
   ) where
 
-import Data.Coerce
-import Unsafe.Coerce
+import Utils
 
-type family IdF a where
-  IdF a = Wrap1 a
+run :: TestState
+run = createChapterTest "12" "Overlapping instances" (do
+  assertIsEqual (myShow ()) "()"
+  assertIsEqual (myShow @Double 1.1) "1.1"
+  assertIsEqual (myShow @Int 1) "INT 1"
+  assertIsEqual (myShow True) "BOOL True"
 
-data Wrap1 a = Wrap1 a deriving (Show, Eq)
-
-newtype WrapFamily a = WrapFamily (IdF a)
-deriving instance Eq a => Eq (WrapFamily a)
-deriving instance Show a => Show (WrapFamily a)
-
-unsafeWrap :: WrapFamily Int  -> WrapFamily (Wrap1 Int)
--- unsafeWrap = coerce
-unsafeWrap = unsafeCoerce
+  assertIsEqual (myShow2 ()) "()"
+  assertIsEqual (myShow2 @Double 1.1) "1.1"
+  assertIsEqual (myShow2 @Int 1) "INT 1"
+  assertIsEqual (myShow2 True) "BOOL True"
+  testDone)
 
 class MyShow a where
   myShow :: a -> String
