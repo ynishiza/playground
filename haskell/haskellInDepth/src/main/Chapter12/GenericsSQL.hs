@@ -8,6 +8,9 @@
 
 module Chapter12.GenericsSQL
   ( run,
+  Student(..),
+  Course(..),
+  ToSQL(..)
   )
 where
 
@@ -15,7 +18,6 @@ import Data.List (intercalate)
 import qualified Data.Text as T
 import Fmt
 import GHC.Generics
-import GHC.Exts (IsString)
 import Utils
 
 run :: TestState

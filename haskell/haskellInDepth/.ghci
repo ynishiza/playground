@@ -2,6 +2,8 @@
 :set -W             -- minimal warnings
 -- :set -XOverloadedStrings     -- Disabled since it may break loaded modules
 :set -XMagicHash
+:set -XNoStarIsType
+:set -fprint-explicit-foralls
 :set prompt "ghci> "
 :set editor "nvim"
 :set +m             -- multine

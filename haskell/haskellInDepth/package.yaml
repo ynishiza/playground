@@ -82,8 +82,8 @@ executables:
     - criterion >= 1.5.12 && < 2
     - timeit >= 2.0 && < 3
     ghc-options:
-    - -ddump-to-file
-    - -ddump-file-prefix=mydump
+    # - -ddump-to-file
+    # - -ddump-file-prefix=mydump
     - -ddump-deriv
 
   du:
@@ -183,6 +183,7 @@ internal-libraries:
       - Chapter5_3_1
       - Chapter6_2
       - Chapter7_3
+      - Chapter12.GenericsSQL
       - Radar
     dependencies: 
       - haskellInDepth

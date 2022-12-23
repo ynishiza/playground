@@ -2,10 +2,22 @@
 {-# LANGUAGE StandaloneKindSignatures #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
-module Chapter11.DataKindsLiterals () where
+module Chapter11.TypeLevelLiterals (run) where
 
 import GHC.Base
+import GHC.TypeLits
 import GHC.Natural
+import Utils
+
+import Data.Proxy
+
+run :: TestState
+run = createChapterTest "11.2" "Type-level literals" (do
+    assertIsEqual (natVal (Proxy :: Proxy 0)) 0
+    assertIsEqual (natVal (Proxy :: Proxy 1)) 1
+    assertIsEqual (symbolVal (Proxy :: Proxy "")) ""
+    assertIsEqual (symbolVal (Proxy :: Proxy "hello")) "hello"
+    testDone)
 
 b0 :: Bool
 b0 = True
@@ -37,3 +49,13 @@ type S0 = ""
 -- type S0' = ""           -- ERROR "Expected kind ‘String’, but ‘""’ has kind ‘Symbol’"
 type S1 :: Symbol
 type S1 = "ABC"
+
+type L0 :: [Nat]
+type L0 = '[]
+type L1 :: [Nat]
+type L1 = '[1]
+type L2 :: [Nat]
+type L2 = '[1,2]
+type L3 :: [Symbol]
+type L3 = '["abc","def"]
+

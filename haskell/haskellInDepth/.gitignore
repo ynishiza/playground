@@ -1,7 +1,4 @@
-.stack-work/
 *.png
 *.svg
-*.cabal
 bench.*
-*~
 random*

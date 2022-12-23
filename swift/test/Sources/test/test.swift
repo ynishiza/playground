@@ -1,13 +1,15 @@
 @main
-public struct test {
+public struct Test {
     public private(set) var text = "Hello, World!"
 
     public static func main() {
-        print(test().text)
-        testEnum()
+        print(Test().text)
+        testStructures()
         // testBasic()
         // testStructures()
         // testFunctions()
+        runScratchSpace()
+        testClasses()
     }
 }
 

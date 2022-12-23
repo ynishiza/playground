@@ -114,3 +114,19 @@ jobs:
       - name: Cleanup HID
         working-directory: ${{ github.workspace }}/haskell/haskellInDepth
         run: make clean
+
+  swift:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build
+        working-directory: ${{ github.workspace }}/swift/test
+        run: make compile
+
+      - name: Run
+        working-directory: ${{ github.workspace }}/swift/test
+        run: make run
+
+      - name: Clean
+        working-directory: ${{ github.workspace }}/swift/test
+        run: make clean

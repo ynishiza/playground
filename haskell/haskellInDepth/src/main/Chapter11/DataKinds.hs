@@ -2,10 +2,12 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Chapter11.DataKinds (run, Temp (..), TUnit (..)) where
 
+import Data.Kind
 import Data.Proxy
 import Fmt
 import GHC.TypeLits (KnownNat, KnownSymbol, Nat, Symbol, natVal, symbolVal)
@@ -105,7 +107,8 @@ squareBrackets = MkSurroundedString @"[" @"]"
 instance (KnownSymbol p, KnownSymbol s) => Show (SurroundedString p s) where
   show (MkSurroundedString v) = symbolVal (Proxy @p) ++ v ++ symbolVal (Proxy @s)
 
-newtype FixedPoint (f :: Nat) = MkFixedPoint Integer
+type FixedPoint :: Nat -> Type
+newtype FixedPoint f = MkFixedPoint Integer
 
 instance KnownNat f => Show (FixedPoint f) where
   show = (show @Double) . getValue

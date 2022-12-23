@@ -18,7 +18,7 @@ allTests =
         testArrow
         testArrowLoop
     )
-    "TestArrow"
+  "TestArrow"
 
 testArrow :: TestState
 testArrow =

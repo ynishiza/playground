@@ -5,8 +5,31 @@
 
 func testStructures() -> () {
     print("Test structures")
-    testProperties()
-    testPropertyWrapper()
+    // testProperties()
+    // testPropertyWrapper()
+    testMutation()
+    testSubscript()
+}
+
+fileprivate func testSubscript() {
+    var arr = MyArray(array: [1,2,3,4,5])
+    print(arr[])
+    print(arr[1])
+    print(arr[2])
+    print(arr[100, "default"])
+    arr[1] = 10
+    print(arr[1])
+    arr[1, 20] = 10
+    print(arr[1])
+
+    print(arr["a"])
+    print(arr["b"])
+}
+
+fileprivate func testInitializer() {
+    let o1 = DefaultInitTest(a : 1, b: 1)
+    let o2 = DefaultInitTest(a : 1, b: 1, c: 1)
+    let o3 = DefaultInitTest(a : 1, b: 1, c: 1, d: 1)
 }
 
 fileprivate func testPropertyWrapper() {
@@ -57,6 +80,17 @@ fileprivate func testProperties() {
         printLabel("MyStruct.vReadonly", MyStruct.vReadonly);
         printLabel("MyStruct.vcomp", MyStruct.vcomp);
     }
+}
+
+fileprivate func testMutation() {
+    let o1 = MutatingObj(x: "a", y: "b")
+    var o2 = o1
+    // o1.replaceX("hello")
+    print(o1, o2)
+    o2.replaceSelf(MutatingObj())
+    print(o1, o2)
+    o2.replaceX("ABC")
+    print(o1, o2)
 }
 
 fileprivate struct MyPoint {
@@ -152,4 +186,77 @@ fileprivate struct NonNegative {
 fileprivate struct TrueOnly {
     var wrappedValue : Bool { true }
     var projectedValue : Bool { false }
+}
+
+fileprivate struct MutatingObj {
+    var x : String = "x"
+    var y : String = "y"
+
+    mutating func replaceX(_ x: String) {
+        self.x = x
+    }
+    mutating func replaceSelf(_ x: MutatingObj) {
+        self = x
+    }
+}
+
+fileprivate struct MyArray {
+    var array : [Any] = []
+    subscript(index: Int = 0, v : Any? = nil) -> Any {
+        set (newValue) {
+            array[index] = v ?? newValue
+        } get {
+            if index < array.count {
+                return array[index]
+            } else if let d = v {
+                return d
+            } 
+            return -1
+        }
+    }
+
+    subscript(key: String) -> String{
+        get { "key=\(key)" }
+    }
+
+    let y : Int
+    init(array: [Any]) {
+        self.array = array
+        self.y = 1
+    }
+}
+
+fileprivate struct InitTest {
+    let a0 : Int
+    let a1 : Int = 0
+    var a2 : Int
+    var a3 : Int = 1
+    var a4 : Int?
+    var a5 : Int? = 1
+
+    init() {
+        self.init(a0: 1, a2: -1)
+        // self.a1 = 10
+        self.a3 = 10
+        self.a4 = nil
+        self.a4 = 1
+        self.a5 = nil
+    }
+
+    init(a0: Int, a2: Int) {
+        self.a0 = a0
+        self.a2 = a2
+    }
+
+    init(x: Any...) {
+        self.a0 = 10
+        self.a2 = 10
+    }
+}
+
+fileprivate struct DefaultInitTest {
+    let a : Int
+    var b  : Int
+    var c  : Int = 1
+    var d : Int?
 }

@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE UnboxedTuples #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
@@ -31,6 +32,7 @@ import Control.Exception
 import Criterion.Main
 import Criterion.Types
 import Data.Foldable
+import Data.Kind
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Fmt
@@ -76,7 +78,7 @@ test =
     assertSuccess = assertIsEqual True . snd
     assertFalse = assertIsEqual False . snd
 
-data Showable = forall a. Show a => Showable a
+data Showable = forall (a :: Type). Show a => Showable a
 
 instance Show Showable where
   show (Showable x) = show x
@@ -240,11 +242,10 @@ testStrictVariantFunctions =
               ]
 
         printBanner "Existential number"
-        let
-          x = SomeNum (1::Int)
-          y = SomeNum (1.2::Double)
+        let x = SomeNum (1 :: Int)
+            y = SomeNum (1.2 :: Double)
          in do
-           print $ x + y
+              print $ x + y
         testDone
     )
 
@@ -305,7 +306,7 @@ testUnpacking =
         testDone
     )
 
-data SomeNum = forall a. (Show a, Real a) => SomeNum a 
+data SomeNum = forall a. (Show a, Real a) => SomeNum a
 
 instance Show SomeNum where show (SomeNum v) = "SomeNum " ++ show v
 
@@ -316,4 +317,3 @@ instance Num SomeNum where
   signum (SomeNum x) = SomeNum (signum x)
   negate (SomeNum x) = SomeNum (negate x)
   fromInteger x = SomeNum x
-

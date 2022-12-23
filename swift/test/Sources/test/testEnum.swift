@@ -1,16 +1,32 @@
 func testEnum() {
     print("doing something")
+    testEnumMain()
+    testEnumCommon()
+}
+
+fileprivate func testEnumCommon() {
+    let s = SomeEnum.InnerClass()
+    let t = SomeEnum.InnerEnum.a
+    print(s, t)
+    print(s === s)
+    SomeEnum.a.fn()
+    SomeEnum.fn()
+    print(SomeEnum.a.v)
+    print(SomeEnum.v)
+}
+
+fileprivate func testEnumMain() {
     iterPrint("Alpha", Alpha.allCases)
     iterPrint("Alpha2", Alpha2.allCases)
     print(Alpha2.a)
     print(Alpha2.b)
 
-    Alpha.printV(.a)
-    Alpha.printV(.b)
-    Alpha2.printV(.a)
-    Alpha2.printV(.b)
-    Alpha3.printV(.a)
-    Alpha3.printV(.b)
+    Alpha.a.printV()
+    Alpha.b.printV()
+    Alpha2.a.printV()
+    Alpha2.b.printV()
+    Alpha3.a.printV()
+    Alpha3.b.printV()
 
     var id : Id
     id = .uid("ABC")
@@ -30,11 +46,27 @@ func testEnum() {
     expr = .add(.num(1), .num(2))
 }
 
-fileprivate func iterPrint(_ name: String, _ x: any Collection) {
+fileprivate func iterPrint(_ name: String, _ x: [Any]) {
     print(name)
     for v in x {
         print(v)
     }
+}
+
+fileprivate enum SomeEnum {
+    case a
+    case b
+
+    enum InnerEnum {
+        case a
+    }
+    class InnerClass {
+    }
+
+    var v : String { "value prop" }
+    static var v : String { "static prop" }
+    func fn() { print("value hello") }
+    static func fn() { print("static hello") }
 }
 
 fileprivate enum Alpha0 : CaseIterable {
@@ -45,24 +77,25 @@ fileprivate enum Alpha0 : CaseIterable {
 fileprivate enum Alpha : String, CaseIterable {
     case a
     case b
-    static func printV(_ x: Alpha) {
-        print("Alpha \(x)=\(x.rawValue)")
+    var hello : String { "hello" }
+    func printV() {
+        print("Alpha \(self)=\(self.rawValue)")
     }
 }
 
 fileprivate enum Alpha2 : String, CaseIterable {
     case a = "A"
     case b = "B"
-    static func printV(_ x: Alpha2) {
-        print("Alpha2 \(x)=\(x.rawValue)")
+    func printV() {
+        print("Alpha2 \(self)=\(self.rawValue)")
     }
 }
 fileprivate enum Alpha3 : Int, CaseIterable {
     case a
     case b
 
-    static func printV(_ x: Alpha3) {
-        print("Alpha3 \(x)=\(x.rawValue)")
+    func printV() {
+        print("Alpha3 \(self)=\(self.rawValue)")
     }
 }
 
