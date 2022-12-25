@@ -37,7 +37,6 @@ dependencies:
 - deepseq
 
 ghc-options:
-- -XHaskell2010
 - -rtsopts=all
 - -fprof-auto
 - -fprof-auto-top
@@ -54,10 +53,13 @@ ghc-options:
 - -Wpartial-fields
 - -Wredundant-constraints
 
+
 # NOTE: "language" field not recognized?
+# default-language: Haskell2010
 # language: Haskell2010
 
 default-extensions:
+- Haskell2010
 - DeriveFoldable
 - DeriveFunctor
 - DeriveTraversable
@@ -98,6 +100,7 @@ internal-libraries:
       - Radar
       - Chapter5_2_2_Parser
       - Chapter12.TemplateProjection
+      - Chapter12.Base
       - Chapter12.GenericsSQL
     dependencies: 
       - haskellInDepthGHC9

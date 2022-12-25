@@ -1,5 +1,5 @@
 func testEnum() {
-    print("doing something")
+    print("Test enum")
     testEnumMain()
     testEnumCommon()
 }

@@ -7,5 +7,10 @@ final class testTests: XCTestCase {
         // Use XCTAssert and related functions to verify your tests produce the correct
         // results.
         XCTAssertEqual(Test().text, "Hello, World!")
+        testBasic()
+        testClasses()
+        testEnum()
+        testFunctions()
+        testStructures()
     }
 }

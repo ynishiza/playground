@@ -1,4 +1,5 @@
 func testClasses() {
+    print("test classes")
     testClassInitialization()
 }
 

@@ -9,6 +9,7 @@ module Chapter12.TemplateValues (
 
 import Data.Foldable
 import Fmt
+import Language.Haskell.TH
 import Utils
 
 run :: TestState
@@ -38,7 +39,6 @@ run = createChapterTest "12.3" "Template Haskell terms" (do
     IOContainer "Just (Just (Jst x))" [p| Just (Just (Just x)) |]
                              ]
 
-
   printBannerWrap "Type" $ 
     traverse_ printContainer [
       IOContainer "()" [t| () |],
@@ -53,6 +53,13 @@ run = createChapterTest "12.3" "Template Haskell terms" (do
       IOContainer "Int -> Double" [t| Int -> Double |],
       IOContainer "forall a. a" [t| forall a. a |],
       IOContainer "forall a. (Show a, Eq a)" [t| forall a. (Show a, Eq a) |]
+                             ]
+
+
+  printBannerWrap "Inverse" $
+    traverse_ printContainer [
+    IOContainer "[| $[| 1 |] |]" [| $[| 1 |] |],
+    IOContainer "[| $(litE (IntegerL 1)]) |]" [| $(litE (IntegerL 1)) |]
                              ]
 
   testDone)
