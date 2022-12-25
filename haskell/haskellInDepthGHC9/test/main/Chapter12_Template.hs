@@ -14,5 +14,3 @@ specs = describe "" $ do
     $(project 3 0) t `shouldBe` 1
     $(project 3 1) t `shouldBe` 1
     $(project 3 2) t `shouldBe` 1
-
--- a `shouldBe` 2
