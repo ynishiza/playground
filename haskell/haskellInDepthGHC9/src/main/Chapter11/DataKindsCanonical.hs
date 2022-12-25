@@ -45,6 +45,10 @@ type L3 = 'Cons 1 ('Cons 1 'Nil)
 type L4 :: List Type
 type L4 = 'Cons Int ('Cons (List Int) 'Nil)
 
+-- mynat :: Proxy 'Zero -> Int
+-- mynat _ = 0
+-- mynat :: forall (a :: MyNat). Proxy ('Succ a) -> Int
+-- mynat _ = 1 + mynat (Proxy :: Proxy a)
 -- mynat :: Proxy (a :: MyNat) -> Integer
 -- mynat _ = 0
 -- mynat (Succ

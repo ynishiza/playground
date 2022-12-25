@@ -57,6 +57,16 @@ module Chapter12.Base
     proj_10_7,
     proj_10_8,
     proj_10_9,
+    toTuple_1,
+    toTuple_2,
+    toTuple_3,
+    toTuple_4,
+    toTuple_5,
+    toTuple_6,
+    toTuple_7,
+    toTuple_8,
+    toTuple_9,
+    toTuple_10,
   )
 where
 
@@ -70,12 +80,8 @@ import Chapter12.TemplateProjection
 import Chapter12.TemplateValues qualified
 import Utils
 
-$( let maxN = 10
-    in foldr sumInner (pure []) $ do
-         n <- [1 .. maxN]
-         let c = traverse (declareProjection n) [0 .. n - 1]
-         return $ concat <$> c
- )
+$(toTupleDeclareMany 1 10)
+$(projectionDeclareMany 1 10)
 
 run :: TestState
 run =

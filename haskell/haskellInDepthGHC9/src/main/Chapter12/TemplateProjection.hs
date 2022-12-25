@@ -7,14 +7,18 @@
 module Chapter12.TemplateProjection
   ( project_rawAst,
     project_withExpr,
-    declareProjection,
-    makeTypeSignature,
+    projectionDeclare,
+    projectionDeclareMany,
+    toTupleE,
+    toTupleDeclare,
+    toTupleDeclareMany,
     sumInner,
   )
 where
 
-import Data.List (singleton)
 import Control.Monad
+import Data.Foldable
+import Data.List (singleton)
 import Fmt
 import Language.Haskell.TH
 
@@ -53,29 +57,62 @@ projectBase f errMsg n k
 makeName :: Int -> Int -> Name
 makeName n k = mkName $ "proj_" +| n |+ "_" +| k |+ ""
 
-declareProjection :: Int -> Int -> Q [Dec]
--- declareProjection n k = [d| $(varP $ makeName n k) = $(project_rawAst n k) |]
-declareProjection n k = (:) <$> typeDec <*> [d| $(varP nm) = $(project_rawAst n k) |]
+projectionDeclareMany :: Int -> Int -> Q [Dec]
+projectionDeclareMany start end = declareRange declareNTuple [start .. end]
   where
-    typeDec = sigD nm (makeTypeSignature n k)
-    nm = makeName n k
+    declareNTuple n = mapSum (projectionDeclare n) [0 .. n - 1]
+
+declareRange :: (Int -> Q [Dec]) -> [Int] -> Q [Dec]
+declareRange = mapSum
+
+projectionDeclare :: Int -> Int -> Q [Dec]
+projectionDeclare n k = (:) <$> typeDec <*> [d|$(varP projName) = $(project_rawAst n k)|]
+  where
+    typeDec = sigD projName (projectionTypeSignature n k)
+    projName = makeName n k
+
+mapSum :: forall a t m s. (Traversable t, Monad m, Monoid s) => (a -> m s) -> t a -> m s
+mapSum f r = fold <$> traverse f r
 
 sumInner :: (Monad m, Monoid a) => m a -> m a -> m a
 sumInner x y = (<>) <$> x <*> y
 
-makeTypeSignature :: Int -> Int -> Q Type
-makeTypeSignature n k = do
+projectionTypeSignature :: Int -> Int -> Q Type
+projectionTypeSignature n k = do
   names <- replicateM n $ newName "x"
   nameVars <- traverse (`plainInvisTV` specifiedSpec) names
-  let 
-    tuples = foldl AppT (TupleT n) $ VarT <$> names
-    sign = AppT (AppT ArrowT tuples) (VarT $ names!!k)
-  forallT nameVars (return []) (return sign)
+  let tuples = toTupleType names
+      selected = names !! k
+  forallT nameVars (return []) [t|$(return tuples) -> $(varT selected)|]
 
--- declareProjection :: Int -> Int -> Q Dec
--- declareProjection n k = do
---   f <- project_rawAst n k
---   return $ ValD (VarP $ makeName n k) (NormalB f) []
-  
-  -- [d| $(return [ValD (VarP x) (NormalB (VarE x)) []]) |]
-  -- [d| $(VarP $ makeName n k) = $(project_rawAst n k) |]
+toTupleName :: Int -> Name
+toTupleName n = mkName $ "toTuple_" +|| n ||+ ""
+
+toTupleDeclareMany :: Int -> Int -> Q [Dec]
+toTupleDeclareMany start end = declareRange toTupleDeclare [start .. end]
+
+toTupleDeclare :: Int -> Q [Dec]
+toTupleDeclare n = do
+  names <- replicateM n $ newName "x"
+  let (pat, expr) = toTupleInfo names
+      mainClause = Clause [pat] (NormalB expr) []
+      errorClause = clause [return WildP] (normalB errorExp) []
+  singleton <$> funD name [return mainClause, errorClause]
+  where
+    name = toTupleName n
+    errorExp = [|error $(litE (StringL $ "List must be exactly length " +| n |+ ""))|]
+
+toTupleType :: [Name] -> Type
+toTupleType names = foldl AppT (TupleT (length names)) $ VarT <$> names
+
+toTupleInfo :: [Name] -> (Pat, Exp)
+toTupleInfo names =
+  ( ListP $ VarP <$> names,
+    TupE $ Just . VarE <$> names
+  )
+
+toTupleE :: Int -> Q Exp
+toTupleE n = do
+  names <- replicateM n $ newName "x"
+  let (lpat, expr) = toTupleInfo names
+  return $ LamE [lpat] expr

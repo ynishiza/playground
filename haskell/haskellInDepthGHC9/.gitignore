@@ -4,3 +4,4 @@
 
 # Profiler
 *.prof
+bench*
