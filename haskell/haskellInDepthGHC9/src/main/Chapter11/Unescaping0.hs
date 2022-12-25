@@ -1,10 +1,8 @@
-
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE ConstraintKinds #-}
 
 module Chapter11.Unescaping0 (
@@ -13,13 +11,11 @@ module Chapter11.Unescaping0 (
   uprint0,
   ) where
 
-import Data.Kind
 import GHC.Show (showLitChar)
 import Unsafe.Coerce (unsafeCoerce)
 
 newtype UnescapingChar = UnescapingChar {unescapingChar :: Char}
 
-type ToUnescapingTF :: forall a. a -> a
 type family ToUnescapingTF (a :: k) :: k where
   ToUnescapingTF Char = UnescapingChar
   ToUnescapingTF (t b :: k) = (ToUnescapingTF t) (ToUnescapingTF b)

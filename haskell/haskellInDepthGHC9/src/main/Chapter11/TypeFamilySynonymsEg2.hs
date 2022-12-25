@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE StandaloneKindSignatures #-}
+-- {-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Chapter11.TypeFamilySynonymsEg2
@@ -11,9 +11,9 @@ module Chapter11.TypeFamilySynonymsEg2
 where
 
 import Data.Kind
+
 -- type Widen :: forall a. a -> a        StandaloneKindSignatures
 -- type Widen :: Type -> Type            StandaloneKindSignatures
-type Widen :: forall a. a -> a        
 type family Widen (a :: k) :: k where
   Widen Double = Double
   Widen Int = Double
