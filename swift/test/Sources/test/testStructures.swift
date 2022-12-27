@@ -2,6 +2,7 @@
 /*
  * A block comment
  */
+ import CoreData
 
 func testStructures() -> () {
     print("Test structures")
@@ -9,6 +10,7 @@ func testStructures() -> () {
     // testPropertyWrapper()
     testMutation()
     testSubscript()
+    testOptionalChaining()
 }
 
 fileprivate func testSubscript() {
@@ -259,4 +261,42 @@ fileprivate struct DefaultInitTest {
     var b  : Int
     var c  : Int = 1
     var d : Int?
+}
+
+fileprivate func testOptionalChaining() {
+    print("testOptionalChaining")
+    let obj1 = OptionaChainingTest<[Int]>(child: nil)
+    let obj1a = OptionaChainingTest<[Int]>(child: [1])
+    let obj2 = OptionaChainingTest(child: obj1)
+    let obj3 = OptionaChainingTest(child: obj2)
+    let obj4 = OptionaChainingTest<OptionaChainingTest<Int>>(child: nil)
+    let array = Array(1...10)
+
+    print(obj1.child?.first)
+    print(obj1a.child?.first)
+    print(obj2.child?.doStuff(""))
+    print(obj2.child?.doStuff(""))
+    print(obj3.child?.child?.doStuff(""))
+    print(obj3.child?.child?.doStuff(""))
+    print(obj4.child?.doStuff(""))
+    print("count", obj1[1]?.description)
+    print("count", obj1[111]?.description)
+
+    if let c = obj3.child?.child {
+        print(c.doStuff(""))
+    } else { print("no child for obj3") }
+    if let c = obj4.child?.child {
+        print(c)
+    } else { print("no child for obj4") }
+}
+
+fileprivate struct OptionaChainingTest<T> {
+    var name : String = ""
+    var child : T?
+    var child2 : T?
+    var dates = [Date(), Date(), Date()]
+    subscript(index : Int) -> Date? {
+        get { index < dates.count ? dates[index] : nil }
+    }
+    func doStuff(_ s: String) -> String { "doStuff!: \(s)" }
 }

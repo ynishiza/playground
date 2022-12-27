@@ -9,8 +9,49 @@ func testBasic() -> () {
     // testsConversion()
     // testAssertion() 
     // testString()
-    testSwitch()
+    // testSwitch()
+    testPattern()
 }
+
+fileprivate func testPattern() {
+    var x : Any = 1 
+    var y : Int = 0
+    let _ = 1
+    // let array = [1,2]
+    // let (a,_) = x as! (Double, Double)
+    // let (b,_) = x as? (Double, Double) ?? (1,1)
+    // if case let _ = x { }
+    // if case let a = x { }
+    // if case let y = x is Int { print("x is Int", y) }
+    // if case let _ = x { }
+    // if case let (t,s)? = x as? (Double, Double) { }
+    // if case is Int = x {}
+    // if case let y as Int = x {}
+    // if case y = 1 {}
+    // if case _ = x {}
+    // if case 1 = 2 {}
+    // if case [1] = array {}
+    // if case (1,0) = (1,1) {}
+    // if case MyEnum.a = x {}
+    // if case MyEnum.b = x {}
+    // if case MyEnum.c = x {}
+    // if case MyEnum.c("") = x {}
+    // if case MyEnum.c(let y) = x {}
+    // if case let y = x {}
+    // if case let (a, _) = (1,2) {}
+    // if case is Int = x {}
+    // if case is any Identifiable = x {}
+
+    var opt = Int?(1)
+    if case .some(let x) = opt { print(opt, x) }
+    if case .some = opt { print(opt) }
+    opt = nil
+    if case .none = opt { print(opt) }
+    opt = 4
+    if case let x? = opt { print(opt, x) }
+}
+
+fileprivate enum MyEnum { case a; case b; case c(String) }
 
 fileprivate func testType() {
     let u1 : UInt = UInt.max

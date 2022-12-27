@@ -67,6 +67,11 @@ module Chapter12.Base
     toTuple_8,
     toTuple_9,
     toTuple_10,
+    someVeryRandomValue,
+    someVeryRandomValue2,
+    isCircle,
+    isTriangle,
+    isSquare,
   )
 where
 
@@ -77,11 +82,16 @@ import Chapter12.Generics qualified
 import Chapter12.GenericsSQL qualified
 import Chapter12.Overlapping qualified
 import Chapter12.TemplateProjection
+import Chapter12.TemplateReify
 import Chapter12.TemplateValues qualified
+import Language.Haskell.TH
 import Utils
 
 $(toTupleDeclareMany 1 10)
 $(projectionDeclareMany 1 10)
+$(myRandomValueDeclare)
+$(myRandomValueDeclare2)
+$(mkTypePredicates (mkName "Shape"))
 
 run :: TestState
 run =

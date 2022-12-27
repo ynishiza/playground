@@ -4,12 +4,14 @@ public struct Test {
 
     public static func main() {
         print(Test().text)
-        testStructures()
         // testBasic()
         // testStructures()
         // testFunctions()
-        runScratchSpace()
-        testClasses()
+        // runScratchSpace()
+        // testStructures()
+        // testClasses()
+        // testProtocol()
+        testErrorHandling()
     }
 }
 

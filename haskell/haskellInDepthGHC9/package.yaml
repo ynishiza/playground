@@ -99,9 +99,10 @@ internal-libraries:
     exposed-modules:
       - Radar
       - Chapter5_2_2_Parser
-      - Chapter12.TemplateProjection
       - Chapter12.Base
       - Chapter12.GenericsSQL
+      - Chapter12.TemplateProjection
+      - Chapter12.TemplateReify
     dependencies: 
       - haskellInDepthGHC9
       - random

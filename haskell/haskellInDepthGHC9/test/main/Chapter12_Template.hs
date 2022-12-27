@@ -5,8 +5,10 @@ module Chapter12_Template (specs) where
 
 import Chapter12.Base
 import Chapter12.TemplateProjection
+import Chapter12.TemplateReify
 import Control.Exception
 import Data.Tuple
+import Data.Foldable
 import Fmt
 import Test.Hspec
 
@@ -43,11 +45,13 @@ specs = describe "templates" $ do
       proj_3_1 t3 `shouldBe` 2
       proj_3_2 t3 `shouldBe` 3
 
-  it "t" $ do
-    $(toTupleE 1) [1] `shouldBe` t1
-    $(toTupleE 2) [1, 2] `shouldBe` t2
-    $(toTupleE 3) [1, 2, 3] `shouldBe` t3
-    $(toTupleE 4) [1, 2, 3, 4] `shouldBe` t4
+  describe "reification" $ do
+    it "should identify shapes" $ do
+      let
+        testPredicate p expected = traverse_ (\x -> p x `shouldBe` expected == x) [Circle, Square, Triangle]
+      testPredicate isCircle Circle
+      testPredicate isSquare Square
+      testPredicate isTriangle Triangle
 
   describe "toTuple" $ do
     describe "Q Exp" $ do
@@ -64,11 +68,13 @@ specs = describe "templates" $ do
       toTuple_4 [1, 2, 3, 4] `shouldBe` t4
 
     it "should throw an error on length mismatch" $ do
+      let
+        f :: Int -> MyTemplateError -> Bool
+        f n (MkMyTemplateError msg) = msg == ("List must be exactly length " +| n |+ "")
       evaluate (toTuple_1 []) `shouldThrow` f 1
       evaluate (toTuple_2 []) `shouldThrow` f 2
       evaluate (toTuple_3 []) `shouldThrow` f 3
-        where
-          f :: Int -> SomeException -> Bool
-          f n (SomeException e) = msg == ("List must be exactly length " +| n |+ "")
-            where
-              msg = head $ lines $ show e
+          -- f :: Int -> SomeException -> Bool
+          -- f n (SomeException e) = msg == ("List must be exactly length " +| n |+ "")
+          --   where
+          --     msg = head $ lines $ show e

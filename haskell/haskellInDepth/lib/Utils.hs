@@ -29,6 +29,7 @@ module Utils
     UtilErrors (..),
     shouldNeverHappen,
     shouldNeverHappenIO,
+    notImplemented,
     showBuilder,
   )
 where
@@ -43,7 +44,7 @@ import Data.Typeable
 import Debug.Trace (trace)
 import Fmt
 
-data UtilErrors = ShouldNeverHappen | NotImplemented deriving (Show)
+data UtilErrors = ShouldNeverHappen | NotImplemented !String deriving (Show)
 
 instance Exception UtilErrors where
 
@@ -52,6 +53,9 @@ shouldNeverHappen = throw ShouldNeverHappen
 
 shouldNeverHappenIO :: IO a
 shouldNeverHappenIO = throwIO ShouldNeverHappen
+
+notImplemented :: String -> a
+notImplemented n = throw $ NotImplemented $ n |+ " is not implemented"
 
 showBuilder :: Show a => a -> Builder
 showBuilder = build . show
@@ -98,7 +102,7 @@ printBannerWrap name io = printBanner (name |+ " start") >> io >> printBanner (n
 printBanner :: T.Text -> IO ()
 printBanner name = fmtLn $ "=====" +| name |+ "====="
 
-infixl 9 .@, ..@
+infixl 2 .@, ..@
 
 (.@) :: (t1 -> t2 -> t3) -> t2 -> t1 -> t3
 f .@ b = \a -> f a b
