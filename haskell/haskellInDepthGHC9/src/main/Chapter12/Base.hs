@@ -57,16 +57,16 @@ module Chapter12.Base
     proj_10_7,
     proj_10_8,
     proj_10_9,
-    toTuple_1,
-    toTuple_2,
-    toTuple_3,
-    toTuple_4,
-    toTuple_5,
-    toTuple_6,
-    toTuple_7,
-    toTuple_8,
-    toTuple_9,
-    toTuple_10,
+    listToTuple_1,
+    listToTuple_2,
+    listToTuple_3,
+    listToTuple_4,
+    listToTuple_5,
+    listToTuple_6,
+    listToTuple_7,
+    listToTuple_8,
+    listToTuple_9,
+    listToTuple_10,
     someVeryRandomValue,
     someVeryRandomValue2,
     isCircle,
@@ -81,13 +81,15 @@ import Chapter12.DerivingVia qualified
 import Chapter12.Generics qualified
 import Chapter12.GenericsSQL qualified
 import Chapter12.Overlapping qualified
+import Chapter12.TemplateListToTuple
 import Chapter12.TemplateProjection
 import Chapter12.TemplateReify
 import Chapter12.TemplateValues qualified
 import Language.Haskell.TH
 import Utils
 
-$(toTupleDeclareMany 1 10)
+
+$(listToTupleDeclareMany 1 10)
 $(projectionDeclareMany 1 10)
 $(myRandomValueDeclare)
 $(myRandomValueDeclare2)

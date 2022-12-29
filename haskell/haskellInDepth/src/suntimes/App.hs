@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Eta reduce" #-}
@@ -38,7 +39,7 @@ newtype SuntimesAppState = SuntimesAppState
 newtype SuntimesApp a = SuntimesApp
   { runSuntimesApp :: ReaderT WebAPIAuth (StateT SuntimesAppState (LoggingT IO)) a
   }
-  deriving
+  deriving newtype
     ( Functor,
       Applicative,
       Monad,

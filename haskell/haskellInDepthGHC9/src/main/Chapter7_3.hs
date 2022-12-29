@@ -302,7 +302,7 @@ bracketSample = do
 
   bracket cstart cfinally cprocess >>= print
   bracket cstart cfinally (const cerror) >>= print
-  bracket cerror cfinally cprocess >>= print
+  -- bracket cerror cfinally cprocess >>= print
 
   pure ()
 
