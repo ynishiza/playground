@@ -1,5 +1,5 @@
 module RPC.Base (
-  module X
+  module X,
 ) where
 import RPC.Server as X
 import RPC.Client as X

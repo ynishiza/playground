@@ -105,6 +105,8 @@ executables:
     - haskell-src-exts >= 1.20 && <1.24
     - haskell-src-meta >= 0.6 && < 0.9
     - optparse-applicative >= 0.17 && < 0.20
+    ghc-options: 
+    - -ddump-splices
 
   rpc-sample:
     main:               main.hs
@@ -187,5 +189,7 @@ tests:
     - hspec >= 0.1 && <= 3
     - hedgehog >= 0.5 && < 1.2
     - template-haskell >=2.18 && <2.19
+    ghc-options: 
+    - -ddump-splices
 
 benchmarks: {}

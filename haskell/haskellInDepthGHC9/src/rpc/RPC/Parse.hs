@@ -7,9 +7,14 @@
 module RPC.Parse (
   remote,
   quoteDecRemote,
+  genServerStub,
+  genRPCTable,
+  declareRPCTable,
+  gen,
   test
                  ) where
 
+import Data.ByteString (ByteString)
 import Control.Monad.Catch
 import Control.Monad
 import Language.Haskell.Meta.Parse
@@ -17,6 +22,12 @@ import Language.Haskell.TH
 import Language.Haskell.TH.Quote
 import Data.Serialize
 import Data.Tuple
+
+stubName :: String
+stubName = "callRemote"
+
+decoderName :: String
+decoderName = "forceDecodeParam"
 
 instance Serialize a => Serialize (Solo a) 
 
@@ -32,7 +43,7 @@ remote =
 
 quoteDecRemote :: String -> Q [Dec]
 quoteDecRemote = do
-  parseToFnInfo >=> (concat<$>) . traverse generateStubCaller
+  parseToFnInfo >=> (concat<$>) . traverse genClientStub
 
 data FnInfo = MkFnInfo
   { fnName :: Name,
@@ -45,36 +56,68 @@ parseToFnInfo s =
     (Right decs) -> pure $ decToFn <$> decs
     (Left e) -> error e
 
-generateStubCaller :: FnInfo -> Q [Dec]
-generateStubCaller (MkFnInfo {..}) = do
-  let 
-    (inTs, _) = parseSig fnType
-  vars <- replicateM (length inTs) $ newName "a"
-  let
-    varsP = varP @Q <$> vars
-    tup = TupE $ Just . VarE <$> vars
-    expr = [| $(dyn "callRemote") $(litE (StringL $ nameBase fnName)) $(pure tup) |] :: Q Exp
-    cl = clause varsP (normalB expr) []
-
-  sig <- sigD fnName (pure fnType)
-  -- undefined
-  dec <- funD fnName [cl]
-  return [sig, dec]
-  -- return [dec]
-
 decToFn :: Dec -> FnInfo
 decToFn (SigD fnName fnType) = MkFnInfo fnName fnType
 decToFn _ = error "Unsupported"
 
-toTuple :: [Type] -> Type
-toTuple l = foldl AppT (TupleT (length l)) l
+genClientStub :: FnInfo -> Q [Dec]
+genClientStub (MkFnInfo {..}) = do
+  let 
+    (argTypes, _) = extractTopLevelSig fnType
+  argVars <- replicateM (length argTypes) $ newName "a"
+  let
+    argPat = varP @Q <$> argVars
+    argTuple = TupE $ Just . VarE <$> argVars
+    stubExpr = [| $(dyn stubName) $(litE (StringL $ nameBase fnName)) $(pure argTuple) |] :: Q Exp
 
-parseSig :: Type -> ([Type], Type)
-parseSig (ForallT _ _ t) = parseSig t
-parseSig (AppT (AppT ArrowT t1) (AppT (AppT ArrowT t2) t3)) = (t1:t2:c, o)
-  where (c, o) = parseSig t3
-parseSig (AppT (AppT ArrowT t1) t2) = ([t1], t2)
-parseSig t = ([], t)
+  sig <- sigD fnName (pure fnType)
+  dec <- funD fnName [clause argPat (normalB stubExpr) []]
+  return [sig, dec]
+
+gen :: String -> Name -> Q [Dec]
+gen n1 n2 = do 
+  d <- funD (mkName n1) [clause [] (normalB (genServerStub n2)) []]
+  return [d]
+
+declareRPCTable :: String -> [Name] -> Q [Dec]
+declareRPCTable fn nms = do
+  d <- funD (mkName fn) [clause [] (normalB $ genRPCTable nms) []]
+  return [d]
+
+genRPCTable :: [Name] -> Q Exp
+genRPCTable = (ListE <$>) . traverse genServerStub
+
+genServerStub :: Name -> Q Exp
+genServerStub n = do
+  (VarI _ t Nothing) <- reify n
+  genServerStubExp $ MkFnInfo n t
+
+genServerStubExp :: FnInfo -> Q Exp
+genServerStubExp (MkFnInfo {..}) = do
+  let 
+    (argTypes, _) = extractTopLevelSig fnType
+  argVars <- replicateM (length argTypes) $ newName "a"
+  let
+    callFn = foldl AppE (VarE fnName) $ VarE <$> argVars
+    stubExpr = [|
+        $(dyn decoderName) Stage2 
+          >=> (\ $(tupP (varP <$> argVars)) -> $(pure callFn))
+          >=> pure . encode
+      |] :: Q Exp
+  [| ($(litE $ StringL $ nameBase fnName), $stubExpr) |]
+
+-- extract the top types of the signature.
+-- In particular, the function arguments + result
+-- e.g. 
+--    extractTopLevelSig [t| Int -> (Maybe a) -> Double) |]
+--        ==> ([Int, Maybe a], Double)
+--
+extractTopLevelSig :: Type -> ([Type], Type)
+extractTopLevelSig (ForallT _ _ t) = extractTopLevelSig t
+extractTopLevelSig (AppT (AppT ArrowT t1) (AppT (AppT ArrowT t2) t3)) = (t1:t2:c, o)
+  where (c, o) = extractTopLevelSig t3
+extractTopLevelSig (AppT (AppT ArrowT t1) t2) = ([t1], t2)
+extractTopLevelSig t = ([], t)
 
 
 test :: IO ()
@@ -91,7 +134,5 @@ test = do
   pure ()
   where
     testParse q = do
-      (tps, o) <- runQ $ parseSig <$> q
+      (tps, o) <- runQ $ extractTopLevelSig <$> q
       print (tps, o)
-      print $ toTuple tps
-

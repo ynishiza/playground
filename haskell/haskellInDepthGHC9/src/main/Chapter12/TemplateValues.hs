@@ -4,13 +4,24 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Unused LANGUAGE pragma" #-}
 module Chapter12.TemplateValues (
-  run
+  run,
+  myVeryRandomValueDec,
+  myVeryRandomFunctionDec
   ) where
 
 import Data.Foldable
 import Fmt
 import Language.Haskell.TH
 import Utils
+
+myVeryRandomValueDec :: Q [Dec]
+myVeryRandomValueDec = [d| myVeryRandomValue = 1 :: Int |]
+
+myVeryRandomFunctionDec :: Q [Dec]
+myVeryRandomFunctionDec = let
+    nx = mkName "x"
+    ny = mkName "y"
+    in [d| myVeryRandomFunction $(varP nx) $(varP ny) = $(varE nx) * $(varE ny) |]
 
 run :: TestState
 run = createChapterTest "12.3" "Template Haskell terms" (do

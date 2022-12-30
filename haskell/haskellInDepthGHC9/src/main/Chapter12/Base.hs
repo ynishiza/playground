@@ -72,6 +72,8 @@ module Chapter12.Base
     isCircle,
     isTriangle,
     isSquare,
+    myVeryRandomValue,
+    myVeryRandomFunction,
   )
 where
 
@@ -94,6 +96,9 @@ $(projectionDeclareMany 1 10)
 $(myRandomValueDeclare)
 $(myRandomValueDeclare2)
 $(mkTypePredicates (mkName "Shape"))
+
+Chapter12.TemplateValues.myVeryRandomValueDec
+Chapter12.TemplateValues.myVeryRandomFunctionDec
 
 run :: TestState
 run =
