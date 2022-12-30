@@ -4,11 +4,9 @@
 module RPC.Server
   ( startSereverBase,
     startOperationServer,
-    sampleTable,
   )
 where
 
-import Control.Exception (ArithException (..))
 import Data.Serialize
 import Network.Connection
 import Network.Simple.TCP
@@ -19,18 +17,28 @@ startOperationServer :: forall s. RemoteState s => RPCParams -> RPCTable s -> IO
 startOperationServer rsParams table = do
   pretty $ nameF "supported operations" $ blockListF' "-" build $ fst <$> table
   startSereverBase @s rsParams $ do
-    res <- main `catch` handleError
-    logDebugN $ pretty res
-    sendData $ encode res
+    main
+      `catches` [ Handler handleConnectionError,
+                  Handler (handleError @SomeException)
+                ]
   where
+    logAndSend x = logDebugN (pretty x) >> sendData (encode x)
     main = do
       packet@(MkRPCPacket op opArgs) <- receiveData >>= forceDecodeStage Stage1
       logDebugN $ pretty packet
-      case lookup op table of
+      res <- case lookup op table of
         (Just f) -> CallSuccess <$> f opArgs
         _ -> pure $ CallFail $ OperationNotFound op
-    handleError :: SomeException -> RSIO s RPCResult
-    handleError (SomeException e) = pure $ CallFail $ OperationCallFail $ show e
+      logAndSend res
+
+    -- note: ignore ConnectionClosed (for now)
+    -- This happens every time the client closes connection, even on success.
+    handleConnectionError ConnectionClosed = throwM ConnectionClosed
+    handleConnectionError e =
+      logAndSend $ CallFail $ OperationCallFail $ show e
+    handleError :: Exception e => e -> RSIO s ()
+    handleError e =
+      logAndSend $ CallFail $ OperationCallFail $ show e
 
 startSereverBase :: RemoteState s => RPCParams -> RSIO s () -> IO ()
 startSereverBase rsParams comp = do
@@ -44,7 +52,8 @@ processRequest rsParams comp (s, a) =
       writeLog connParams $ "Init" +|| a ||+ ""
       ctx <- initConnectionContext
       con <- connectFromSocket ctx s connParams
-      fst <$> execRSIO (rsParams {connection = con}) comp
+      _ <- fst <$> execRSIO (rsParams {connection = con}) (forever comp)
+      connectionClose con
   )
     `catch` handleError
   where
@@ -56,26 +65,3 @@ processRequest rsParams comp (s, a) =
 
 writeLog :: ConnectionParams -> Builder -> IO ()
 writeLog connParams msg = fmt $ "LOG:" +| connParams |+ "" +|| msg ||+ ""
-
-sampleTable :: RPCTable s
-sampleTable =
-  [ ( "hello",
-      const $ pure $ encode @String "World"
-    ),
-    ( "add",
-      \d -> do
-        (x, y) <- forceDecodeParam @(Int, Int) Stage2 d
-        pure $ encode $ x + y
-    ),
-    ( "sum",
-      \d -> do
-        list <- forceDecodeParam @[Int] Stage2 d
-        pure $ encode $ sum list
-    ),
-    ( "divide",
-      \d -> do
-        (x, y) <- forceDecodeParam @(Double, Double) Stage2 d
-        when (y == 0) (throwM DivideByZero)
-        pure $ encode $ x / y
-    )
-  ]

@@ -8,5 +8,7 @@ cradle:
       component: haskellInDepthGHC9:test:main-test
     - path: "./src/rpc/"
       component: haskellInDepthGHC9:exe:rpc-lib
+    - path: "./src/rpc-sample/"
+      component: haskellInDepthGHC9:exe:rpc-sample
     - path: "./test/rpc/"
       component: haskellInDepthGHC9:test:rpc-test

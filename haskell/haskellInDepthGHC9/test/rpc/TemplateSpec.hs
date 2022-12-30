@@ -1,0 +1,64 @@
+{-# HLINT ignore "Use section" #-}
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+module TemplateSpec
+  ( spec,
+  )
+where
+
+import Common
+import GHC.Real
+import RPC.Base
+import Test.Hspec
+import TestClient qualified as C
+import TestServer qualified as S
+
+spec :: SpecWith ()
+spec =
+  testBootstrap
+    (flip startOperationServer S.table)
+    `aroundAll` baseSpec
+
+baseSpec :: SpecWith RPCParams
+baseSpec = describe "template generated client/server" $ do
+  it "should call" $ \params -> do
+    requestRSIO params (C.echo "Hello") >>= (`shouldBe` "echo:Hello")
+
+  it "should support operations with no input" $ \params ->
+    requestRSIO params C.reset
+      >> requestRSIO params C.ping
+      >>= (`shouldBe` 1)
+
+  it "should support operations with multiple inputs" $ \params ->
+    requestRSIO params (C.to3DPoint 1 2 3)
+      >>= (`shouldBe` (1, 4, 9))
+
+  it "should support operations with parameterized inputs" $ \params ->
+    requestRSIO params (C.trivial @Int 1)
+      >>= (`shouldBe` 1)
+      >> requestRSIO params (C.trivial "hello")
+      >>= (`shouldBe` "hello")
+
+  it "should support forall" $ \params ->
+    requestRSIO params (C.trivialForAll @Int 1)
+      >>= (`shouldBe` 1)
+
+  it "should support nested" $ \params ->
+    requestRSIO params (C.unwrapAll (Just (Just (Right 10))))
+      >>= (`shouldBe` 10)
+      >> requestRSIO params (C.unwrapAll (Just Nothing))
+      >>= (`shouldBe` fromRational infinity)
+
+  it "should make multiple calls" $ \params -> do
+    res <- requestRSIO params $ do
+      l <- C.reset >> replicateM 5 C.ping
+      h <- C.echo "hello"
+      return (l, h)
+    res `shouldBe` ([1, 2, 3, 4, 5], "echo:hello")
+
+  it "should raise an error if the operation is not supported" $ \params ->
+    requestRSIO params C.predictFuture
+      `shouldThrow` ( \(OperationNotFound m) ->
+                        m == "predictFuture"
+                    )

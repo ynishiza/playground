@@ -1,18 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use uncurry" #-}
 
-module Main
-  ( main,
-  )
-where
-
-import Control.Concurrent
-import Data.Serialize
 import Network.Connection
 import Network.Socket (PortNumber)
 import Options.Applicative
 import RPC.Client qualified as Client
 import RPC.Messaging
+import qualified RPC.Samples as RS
 import RPC.Server qualified as Server
 
 main :: IO ()
@@ -21,16 +17,22 @@ main = do
   fmtLn $ nameF "CLI rsParams" (build argParams)
   let rsParams =
         MkRPCParams
-          { logLevel = if debug then LevelDebug else LevelInfo,
+          { 
+            sourceName = if server then "server" else "client",
+            logLevel = if debug then LevelDebug else LevelInfo,
             connectionParams = ConnectionParams host port Nothing Nothing,
             connection = undefined
           }
   case () of
     ()
-      | server -> Server.startOperationServer rsParams (Server.sampleTable @())
-      | hello -> Client.requestOperation rsParams "hello" () >>= print @String
-      | (Just p) <- add -> Client.requestOperation rsParams "add" p >>= print @Int
-      | (Just p) <- divide -> Client.requestOperation rsParams "divide" p >>= print @Double
+      | server -> Server.startOperationServer rsParams (RS.sampleTable @())
+      -- | hello -> Client.requestOperation rsParams "hello" () >>= print @String
+      | hello -> Client.requestRSIO rsParams RS.hello >>= print @String
+      -- | (Just p) <- add -> Client.requestOperation rsParams "add" p >>= print @Int
+      | (Just p) <- add -> Client.requestRSIO rsParams (RS.add (fst p) (snd p)) >>= print @Int
+      -- | (Just p) <- divide -> Client.requestOperation rsParams "divide" p >>= print @Double
+      | (Just p) <- divide -> Client.requestRSIO rsParams (RS.divide (fst p) (snd p)) >>= print @Double
+
       | otherwise -> Client.requestOperation rsParams "BADOP" ()
 
 data Params = MkParams
@@ -60,20 +62,3 @@ parser =
     <*> optional (option auto (long "add"))
     <*> optional (option auto (long "divide"))
 
-serverProc :: RSIO () ()
-serverProc = do
-  liftIO $ putStrLn "waiting"
-  d <- receiveData >>= forceDecodeParam @String Stage2
-  logDebugN $ "received:" +|| d ||+ ""
-  logDebugN "send"
-  liftIO $ threadDelay $ 5 * 1000 * 1000
-  sendData $ encode @String "World"
-  logDebugN "done"
-
-proc :: RSIO () ()
-proc = do
-  logDebugN "send"
-  sendData $ encode @String "Hello"
-  logDebugN "waiting"
-  d <- decode @String <$> receiveData
-  logDebugN $ "received:" +|| d ||+ ""

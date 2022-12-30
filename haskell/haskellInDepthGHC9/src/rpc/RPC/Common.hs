@@ -1,5 +1,5 @@
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -8,6 +8,7 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Use newtype instead of data" #-}
+{-# HLINT ignore "Use section" #-}
 
 module RPC.Common
   ( RemoteException (..),
@@ -36,6 +37,7 @@ import Data.ByteString (ByteString)
 import Data.ByteString qualified as B
 import Data.Data
 import Data.Serialize
+import Data.Time
 import Fmt as X
 import GHC.Generics
 import Network.Connection
@@ -59,7 +61,7 @@ data RPCPacket where
 instance Buildable RPCPacket where build = build . show
 
 instance Show RPCPacket where
-  show (MkRPCPacket op d) = "operation:" +| op |+ " data:" +| logByteString d |+""
+  show (MkRPCPacket op d) = "operation:" +| op |+ " data:" +| logByteString d |+ ""
 
 type RPCTable s = [(Operation, RSAction s ByteString ByteString)]
 
@@ -97,23 +99,28 @@ newtype RSIO s a = MkRSIO
 
 data RPCParams where
   MkRPCParams ::
-    { logLevel :: !LogLevel,
+    { sourceName :: !String,
+      logLevel :: !LogLevel,
       connectionParams :: ConnectionParams,
       connection :: Connection
     } ->
     RPCParams
 
 instance Show RPCParams where
-  show (MkRPCParams lv (ConnectionParams host port _ _) _) = fmt $ "log level:" +|| lv ||+ " "
-    <> host|+":"+||port||+""
+  show (MkRPCParams n lv cp _) =
+    fmt $ surroundSquare n <> "log level:" +|| lv ||+ " " <> build cp
 
 defaultRPCParams :: RPCParams
 defaultRPCParams =
   MkRPCParams
-    { logLevel = LevelDebug,
+    { sourceName = "",
+      logLevel = LevelDebug,
       connectionParams = ConnectionParams "0.0.0.0" 12345 Nothing Nothing,
       connection = undefined
     }
+
+instance Buildable ConnectionParams where
+  build (ConnectionParams host port _ _) = host ||+ ":" +|| port ||+ ""
 
 data DecodeStage = Stage0 | Stage1 | Stage2 deriving (Show, Eq, Enum)
 
@@ -125,14 +132,27 @@ instance RemoteState () where
 
 execRSIO :: RemoteState s => RPCParams -> RSIO s a -> IO (a, s)
 execRSIO param@(MkRPCParams {..}) (MkRSIO comp) =
-  runStdoutLoggingT $
-    p
+  flip runLoggingT writeLog $
+    initialLog
       >> filterLogger
         (\_ l -> l >= logLevel)
         ( runReaderT (runStateT comp initState) connection
         )
   where
-    p = logDebugN $ pretty (build $ show param)
+    initialLog = logDebugN $ pretty (build $ show param)
+    writeLog :: Loc -> LogSource -> LogLevel -> LogStr -> IO ()
+    writeLog _ txt lv rest = do
+      time <- getCurrentTime
+      B.putStr $
+        fromLogStr
+          ( toLogStr (formatLog time txt lv) <> rest <> "\n"
+          )
 
-instance Buildable ConnectionParams where
-  build (ConnectionParams host port _ _) = host ||+ ":" +|| port ||+ ""
+    logHeader :: Builder
+    logHeader = surroundSquare sourceName <> surroundSquare connectionParams
+    formatLog time txt lv = pretty @Builder @ByteString $ build ts <> logHeader <> surroundSquare (show lv) <> build txt
+      where
+        ts = formatTime defaultTimeLocale "%D %T" time
+
+surroundSquare :: Buildable a => a -> Builder
+surroundSquare s = "[" +| s |+ "]"

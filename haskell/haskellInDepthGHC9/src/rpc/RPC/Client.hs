@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module RPC.Client
-  ( requestBase,
+  ( requestRSIO,
     requestOperation,
+    callRemote,
   )
 where
 
@@ -12,13 +13,14 @@ import RPC.Messaging
 
 requestOperation :: (OperationDataType a, OperationDataType b) => RPCParams -> Operation -> a -> IO b
 requestOperation rsParams op opArgs =
-  requestBase rsParams (callRemote @() op opArgs)
+  requestRSIO rsParams (callRemote @() op opArgs)
 
-requestBase :: RemoteState s => RPCParams -> RSIO s a -> IO a
-requestBase rsParams comp = do
+requestRSIO :: RemoteState s => RPCParams -> RSIO s a -> IO a
+requestRSIO rsParams comp = do
   ctx <- initConnectionContext
   conn <- connectTo ctx (connectionParams rsParams)
   (res, _) <- execRSIO (rsParams {connection = conn}) comp
+  connectionClose conn
   return res
 
 callRemote :: forall s a b. (OperationDataType a, OperationDataType b) => Operation -> RSAction s a b
