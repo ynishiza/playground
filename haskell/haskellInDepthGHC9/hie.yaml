@@ -12,3 +12,7 @@ cradle:
       component: haskellInDepthGHC9:exe:rpc-sample
     - path: "./test/rpc/"
       component: haskellInDepthGHC9:test:rpc-test
+    - path: "./src/restapi/"
+      component: haskellInDepthGHC9:exe:restapi
+    - path: "./test/restapi/"
+      component: haskellInDepthGHC9:test:restapi-test

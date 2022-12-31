@@ -5,7 +5,7 @@
 module MessagingSpec (specs) where
 
 import Common
-import Data.List (isSubsequenceOf)
+import Data.List (isInfixOf)
 import Network.Connection
 import RPC.Base
 import Test.Hspec
@@ -32,20 +32,20 @@ baseSpec =
         it "should throw an error if the parameters are invalid" $ \params -> do
           requestOperation @Int @() params "sum" 1
             `shouldThrow` ( \e@(OperationCallFail _) ->
-                              "Failed to decode at stage Stage2 with error:\"too few bytes" `isSubsequenceOf` show e
+                              "Failed to decode at stage Stage2 with error:\"too few bytes" `isInfixOf` show e
                           )
 
         it "should exit immediately if the server is not reachable" $ \params -> do
           let badCon = (connectionParams params) {connectionPort = 11111}
           requestOperation @(Double, Double) @Double (params {connectionParams = badCon}) "divide" (1.0, 0.0)
             `shouldThrow` ( \e@(HostCannotConnect _ _) ->
-                              "Connection refused" `isSubsequenceOf` show e
+                              "Connection refused" `isInfixOf` show e
                           )
 
         it "should raise an error if the operation crashes" $ \params ->
           requestOperation @(Double, Double) @Double params "divide" (1.0, 0.0)
             `shouldThrow` ( \e@(OperationCallFail _) ->
-                              "OperationCallFail : error: divide by zero" `isSubsequenceOf` show e
+                              "OperationCallFail : error: divide by zero" `isInfixOf` show e
                           )
 
         it "should raise an error if the operation is not supported" $ \params ->

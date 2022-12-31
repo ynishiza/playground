@@ -93,6 +93,7 @@ executables:
     # - -ddump-to-file
     # - -ddump-file-prefix=mydump
     # - -ddump-deriv
+
   rpc-lib:
     main:               main.hs
     source-dirs:        ./src/rpc
@@ -112,24 +113,6 @@ executables:
     main:               main.hs
     source-dirs:        ./src/rpc-sample
     dependencies:
-    - rpc-lib-internal
-    - network >= 2.8 && <3.2
-    - connection >= 0.3 && <0.4
-    - network-simple >=0.4.5 && <0.5
-    - optparse-applicative >= 0.17 && < 0.20
-
-internal-libraries:
-  rpc-lib-internal:
-    source-dirs:        ./src/rpc
-    exposed-modules:
-    - RPC.Base
-    - RPC.Client
-    - RPC.Server
-    - RPC.Common
-    - RPC.Messaging
-    - RPC.Exception
-    - RPC.Parse
-    dependencies:
     - cereal >= 0.5 && <0.6
     - network >= 2.8 && <3.2
     - connection >= 0.3 && <0.4
@@ -139,24 +122,17 @@ internal-libraries:
     - haskell-src-meta >= 0.6 && < 0.9
     - optparse-applicative >= 0.17 && < 0.20
 
-  hid-lib:
-    source-dirs: ./src/main
-    exposed-modules:
-      - Radar
-      - Chapter5_2_2_Parser
-      - Chapter12.Base
-      - Chapter12.GenericsSQL
-      - Chapter12.TemplateProjection
-      - Chapter12.TemplateReify
-      - Chapter12.TemplateQuasiQuote
-    dependencies: 
-      - haskellInDepthGHC9
-      - random
-      - aeson >= 2 && <3
-      - criterion >= 1.5.12 && < 2
-      - timeit >= 2.0 && < 3
-      - template-haskell >=2.18 && <2.19
+  restapi:
+    main:               main.hs
+    source-dirs:        ./src/restapi
+    dependencies:
+    - aeson >= 2 && <3
+    - blaze-html > 0.9 && < 1
+    - servant-server > 0.19 && < 0.30
+    - template-haskell >=2.18 && <2.19
+    - warp > 3.3 && < 4
 
+internal-libraries: {}
 
 tests:
   main-test:
@@ -164,8 +140,8 @@ tests:
     source-dirs:      ./test/main
     dependencies: 
     - haskellInDepthGHC9
-    - hid-lib
     - random
+    - aeson >= 2 && <3
     - tasty >= 0.11 && < 1.6
     - tasty-hspec >= 1.1 && < 1.3
     - tasty-hedgehog >= 0.1 && <= 1.4
@@ -177,19 +153,32 @@ tests:
     main:               Main.hs
     source-dirs:      ./test/rpc
     dependencies: 
-    - rpc-lib-internal
     - random
     - cereal >= 0.5 && <0.6
     - network >= 2.8 && <3.2
     - connection >= 0.3 && <0.4
     - network-simple >=0.4.5 && <0.5
+    - template-haskell >=2.18 && <2.19
+    - haskell-src-exts >= 1.20 && <1.24
+    - haskell-src-meta >= 0.6 && < 0.9
+    - optparse-applicative >= 0.17 && < 0.20
+    - tasty >= 0.11 && < 1.6
+    - tasty-hspec >= 1.1 && < 1.3
+    - tasty-hedgehog >= 0.1 && <= 1.4
+    - hspec >= 0.1 && <= 3
+    - hedgehog >= 0.5 && < 1.2
+    ghc-options: 
+    - -ddump-splices
+
+  restapi-test:
+    main:               main.hs
+    source-dirs:      ./test/restapi
+    dependencies: 
     - tasty >= 0.11 && < 1.6
     - tasty-hspec >= 1.1 && < 1.3
     - tasty-hedgehog >= 0.1 && <= 1.4
     - hspec >= 0.1 && <= 3
     - hedgehog >= 0.5 && < 1.2
     - template-haskell >=2.18 && <2.19
-    ghc-options: 
-    - -ddump-splices
 
 benchmarks: {}
