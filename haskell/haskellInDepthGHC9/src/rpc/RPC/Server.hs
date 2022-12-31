@@ -64,4 +64,4 @@ processRequest rsParams comp (s, a) =
       pure ()
 
 writeLog :: ConnectionParams -> Builder -> IO ()
-writeLog connParams msg = fmt $ "LOG:" +| connParams |+ "" +|| msg ||+ ""
+writeLog connParams msg = prettyLn @Builder $ "LOG:" +| connParams |+ "" +|| msg ||+ ""

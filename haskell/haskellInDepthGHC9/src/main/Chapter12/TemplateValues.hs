@@ -6,7 +6,10 @@
 module Chapter12.TemplateValues (
   run,
   myVeryRandomValueDec,
-  myVeryRandomFunctionDec
+  myVeryRandomFunctionDec,
+  localOne,
+  localF,
+  localG,
   ) where
 
 import Data.Foldable
@@ -22,6 +25,19 @@ myVeryRandomFunctionDec = let
     nx = mkName "x"
     ny = mkName "y"
     in [d| myVeryRandomFunction $(varP nx) $(varP ny) = $(varE nx) * $(varE ny) |]
+
+[d| localOne = 1 |]
+localOne :: $[t| Int |]
+
+localF $[p| (_,0) |] = 0
+localF $[p| (_,1) |] = 1
+localF $[p| 
+  $(tupP [wildP, litP (IntegerL 2)]) |]  = 2
+localF $[p| $wildP |] = 2
+localF $wildP = 2
+localF :: (Int, Int) -> Int
+
+[d| localG :: $(conT ''Int) -> $(conT ''Int); localG x = $(varE 'abs) x |]
 
 run :: TestState
 run = createChapterTest "12.3" "Template Haskell terms" (do
@@ -81,3 +97,4 @@ printContainer :: IOContainer -> IO ()
 printContainer (IOContainer n c) = do
   v <- c
   fmtLn $ n ||+":"+||v ||+""
+
