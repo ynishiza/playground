@@ -11,12 +11,13 @@ import APIWithServant.API
 import Control.Concurrent
 import Control.Exception
 import Data.Aeson
-import Data.ByteString.Lazy qualified as LB
-import Data.ByteString.Lazy.Char8 qualified as LBC
+import Data.ByteString qualified as B
+import Data.ByteString.Char8 qualified as BC
 import Data.List (isInfixOf)
 import Fmt
 import Network.HTTP.Req
 import Network.Wai.Handler.Warp
+
 import System.Random
 import Test.Hspec
 
@@ -30,29 +31,29 @@ spec :: Spec
 spec =
   ( \runTest -> do
       (portNum :: Int) <- getStdRandom (uniformR (10000, 20000))
-      threadId <- forkIO $ run portNum server
+      threadId <- forkIO $ run portNum serverApp
       putStrLn $ "Port:" +| portNum |+ ""
       oneSecond
-      let sendReq :: (Url 'Http -> Url 'Http) -> IO LB.ByteString
-          sendReq path = responseBody <$> req GET (path $ http "localhost") NoReqBody lbsResponse (port portNum)
+      let sendReq :: (Url 'Http -> Url 'Http) -> IO B.ByteString
+          sendReq path = responseBody <$> req GET (path $ http "localhost") NoReqBody bsResponse (port portNum)
       runTest sendReq
       killThread threadId
   )
     `aroundAll` baseSpec
 
-baseSpec :: SpecWith ((Url 'Http -> Url 'Http) -> IO LB.ByteString)
+baseSpec :: SpecWith ((Url 'Http -> Url 'Http) -> IO B.ByteString)
 baseSpec = describe "" $ do
   it "should return JSON" $ \sendReq -> do
-    decode @Rating <$> sendReq (\u -> u /: "rating" /: "0")
+    decodeStrict @Rating <$> sendReq (\u -> u /: "rating" /: "0")
       >>= (`shouldBe` Just Great)
-    decode @Book <$> sendReq (\u -> u /: "book" /: "0")
+    decodeStrict @Book <$> sendReq (\u -> u /: "book" /: "0")
       >>= (`shouldBe` Just (MkBook 0 "Haskell in depth" 2021))
-    decode @Int <$> sendReq (\u -> u /: "year" /: "0")
+    decodeStrict @Int <$> sendReq (\u -> u /: "year" /: "0")
       >>= (`shouldBe` Just 2021)
 
   it "should return HTML" $ \sendReq ->
     sendReq (\u -> u /: "title" /: "0")
-      >>= (`shouldBe` "<html><body><h1>Title</h1><div>Haskell in depth</div></body></html>") . LBC.unpack
+      >>= (`shouldBe` "<html><body><h1>Title</h1><div>Haskell in depth</div></body></html>") . BC.unpack
 
   it "should throw an error if the id is invalid" $ \sendReq ->
     sendReq (\u -> u /: "title" /: "a")

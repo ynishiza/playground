@@ -8,7 +8,8 @@
 {-# LANGUAGE TypeOperators #-}
 
 module APIWithServant.API (
-  server,
+  serverApp,
+  serverAppBasic,
   BookAPI,
   Book(..),
   Rating(..),
@@ -19,6 +20,8 @@ import Servant
 import Servant.HTML.Blaze
 import Data.Aeson
 import GHC.Generics
+import Control.Monad.IO.Class
+import Control.Monad.Logger
 import qualified Text.Blaze.Html as H
 import qualified Text.Blaze.Html4.Strict as H
 
@@ -46,8 +49,34 @@ type BookAPI = Get '[JSON] ServiceStatus
   :<|> "rating" :> Capture "id" Int :> Get '[JSON] Rating
   :<|> "book" :> Capture "id" Int :> Get '[JSON] Book
 
-bookAPIService :: Server BookAPI
-bookAPIService = 
+bookAPI :: Proxy BookAPI
+bookAPI = Proxy
+
+bookAPIServerT :: ServerT BookAPI (LoggingT Handler)
+bookAPIServerT = 
+  pure Up
+  :<|> (\_ -> do 
+    logDebugN "title"
+    pure $ H.html $ 
+      H.body $ do
+        H.h1 "Title"
+        H.div $ do
+          "Haskell in depth")
+  :<|> (\i -> do 
+    logDebugN "year called"
+    liftIO $ putStrLn "test"
+    pure $ 2021 + i)
+  :<|> (\i -> logDebugN "rating" >> pure (toEnum (i `mod` 3)))
+  :<|> (\i -> logDebugN "book" >> pure (MkBook i "Haskell in depth" 2021))
+
+serverWithLogger :: Server BookAPI
+serverWithLogger = hoistServer bookAPI runStdoutLoggingT bookAPIServerT
+
+serverApp :: Application
+serverApp = serve bookAPI serverWithLogger
+
+bookAPIServerBasic :: Server BookAPI
+bookAPIServerBasic = 
   pure Up
   :<|> (\_ -> pure $ H.html $ 
       H.body $ do
@@ -58,8 +87,5 @@ bookAPIService =
   :<|> (\i -> pure (toEnum (i `mod` 3)))
   :<|> (\i -> pure $ MkBook i "Haskell in depth" 2021)
 
-bookAPI :: Proxy BookAPI
-bookAPI = Proxy
-
-server :: Application
-server = serve bookAPI bookAPIService
+serverAppBasic :: Application
+serverAppBasic = serve bookAPI bookAPIServerBasic
