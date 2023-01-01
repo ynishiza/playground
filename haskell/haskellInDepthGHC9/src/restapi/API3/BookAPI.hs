@@ -2,7 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE TypeOperators #-}
 
-module BookAPI
+module API3.BookAPI
   ( BookAPI,
     bookAPI,
     bookAPIProxy,
@@ -11,7 +11,7 @@ module BookAPI
   )
 where
 
-import API as X
+import API3.API as X
 
 data Rating where
   Good :: Rating

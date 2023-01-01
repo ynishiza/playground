@@ -10,7 +10,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module API
+module API3.API
   ( Request,
     HandlerAction,
     APIService,
@@ -18,6 +18,7 @@ module API
     APIAction,
     HasAPIService (..),
     ServiceStatus (..),
+    route,
     execAPIAction,
     Get,
     Capture,
@@ -73,7 +74,8 @@ newtype APIAction a = MkAPIAction (LoggingT IO a)
       MonadThrow,
       MonadLogger
     )
-deriving via (LoggingT IO) instance MonadCatch APIAction 
+
+deriving via (LoggingT IO) instance MonadCatch APIAction
 
 type APIService :: Type -> Type
 type family APIService api where
@@ -90,44 +92,46 @@ data APIError where
   deriving anyclass (Exception)
 
 class HasAPIService (api :: Type) where
-  route :: Proxy api -> APIService api -> Request -> APIAction String
+  -- note: on Maybe String as return value
+  -- Nothing indicates continue
+  route' :: Proxy api -> APIService api -> Request -> APIAction (Maybe String)
+
+route :: HasAPIService api => Proxy api -> APIService api -> Request -> APIAction String
+route p api req = route' p api req
+  >>= maybe (throwM $ RequestError req "Failed to handle request") pure
 
 instance {-# OVERLAPPING #-} HasAPIService (Get String) where
-  route _ result [] = result
-  route _ _ req = throwM $ RequestError req $ "Non empty data:" +|| req ||+ ""
+  route' _ result [] = Just <$> result
+  route' _ _ req = throwM $ RequestError req $ "Non empty data:" +|| req ||+ ""
 
 instance (Show a) => HasAPIService (Get a) where
-  route _ result [] = show <$> result
-  route _ _ req = throwM $ RequestError req $ "Non empty data:" +|| req ||+ ""
+  route' _ result [] = Just . show <$> result
+  route' _ _ req = throwM $ RequestError req $ "Non empty data:" +|| req ||+ ""
 
 instance (HasAPIService a, HasAPIService b) => HasAPIService (a :<|> b) where
-  route _ (h1 :<|> h2) req =
-    route (Proxy @a) h1 req
-      `catch` next
-        (route (Proxy @b) h2 req `catch` onErr)
-    where
-      next r (RouteError _ _) = r
-      next _ e = throwM e
-      onErr (RouteError _ _) = throwM $ RouteError req "Route not found"
-      onErr e = throwM e
+  route' _ (h1 :<|> h2) req =
+    route' (Proxy @a) h1 req
+      >>= maybe (route' (Proxy @b) h2 req) (pure . Just)
+      >>= maybe (throwM $ RouteError req "Route not found") (pure . Just)
 
 instance (Show a, Read a, HasAPIService b) => HasAPIService (Capture a :> b) where
-  route _ handler req@(y : ys) = do
+  route' _ handler req@(y : ys) = do
     let x = fromMaybe (throw $ CaptureError req $ "Failed to parse " +| y |+ "") $ readMaybe @a y
     logDebugN $ "captured " +| y |+ " -> " +|| x ||+ ""
-    route (Proxy @b) (handler x) ys
-  route _ _ req = throwM $ CaptureError req "No data to capture"
+    route' (Proxy @b) (handler x) ys
+  route' _ _ req = throwM $ CaptureError req "No data to capture"
 
 instance (KnownSymbol a, HasAPIService b) => HasAPIService ((a :: Symbol) :> b) where
-  route _ handler req@(x : xs) = do
+  route' _ handler (x : xs) = do
     if r == x
       then
-        logDebugN ("route:" +| r |+ "")
-          >> route (Proxy @b) handler xs
-      else throwM $ RouteError req $ "Route mismatch. Expected " +| r |+ " but found " +| x |+ ""
+        logDebugN ("route':" +| r |+ "")
+          >> route' (Proxy @b) handler xs
+      else pure Nothing
     where
       r = symbolVal (Proxy @a)
-  route _ _ req = throwM $ RouteError req "Route not specified"
+  route' _ _ req = throwM $ RouteError req "Route not specified"
+
 
 execAPIAction :: forall a. APIAction a -> IO a
 execAPIAction (MkAPIAction action) = runStdoutLoggingT (action `catch` onErr)

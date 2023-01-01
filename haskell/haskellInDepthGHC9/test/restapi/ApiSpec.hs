@@ -3,8 +3,8 @@ module ApiSpec
   )
 where
 
-import API
-import BookAPI
+import API3.API
+import API3.BookAPI
 import Data.Foldable
 import Data.List (isInfixOf)
 import Test.Hspec
