@@ -6,10 +6,12 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE PolyKinds #-}
 
 module APIWithServant.API (
   serverApp,
   serverAppBasic,
+  bookAPI,
   BookAPI,
   Book(..),
   Rating(..),
@@ -89,3 +91,4 @@ bookAPIServerBasic =
 
 serverAppBasic :: Application
 serverAppBasic = serve bookAPI bookAPIServerBasic
+

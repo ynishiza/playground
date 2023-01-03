@@ -16,3 +16,7 @@ cradle:
       component: haskellInDepthGHC9:exe:restapi
     - path: "./test/restapi/"
       component: haskellInDepthGHC9:test:restapi-test
+    - path: "./src/dependentTypes/"
+      component: haskellInDepthGHC9:exe:dependentTypes
+    - path: "./test/dependentTypes/"
+      component: haskellInDepthGHC9:test:dependentTypes-test
