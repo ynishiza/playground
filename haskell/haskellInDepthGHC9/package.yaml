@@ -141,6 +141,10 @@ executables:
     dependencies:
     - singletons > 3 && < 4
     - singletons-th > 3 && < 4
+    - fin > 0.2 && < 0.3
+    - some > 1 && < 2
+    - dec > 0.0.4 && < 1
+    - template-haskell >=2.18 && <2.19
 
 internal-libraries: {}
 
@@ -208,6 +212,9 @@ tests:
     dependencies:
     - singletons > 3 && < 4
     - singletons-th > 3 && < 4
+    - fin > 0.2 && < 0.3
+    - dec > 0.0.4 && < 1
+    - some > 1 && < 2
     - template-haskell >=2.18 && <2.19
     - tasty >= 0.11 && < 1.6
     - tasty-hspec >= 1.1 && < 1.3

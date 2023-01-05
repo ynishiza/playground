@@ -3,6 +3,8 @@
 -- :set -XOverloadedStrings     -- Disabled since it may break loaded modules
 :set -XMagicHash
 :set -XNoStarIsType
+:set -XTemplateHaskell
+:set -XDataKinds
 :set -fprint-explicit-foralls
 :set prompt "ghci> "
 :set editor "nvim"

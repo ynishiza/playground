@@ -30,7 +30,7 @@ doorEq (d1, d2) = D.doorState d1 === DG.doorState d2
 usePair :: (forall s t. (D.SDoorStateI s, DG.SingI t) => (D.Door s, DG.Door t) -> a) -> (D.SomeDoor, DG.SomeDoor) -> a
 usePair f (d1, d2) = D.withSomeDoor g d1
   where
-    g d1' = DG.withSomeDoor (f . (d1',)) d2
+    g d1' = DG.withSomeDoorI (f . (d1',)) d2
 
 group :: Group
 group =
@@ -49,7 +49,6 @@ group =
               doors <- forAll doorGen
               usePair doorEq $ 
                 usePair (bimap D.toggleState DG.toggleState) doors
-                -- usePair (\(d1, d2) -> (D.toggleState d1, DG.toggleState d2)) doors
           )
         ]
     }

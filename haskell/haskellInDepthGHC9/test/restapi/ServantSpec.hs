@@ -32,7 +32,7 @@ oneSecond = threadDelay $ 1 * 1000 * 1000
 
 data TestArgs = MkTestArgs S.BaseUrl ((Url 'Http -> Url 'Http) -> IO B.ByteString)
 
-spec :: Spec
+spec :: SpecWith ()
 spec =
   ( \runTest -> do
       (portNum :: Int) <- getStdRandom (uniformR (10000, 20000))
