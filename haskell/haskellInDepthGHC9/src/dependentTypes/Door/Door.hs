@@ -1,14 +1,4 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE StandaloneKindSignatures #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 module Door.Door
   ( DoorState (..),
@@ -58,12 +48,12 @@ instance Show SomeDoor where show (MkSomeDoor d) = show d
 
 type SDoorState :: forall {a}. a -> Type
 data SDoorState s where
-  SOpen :: SDoorState 'Open
+  SOpened :: SDoorState 'Opened
   SClosed :: SDoorState 'Closed
 
 class SDoorStateI s where 
   sDoorState :: SDoorState s
-instance SDoorStateI 'Open where sDoorState = SOpen
+instance SDoorStateI 'Opened where sDoorState = SOpened
 instance SDoorStateI 'Closed where sDoorState = SClosed
 
 type WithSomeDoor a = forall c. SDoorStateI c => Door c -> a
@@ -71,44 +61,44 @@ type WithSomeDoor a = forall c. SDoorStateI c => Door c -> a
 withSomeDoor :: forall a. WithSomeDoor a -> SomeDoor -> a
 withSomeDoor f (MkSomeDoor d) = f d
 
-openDoor :: Door 'Closed -> Door 'Open
+openDoor :: Door 'Closed -> Door 'Opened
 openDoor _ = MkDoor
 
-closeDoor :: Door 'Open -> Door 'Closed
+closeDoor :: Door 'Opened -> Door 'Closed
 closeDoor _ = MkDoor
 
 parseDoor :: String -> Maybe SomeDoor
-parseDoor "Open" = Just $ MkSomeDoor (MkDoor @'Open)
+parseDoor "Opened" = Just $ MkSomeDoor (MkDoor @'Opened)
 parseDoor "Closed" = Just $ MkSomeDoor (MkDoor @'Closed)
 parseDoor _ = Nothing
 
 toggleStateV1 :: forall s. KnownDoorState s => Door s -> SomeDoor
 toggleStateV1 d = case doorStateVal @s Proxy of
-  -- Open -> MkSomeDoor $ closeDoor d     -- ERROR "Couldn't match type ‘s’ with ‘'Open’ Expected: Door 'Open Actual: Door s ‘s’ is a rigid type variable bound" 
+  -- Opened -> MkSomeDoor $ closeDoor d     -- ERROR "Couldn't match type ‘s’ with ‘'Opened’ Expected: Door 'Opened Actual: Door s ‘s’ is a rigid type variable bound" 
   _ -> undefined
 
 doorStateV1 :: forall s. KnownDoorState s => Door s -> DoorState
 doorStateV1 _ = doorStateVal @s Proxy
 
-openAnyDoorV1 :: forall s. KnownDoorState s => Door s -> Door 'Open
+openAnyDoorV1 :: forall s. KnownDoorState s => Door s -> Door 'Opened
 openAnyDoorV1 d = case doorStateVal @s Proxy of
-  -- Open -> d
+  -- Opened -> d
   -- Closed -> openDoor d
   _ -> undefined
 
 doorStateV2 :: SDoorState s -> Door s -> DoorState
 doorStateV2 sg _ = case sg of
-  SOpen -> Open
+  SOpened -> Opened
   SClosed -> Closed
 
-openAnyDoorV2 :: SDoorState s -> Door s -> Door 'Open
+openAnyDoorV2 :: SDoorState s -> Door s -> Door 'Opened
 openAnyDoorV2 sg d = case sg of
-  SOpen -> d
+  SOpened -> d
   SClosed -> openDoor d
 
 toggleStateV2 :: SDoorState s -> Door s -> SomeDoor 
 toggleStateV2 sg d = case sg of
-                       SOpen -> MkSomeDoor $ closeDoor d
+                       SOpened -> MkSomeDoor $ closeDoor d
                        SClosed -> MkSomeDoor $ openDoor d
 
 mkDoor :: SDoorState s -> Door s
@@ -117,7 +107,7 @@ mkDoor _ = MkDoor
 toggleStateV3 :: forall s. SDoorStateI s => Door s -> SomeDoor 
 toggleStateV3 = toS toggleStateV2
 
-openAnyDoorV3 :: forall s. SDoorStateI s => Door s -> Door 'Open
+openAnyDoorV3 :: forall s. SDoorStateI s => Door s -> Door 'Opened
 openAnyDoorV3 = toS openAnyDoorV2
 
 doorStateV3 :: forall s. SDoorStateI s => Door s -> DoorState
@@ -125,7 +115,7 @@ doorStateV3 = toS doorStateV2
 
 doorState :: forall s. SDoorStateI s => Door s -> DoorState
 doorState = doorStateV3
-openAnyDoor :: forall s. SDoorStateI s => Door s -> Door 'Open
+openAnyDoor :: forall s. SDoorStateI s => Door s -> Door 'Opened
 openAnyDoor = openAnyDoorV3
 toggleState :: forall s. SDoorStateI s => Door s -> SomeDoor 
 toggleState = toggleStateV3 
@@ -137,7 +127,7 @@ class KnownDoorState s where
   doorStateVal :: Proxy s -> DoorState
 
 -- with proxy
-instance KnownDoorState 'Open where doorStateVal _ = Open
+instance KnownDoorState 'Opened where doorStateVal _ = Opened
 
 instance KnownDoorState 'Closed where doorStateVal _ = Closed
 

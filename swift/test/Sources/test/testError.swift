@@ -2,7 +2,7 @@ func testErrorHandling() {
     testThrowAndHandler()
 }
 
-fileprivate func testThrowAndHandler() {
+private func testThrowAndHandler() {
     let handlers = [
         { throw MyError.BadWeather },
         { throw MyError.BadMood },

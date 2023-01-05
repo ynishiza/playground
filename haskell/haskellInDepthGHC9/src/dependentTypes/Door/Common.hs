@@ -1,27 +1,23 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeFamilies #-}
 
 module Door.Common
   ( DoorState (..),
     SDoorState (..),
     SingI (..),
-    OpenSym0,
+    OpenedSym0,
     ClosedSym0,
+    module X,
   )
 where
 
 import Data.Singletons.TH
+import Data.Singletons as X
 
 $( singletons
      [d|
        data DoorState where
-         Open :: DoorState
+         Opened :: DoorState
          Closed :: DoorState
        |]
  )

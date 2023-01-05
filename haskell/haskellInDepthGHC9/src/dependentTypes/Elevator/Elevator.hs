@@ -1,74 +1,65 @@
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE StandaloneKindSignatures #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Elevator.Elevator
-  ( GoodFloor,
-    Floor (..),
-    prevFloor,
-    nextFloor,
-    sameFloor,
-    belowFloor,
-    aboveFloor,
-    compareFloor,
-    mkFloor,
-    prevFloor',
+  ( Elevator (..),
+    getFloor,
+    getDoorState,
+    moveUp,
+    moveDown,
+    openDoor,
+    closeDoor,
+    ensureOpenedDoor,
+    ensureClosedDoor,
+    module X,
   )
 where
 
-import Data.GADT.Compare
-import Data.Kind
-import Data.Type.Dec
-import Data.Type.Equality
-import Data.Type.Nat
-import Data.Type.Nat.LE
-import Fmt
+import Control.Monad.IO.Class
+import Door.Common as X
+import Elevator.Floor
 
-type GoodFloor :: Nat -> Nat -> Constraint
-type GoodFloor mx f = (SNatI f, SNatI mx, LE f mx)
+type Elevator :: Nat -> Nat -> DoorState -> Type
+data Elevator mx f d where
+  MkElevator :: (GoodFloor mx f, SingI d) => Elevator mx f d
 
-type Floor :: Nat -> Nat -> Type
-data Floor mx f where
-  MkFloor :: GoodFloor mx f => Floor mx f
+getFloor :: forall mx f d. GoodFloor mx f => Elevator mx f d -> Floor mx f
+getFloor MkElevator = MkFloor @mx @f
 
-instance Show (Floor mx f) where
-  show MkFloor = "Floor " +|| snat @mx ||+ " " +|| snat @f ||+ ""
+getDoorState :: forall mx f d. Elevator mx f d -> DoorState
+getDoorState MkElevator = fromSing $ sing @d
 
-instance Eq (Floor mx f) where
-  x == y = show x == show y
+moveUp :: forall mx f m. (MonadIO m, BelowTop mx f) => Elevator mx f 'Closed -> m (Elevator mx ('S f) 'Closed)
+moveUp MkElevator =
+  liftIO (putStrLn "Moving up")
+    >> pure MkElevator
 
-mkFloor :: forall mx f. (SNatI mx, SNatI f) => Maybe (Floor mx f)
-mkFloor = case decideLE @f @mx of
-  Yes pf -> withLEProof pf $ Just MkFloor
-  No _ -> Nothing
+moveDown :: MonadIO m => Elevator mx ('S f) 'Closed -> m (Elevator mx f 'Closed)
+moveDown d@MkElevator =
+  liftIO (putStrLn "Moving down")
+    >> pure (withFloor (prevFloor $ getFloor d) MkElevator)
 
-nextFloor :: forall f mx. LE ('S f) mx => Floor mx f -> Floor mx ('S f)
-nextFloor MkFloor = MkFloor @mx @('S f)
+openDoor :: MonadIO m => Elevator mx f 'Closed -> m (Elevator mx f 'Opened)
+openDoor MkElevator =
+  liftIO (putStrLn "Opening door")
+    >> pure MkElevator
 
-prevFloor :: forall f mx. Floor mx ('S f) -> Floor mx f
-prevFloor MkFloor = withLEProof boundPrf $ withSNat floorPrf MkFloor
-  where
-    floorPrf :: SNat f
-    floorPrf = case snat @('S f) of SS -> snat
-    boundPrf :: LEProof f mx
-    boundPrf = leStepL (leProof @('S f) @mx)
+closeDoor :: MonadIO m => Elevator mx f 'Opened -> m (Elevator mx f 'Closed)
+closeDoor MkElevator =
+  liftIO (putStrLn "Closing door")
+    >> pure MkElevator
 
-sameFloor :: Floor mx k -> Floor mx l -> Maybe (k :~: l)
-sameFloor x y = case compareFloor x y of GEQ -> Just Refl; _ -> Nothing
+ensureClosedDoor :: forall m mx f d. MonadIO m => Elevator mx f d -> m (Elevator mx f 'Closed)
+ensureClosedDoor e@MkElevator =
+  withSing @d
+    ( \case
+        SOpened -> closeDoor e
+        SClosed -> pure e
+    )
 
-belowFloor :: Floor mx k -> Floor mx l -> Bool
-belowFloor x y = case compareFloor x y of GLT -> True; _ -> False
-
-aboveFloor :: Floor mx k -> Floor mx l -> Bool
-aboveFloor x y = case compareFloor x y of GGT -> True; _ -> False
-
-compareFloor :: forall l k mx. Floor mx k -> Floor mx l -> GOrdering k l
-compareFloor MkFloor MkFloor = withSNat (snat @k) $ withSNat (snat @l) cmpNat
-
-prevFloor' :: (GoodFloor f mx) => Floor ('S f) mx -> Floor f mx
-prevFloor' MkFloor = MkFloor
+ensureOpenedDoor :: forall m mx f d. MonadIO m => Elevator mx f d -> m (Elevator mx f 'Opened)
+ensureOpenedDoor e@MkElevator =
+  withSing @d
+    ( \case
+        SOpened -> pure e
+        SClosed -> openDoor e
+    )

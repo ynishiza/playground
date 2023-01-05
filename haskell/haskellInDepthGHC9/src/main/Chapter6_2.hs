@@ -8,7 +8,7 @@ module Chapter6_2
     MyApp2 (..),
     processMyApp,
     myTask,
-    main,
+    run,
     -- mapLevel1,
     -- mapLevel2,
     -- mapLevel3,
@@ -117,8 +117,8 @@ instance MonadError e (MyApp2 r w s e) where
   throwError e = MyApp2 $ throwError e
   catchError (MyApp2 p) h = MyApp2 $ catchError p (runMyApp2 . h)
 
-main :: IO ()
-main = do
+run :: IO ()
+run = do
   processMyApp0 myTask True "" >>= print
   main0
 

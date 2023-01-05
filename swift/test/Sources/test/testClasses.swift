@@ -80,3 +80,11 @@ fileprivate class MyChild4 : MyBaseClass2 {
         // super.init(x: x)
     }
 }
+
+private class MyAccessTest {
+    private var x0 = 1
+    internal var x1 = 1
+    fileprivate var x2 = 1
+    public var x3 = 1
+    open var x4 = 1
+}

@@ -1,14 +1,16 @@
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use section" #-}
 
-module Elevator.TH
+module Elevator.FloorTH
   ( genFloors,
+  genNumAliases,
     module X,
   )
 where
 
 import Data.Type.Nat
-import Elevator.Elevator as X
+import Elevator.Floor as X
 import Language.Haskell.TH
 
 maxNameS :: String
@@ -24,13 +26,15 @@ genFloors :: Int -> Q [Dec]
 genFloors n
   | n <= 0 = fail "Must be a positive number"
   | otherwise = do
-      ns <- foldMap genNumAliases [0 .. n]
       maxName <- genMaxFloor n
-      fs <- foldMap genFloor [0 .. n]
-      return $ ns ++ maxName ++ fs
+      fs <- foldMap (flip genFloor n) [0 .. n]
+      return $ maxName ++ fs
 
-genNumAliases :: Int -> Q [Dec]
-genNumAliases n = do
+genNumAliases :: Int -> Int -> Q [Dec]
+genNumAliases l h = foldMap genNumAlias [l..h]
+
+genNumAlias :: Int -> Q [Dec]
+genNumAlias n = do
   let name = mkNmName n
       sig =
         if n == 0
@@ -41,16 +45,16 @@ genNumAliases n = do
 
 genMaxFloor :: Int -> Q [Dec]
 genMaxFloor n = do
-  let mxName = mkName maxNameS
+  let mxName = mkName $ maxNameS ++ "_" ++ show n
       numName = mkNmName n
   dec <- tySynD mxName [] (conT numName)
   return [dec]
 
-genFloor :: Int -> Q [Dec]
-genFloor n = do
-  let floorName = mkName $ "f" ++ show n
+genFloor :: Int -> Int -> Q [Dec]
+genFloor n mx = do
+  let floorName = mkName $ "f" ++ show n ++ "_" ++ show mx
       numName = mkNmName n
-      maxName = mkName maxNameS
+      maxName = mkName $ maxNameS ++ "_" ++ show mx
       sig = [t|Floor $(conT maxName) $(conT numName)|]
       expr = [|MkFloor|]
   sigDec <- sigD floorName sig

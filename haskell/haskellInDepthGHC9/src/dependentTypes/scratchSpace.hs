@@ -1,10 +1,4 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
 import Data.Kind

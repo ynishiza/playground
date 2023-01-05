@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
@@ -11,6 +10,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module SingletonCommon (
   SBool(..),
@@ -20,8 +20,6 @@ module SingletonCommon (
 
 import Data.Singletons as X
 import Data.Singletons.TH
-import Data.Type.Nat
-import Data.Typeable
 import Fmt
 
 data State where
@@ -65,8 +63,8 @@ instance SingI x => SingI ('Just x) where
   sing :: SMaybe ('Just x)
   sing = SJust (sing @x)
 
-instance SingI ('Nothing) where
-  sing :: SMaybe ('Nothing)
+instance SingI 'Nothing where
+  sing :: SMaybe 'Nothing
   sing = SNothing
 
 instance SingKind k => SingKind (Maybe k) where

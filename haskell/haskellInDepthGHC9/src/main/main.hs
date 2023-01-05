@@ -52,7 +52,7 @@ main = do
       Chapter5_2_1.run
       Chapter5_3_1.run
     Just 4 -> do
-      Chapter6_2.main
+      Chapter6_2.run
     Just 5 -> runTest Chapter7_2.run
     Just 6 -> runTest Chapter7_3.run
     Just 7 -> runTest Chapter9_2.run

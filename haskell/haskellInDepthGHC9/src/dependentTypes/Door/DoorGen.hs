@@ -1,14 +1,4 @@
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE StandaloneKindSignatures #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -50,17 +40,17 @@ type SomeDoor :: Type
 data SomeDoor where
   MkSomeDoor :: forall (s :: DoorState). SingI s => Door s -> SomeDoor
 
-instance {-# OVERLAPPING #-} Show (Door 'Open) where show _ = "Door 'Open"
+instance {-# OVERLAPPING #-} Show (Door 'Opened) where show _ = "Door 'Opened"
 
 instance {-# OVERLAPPING #-} Show (Door 'Closed) where show _ = "Door 'Closed"
 
-instance Show (SDoorState 'Open) where show SOpen = "SOpen"
+instance Show (SDoorState 'Opened) where show SOpened = "SOpened"
 
 instance Show (SDoorState 'Closed) where show SClosed = "SClosed"
 
 instance Show SomeDoor where
   show (MkSomeDoor d) = case doorState d of
-    Open -> "SomeDoor" +|| (MkDoor @'Open) ||+ ""
+    Opened -> "SomeDoor" +|| (MkDoor @'Opened) ||+ ""
     Closed -> "SomeDoor" +|| (MkDoor @'Closed) ||+ ""
 
 instance SingI s => Eq (Door s) where
@@ -71,12 +61,12 @@ instance Eq SomeDoor where
 
 type WithDoor a = forall s. SingI s => Door s -> a
 
-
 fromDoorState :: DoorState -> SomeDoor
 fromDoorState d = case toSing d of
-                    (SomeSing SOpen) -> MkSomeDoor $ fromSDoorState SOpen
-                    (SomeSing SClosed) -> MkSomeDoor $ fromSDoorState SClosed
--- fromDoorState Open = MkSomeDoor $ fromSDoorState SOpen
+  (SomeSing SOpened) -> MkSomeDoor $ fromSDoorState SOpened
+  (SomeSing SClosed) -> MkSomeDoor $ fromSDoorState SClosed
+
+-- fromDoorState Opened = MkSomeDoor $ fromSDoorState SOpened
 -- fromDoorState Closed = MkSomeDoor $ fromSDoorState SClosed
 
 fromSDoorState :: SDoorState s -> Door s
@@ -96,38 +86,38 @@ d #> f = withSomeDoorI f d
 
 infixl 1 #>
 
-openDoor :: Door 'Closed -> Door 'Open
+openDoor :: Door 'Closed -> Door 'Opened
 openDoor _ = MkDoor
 
-closeDoor :: Door 'Open -> Door 'Closed
+closeDoor :: Door 'Opened -> Door 'Closed
 closeDoor _ = MkDoor
 
 doorState :: forall s. SingI s => Door s -> DoorState
 doorState _ = fromSing (sing @s)
 
-openAnyDoor' :: SDoorState s -> Door s -> Door 'Open
-openAnyDoor' SOpen = id
+openAnyDoor' :: SDoorState s -> Door s -> Door 'Opened
+openAnyDoor' SOpened = id
 openAnyDoor' SClosed = openDoor
 
-openAnyDoor :: forall s. SingI s => Door s -> Door 'Open
+openAnyDoor :: forall s. SingI s => Door s -> Door 'Opened
 openAnyDoor = withSing openAnyDoor'
 
 closeAnyDoor' :: SDoorState s -> Door s -> Door 'Closed
 closeAnyDoor' SClosed = id
-closeAnyDoor' SOpen = closeDoor
+closeAnyDoor' SOpened = closeDoor
 
 closeAnyDoor :: forall s. SingI s => Door s -> Door 'Closed
 closeAnyDoor = withSing closeAnyDoor'
 
 toggleState' :: SDoorState s -> Door s -> SomeDoor
-toggleState' SOpen = MkSomeDoor . closeDoor
+toggleState' SOpened = MkSomeDoor . closeDoor
 toggleState' SClosed = MkSomeDoor . openDoor
 
 toggleState :: forall s. SingI s => Door s -> SomeDoor
 toggleState = withSing toggleState'
 
 parseDoor :: String -> Maybe SomeDoor
-parseDoor "Open" = Just $ MkSomeDoor (MkDoor @'Open)
+parseDoor "Opened" = Just $ MkSomeDoor (MkDoor @'Opened)
 parseDoor "Closed" = Just $ MkSomeDoor (MkDoor @'Closed)
 parseDoor _ = Nothing
 
@@ -161,3 +151,10 @@ test = do
       >>= printReturn (\a -> a #> toggleState #> toggleState #> toggleState)
 
   pure ()
+
+type T2 :: forall {a}. a -> Type
+data T2 a = T2
+-- x = T2 @'False
+f :: forall {k}  (a::k). Proxy a
+f=Proxy
+x=f @Maybe

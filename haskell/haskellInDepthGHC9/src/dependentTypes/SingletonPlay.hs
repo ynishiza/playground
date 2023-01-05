@@ -1,15 +1,5 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module SingletonPlay
@@ -21,7 +11,7 @@ module SingletonPlay
 where
 
 import SingletonCommon
-import Data.Singletons
+import Data.Foldable
 import Data.Singletons.TH
 import Data.Typeable
 import Fmt
@@ -50,6 +40,7 @@ instance Eq (SomeSing State) where
   (SomeSing SBad) == (SomeSing SBad) = True
   _ == _ = False
 
+test :: IO ()
 test = do
   let t =
         [ sing @'Good == SGood,
@@ -60,7 +51,7 @@ test = do
           toSing Bad == SomeSing SBad
         ]
 
-  traverse print t
+  traverse_ print t
   printInfo "SGood" SGood
   printInfo "SBAD" SBad
   printInfo "toSing Good" $ toSing Good
