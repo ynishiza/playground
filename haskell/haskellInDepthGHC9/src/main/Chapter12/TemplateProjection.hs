@@ -12,7 +12,6 @@ module Chapter12.TemplateProjection
     project_withExpr,
     projectionDeclare,
     projectionDeclareMany,
-    sumInner,
     myRandomValueDeclare,
     myRandomValueDeclare2,
     MyTemplateError (..),
@@ -25,9 +24,9 @@ import Fmt
 import Language.Haskell.TH
 
 projectionDeclareMany :: Int -> Int -> Q [Dec]
-projectionDeclareMany start end = declareRange declareNTuple [start .. end]
+projectionDeclareMany start end = foldMap declareNTuple [start .. end]
   where
-    declareNTuple n = mapSum (projectionDeclare n) [0 .. n - 1]
+    declareNTuple n = foldMap (projectionDeclare n) [0 .. n - 1]
 
 projectionDeclare :: Int -> Int -> Q [Dec]
 projectionDeclare n k = do

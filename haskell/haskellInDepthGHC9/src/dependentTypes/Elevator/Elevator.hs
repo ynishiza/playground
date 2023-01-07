@@ -1,7 +1,15 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Elevator.Elevator
   ( Elevator (..),
+    SomeElevator (..),
     getFloor,
     getDoorState,
     moveUp,
@@ -10,17 +18,36 @@ module Elevator.Elevator
     closeDoor,
     ensureOpenedDoor,
     ensureClosedDoor,
+    moveTo,
+    call,
+    callSome,
+    getState,
     module X,
   )
 where
 
-import Control.Monad.IO.Class
 import Door.Common as X
 import Elevator.Floor
+import Elevator.LowLevel qualified as L
+import Elevator.LowLevel as X hiding (moveUp, moveDown, openDoor, closeDoor) 
+import Elevator.Move
+import Fmt
 
 type Elevator :: Nat -> Nat -> DoorState -> Type
 data Elevator mx f d where
   MkElevator :: (GoodFloor mx f, SingI d) => Elevator mx f d
+
+data SomeElevator mx where
+  MkSomeElevator :: forall mx f d. Elevator mx f d -> SomeElevator mx
+
+instance Show (Elevator mx f d) where
+  show e@MkElevator = "Elevator [" +|| getFloor e ||+ "][" +|| getDoorState e ||+ "]"
+
+instance Show (SomeElevator mx) where
+  show (MkSomeElevator e@MkElevator) = "SomeElevator (" +|| e ||+ ")"
+
+getState :: forall mx f d. Elevator mx f d -> L.ElevatorState
+getState MkElevator = L.MkElevatorState (fromIntegral $ snatToNatural $ snat @f) (fromSing $ sing @d)
 
 getFloor :: forall mx f d. GoodFloor mx f => Elevator mx f d -> Floor mx f
 getFloor MkElevator = MkFloor @mx @f
@@ -28,27 +55,24 @@ getFloor MkElevator = MkFloor @mx @f
 getDoorState :: forall mx f d. Elevator mx f d -> DoorState
 getDoorState MkElevator = fromSing $ sing @d
 
-moveUp :: forall mx f m. (MonadIO m, BelowTop mx f) => Elevator mx f 'Closed -> m (Elevator mx ('S f) 'Closed)
-moveUp MkElevator =
-  liftIO (putStrLn "Moving up")
-    >> pure MkElevator
+moveUp :: forall mx f. (BelowTop mx f) => Elevator mx f 'Closed -> ElevatorSystem (Elevator mx ('S f) 'Closed)
+moveUp MkElevator = L.moveUp >> pure MkElevator
 
-moveDown :: MonadIO m => Elevator mx ('S f) 'Closed -> m (Elevator mx f 'Closed)
-moveDown d@MkElevator =
-  liftIO (putStrLn "Moving down")
-    >> pure (withFloor (prevFloor $ getFloor d) MkElevator)
+moveDown :: Elevator mx ('S f) 'Closed -> ElevatorSystem (Elevator mx f 'Closed)
+moveDown e@MkElevator = L.moveDown
+    >> pure (withFloor (prevFloor $ getFloor e) MkElevator)
 
-openDoor :: MonadIO m => Elevator mx f 'Closed -> m (Elevator mx f 'Opened)
+openDoor :: Elevator mx f 'Closed -> ElevatorSystem (Elevator mx f 'Opened)
 openDoor MkElevator =
-  liftIO (putStrLn "Opening door")
+   L.openDoor
     >> pure MkElevator
 
-closeDoor :: MonadIO m => Elevator mx f 'Opened -> m (Elevator mx f 'Closed)
+closeDoor :: Elevator mx f 'Opened -> ElevatorSystem (Elevator mx f 'Closed)
 closeDoor MkElevator =
-  liftIO (putStrLn "Closing door")
+  L.closeDoor
     >> pure MkElevator
 
-ensureClosedDoor :: forall m mx f d. MonadIO m => Elevator mx f d -> m (Elevator mx f 'Closed)
+ensureClosedDoor :: forall mx f d. Elevator mx f d -> ElevatorSystem (Elevator mx f 'Closed)
 ensureClosedDoor e@MkElevator =
   withSing @d
     ( \case
@@ -56,10 +80,24 @@ ensureClosedDoor e@MkElevator =
         SClosed -> pure e
     )
 
-ensureOpenedDoor :: forall m mx f d. MonadIO m => Elevator mx f d -> m (Elevator mx f 'Opened)
+ensureOpenedDoor :: forall mx f d. Elevator mx f d -> L.ElevatorSystem (Elevator mx f 'Opened)
 ensureOpenedDoor e@MkElevator =
   withSing @d
     ( \case
         SOpened -> pure e
         SClosed -> openDoor e
     )
+
+moveTo :: Floor mx to -> Elevator mx from 'Closed -> ElevatorSystem (Elevator mx to 'Closed)
+moveTo f e@MkElevator = case decideMove f (getFloor e) of
+  StandStill -> pure e
+  GoingUp -> moveUp e >>= moveTo f
+  GoingDown -> moveDown e >>= moveTo f
+
+call :: Floor mx to -> Elevator mx from d -> ElevatorSystem (Elevator mx to 'Opened)
+call f e@MkElevator = case sameFloor f (getFloor e) of
+  Just p -> gcastWith p $ ensureOpenedDoor e
+  Nothing -> ensureClosedDoor e >>= moveTo f >>= ensureOpenedDoor
+
+callSome :: SomeFloor mx -> SomeElevator mx -> ElevatorSystem (SomeElevator mx)
+callSome (MkSomeFloor f@MkFloor) (MkSomeElevator e@MkElevator) = MkSomeElevator <$> call f e

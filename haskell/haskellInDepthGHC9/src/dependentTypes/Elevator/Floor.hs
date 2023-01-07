@@ -1,7 +1,21 @@
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
+
 module Elevator.Floor
   ( GoodFloor,
     BelowTop,
     Floor (..),
+    SomeFloor (..),
+    mkSomeFloor,
     prevFloor,
     nextFloor,
     sameFloor,
@@ -33,8 +47,24 @@ type Floor :: Nat -> Nat -> Type
 data Floor mx f where
   MkFloor :: GoodFloor mx f => Floor mx f
 
+type SomeFloor :: Nat -> Type
+data SomeFloor mx where
+  MkSomeFloor :: forall mx f. Floor mx f -> SomeFloor mx
+
+mkSomeFloor :: forall mx. SNatI mx => Int -> Maybe (SomeFloor mx)
+mkSomeFloor v
+  | v < 0 = Nothing
+  | otherwise = reify v' mk
+  where
+    v' = fromNatural $ fromIntegral v
+    mk :: forall s p. SNatI s => p s -> Maybe (SomeFloor mx)
+    mk _ = MkSomeFloor <$> (mkFloor @mx @s)
+
 instance Show (Floor mx f) where
-  show MkFloor = "Floor " +|| snat @mx ||+ " " +|| snat @f ||+ ""
+  show MkFloor = "Floor " +|| snatToNatural (snat @f) ||+ "/" +|| snatToNatural (snat @mx) ||+ ""
+
+instance Show (SomeFloor mx) where
+  show (MkSomeFloor e@MkFloor) = "SomeFloor (" +|| e ||+ ")"
 
 instance Eq (Floor mx f) where
   x == y = show x == show y
@@ -54,12 +84,14 @@ nextFloor :: forall mx f. BelowTop mx f => Floor mx f -> Floor mx ('S f)
 nextFloor MkFloor = MkFloor @mx @('S f)
 
 prevFloor :: forall mx f. Floor mx ('S f) -> Floor mx f
-prevFloor MkFloor = withLEProof boundPrf $ withSNat floorPrf MkFloor
+prevFloor MkFloor = withSNat floorPrf $ withLEProof (boundPrf @f) MkFloor
   where
     floorPrf :: SNat f
     floorPrf = case snat @('S f) of SS -> snat
-    boundPrf :: LEProof f mx
-    boundPrf = leStepL (leProof @('S f) @mx)
+    boundPrf :: forall f'. SNatI f' => LEProof f' mx
+    boundPrf = case decideLE @f' @mx of
+      Yes p -> p
+      No _ -> undefined
 
 -- BAD: not useful since caller will still have to prove (LE f mx)
 prevFloorBad :: (GoodFloor mx f) => Floor mx ('S f) -> Floor mx f

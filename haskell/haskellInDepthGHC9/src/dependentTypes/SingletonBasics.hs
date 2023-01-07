@@ -1,8 +1,16 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
 {-# HLINT ignore "Use if" #-}
 
 module SingletonBasics
@@ -40,8 +48,8 @@ instance Buildable Container where build = build . show
 instance Show (TaggedData a) => Eq (TaggedData a) where x == y = show x == show y
 
 instance Show Container where
-  show (MkContainer s@MkBoolData) = show s
-  show (MkContainer s@MkNatData) = show s
+  show (MkContainer s@MkBoolData) = "Container [" +| s |+ "]"
+  show (MkContainer s@MkNatData) = "Container [" +| s |+ "]"
 
 -- reflect: i.e. type -> value
 getBoolTag :: forall a. TaggedData (a :: Bool) -> Bool
@@ -49,25 +57,24 @@ getBoolTag MkBoolData = withSing @a fromSing
 
 -- reify i.e value -> type
 mkBoolData :: Bool -> Container
-mkBoolData v = case v of 
-    True -> MkContainer $ sn STrue
-    False -> MkContainer $ sn SFalse
+mkBoolData v = case v of
+  True -> MkContainer $ sn STrue
+  False -> MkContainer $ sn SFalse
   where
-    sn :: forall (s :: Bool). SBool s -> TaggedData s 
-    sn sg = withSingI sg MkBoolData 
+    sn :: forall (s :: Bool). SBool s -> TaggedData s
+    sn sg = withSingI sg MkBoolData
 
 -- reflect: type (Nat) -> value (Int)
 getNumTag :: forall a. TaggedData (a :: Nat) -> Int
 getNumTag MkNatData = fromIntegral $ toNatural $ reflect @a Proxy
 
-
 mkNumData :: Int -> Container
-mkNumData 0 = MkContainer $ mkNumData'  (snat @'Z)
-mkNumData 1 = MkContainer $ mkNumData'  (snat @Nat1)
-mkNumData 2 = MkContainer $ mkNumData'  (snat @Nat2)
-mkNumData 3 = MkContainer $ mkNumData'  (snat @Nat3)
-mkNumData 4 = MkContainer $ mkNumData'  (snat @Nat4)
-mkNumData 5 = MkContainer $ mkNumData'  (snat @Nat5)
+mkNumData 0 = MkContainer $ mkNumData' (snat @'Z)
+mkNumData 1 = MkContainer $ mkNumData' (snat @Nat1)
+mkNumData 2 = MkContainer $ mkNumData' (snat @Nat2)
+mkNumData 3 = MkContainer $ mkNumData' (snat @Nat3)
+mkNumData 4 = MkContainer $ mkNumData' (snat @Nat4)
+mkNumData 5 = MkContainer $ mkNumData' (snat @Nat5)
 mkNumData _ = undefined
 
 -- reify: value (Int) -> type (Nat)

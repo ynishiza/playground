@@ -7,9 +7,6 @@ module Chapter12.TemplateUtils
   ( emptyCxt,
     newNameX,
     TypeVar,
-    declareRange,
-    mapSum,
-    sumInner,
     MyTemplateError (..),
     myTemplateErrorE,
     tupleSignature,
@@ -19,7 +16,6 @@ module Chapter12.TemplateUtils
 where
 
 import Control.Exception
-import Data.Foldable
 import Language.Haskell.TH
 
 emptyCxt :: Q Cxt
@@ -36,15 +32,6 @@ newtype MyTemplateError = MkMyTemplateError String
 
 myTemplateErrorE :: String -> Q Exp
 myTemplateErrorE msg = [|throw (MkMyTemplateError $(litE (StringL msg)))|]
-
-declareRange :: (Int -> Q [Dec]) -> [Int] -> Q [Dec]
-declareRange = mapSum
-
-mapSum :: forall a t m s. (Traversable t, Monad m, Monoid s) => (a -> m s) -> t a -> m s
-mapSum f r = fold <$> traverse f r
-
-sumInner :: (Monad m, Monoid a) => m a -> m a -> m a
-sumInner x y = (<>) <$> x <*> y
 
 tupleSignature :: [Name] -> Type
 tupleSignature names = foldl AppT (TupleT (length names)) $ VarT <$> names

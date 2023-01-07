@@ -1,22 +1,34 @@
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 
 import Data.Kind
-import GHC.TypeLits
+import Data.Singletons
+import SingletonCommon
 
-type MyLabel :: forall a -> Constraint
-class MyLabel (a :: k)  where
-  myLabel :: String
-instance MyLabel String where myLabel = "S"
-instance MyLabel Maybe where myLabel = "Maybe"
-instance (MyLabel l) => MyLabel (m l) where myLabel = "(" ++ myLabel @l ++ ")"
-instance MyLabel Int where myLabel = "I"
+type MyData :: Bool -> Type
+data MyData a where
+  MkMyData :: MyData a
 
-data Answer = YES | NO
-class HasSymbol s where
-  getSymbol :: Answer
-instance HasSymbol 'YES where getSymbol = YES
-instance HasSymbol 'NO where getSymbol = NO
+-- Bad
+mkMyDataBad :: Bool -> MyData a
+mkMyDataBad True = withSingI STrue MkMyData
+mkMyDataBad False = withSingI SFalse MkMyData
 
-data Key = A | B | C | D
-data Mod (a :: Key) = Bold | Italic | Underline
+x1 = mkMyDataBad @'True True
+
+x2 = mkMyDataBad @'False True
+
+-- solution 1: with witness
+mkMyDataS :: Sing Bool -> MyData a
+mkMyDataS = flip withSingI MkMyData
+
+-- solution 2: with opaque container
+data SomeData where
+  MkSomeData :: forall (a :: Bool). MyData a -> SomeData
+
+mkMyData :: Bool -> SomeData
+mkMyData True = MkSomeData (MkMyData @'True)
+mkMyData False = MkSomeData (MkMyData @'False)

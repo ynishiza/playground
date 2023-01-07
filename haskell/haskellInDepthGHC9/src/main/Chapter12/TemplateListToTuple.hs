@@ -15,7 +15,7 @@ import Fmt
 import Language.Haskell.TH
 
 listToTupleDeclareMany :: Int -> Int -> Q [Dec]
-listToTupleDeclareMany start end = declareRange listToTupleDeclare [start .. end]
+listToTupleDeclareMany start end = foldMap listToTupleDeclare [start .. end]
 
 listToTupleName :: Int -> Name
 listToTupleName n = mkName $ "listToTuple_" +|| n ||+ ""

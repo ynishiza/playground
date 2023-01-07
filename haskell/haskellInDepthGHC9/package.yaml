@@ -145,19 +145,6 @@ executables:
     - some > 1 && < 2
     - dec > 0.0.4 && < 1
     - template-haskell >=2.18 && <2.19
-    default-extensions:
-    - OverloadedStrings
-    - ConstraintKinds
-    - FlexibleContexts
-    - FlexibleInstances
-    - DataKinds
-    - PolyKinds
-    - GADTs
-    - StandaloneKindSignatures
-    - TypeOperators
-    - DerivingStrategies
-    - RankNTypes
-    - TypeFamilies
 
 internal-libraries: {}
 
@@ -234,18 +221,5 @@ tests:
     - tasty-hedgehog >= 0.1 && <= 1.4
     - hspec >= 0.1 && <= 3
     - hedgehog >= 0.5 && < 1.2
-    default-extensions:
-    - OverloadedStrings
-    - ConstraintKinds
-    - FlexibleContexts
-    - FlexibleInstances
-    - DataKinds
-    - PolyKinds
-    - GADTs
-    - StandaloneKindSignatures
-    - TypeOperators
-    - DerivingStrategies
-    - RankNTypes
-    - TypeFamilies
 
 benchmarks: {}
