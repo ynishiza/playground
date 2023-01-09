@@ -28,16 +28,6 @@ import Door hiding (test)
 import Fmt
 import Utils
 
-showType :: (Typeable s, Typeable p) => p s -> String
-showType x = show $ typeOf x
-
-showProof :: Typeable a => Decision a -> String
-showProof d = fmt $ p |+ "" +| showType d |+ ""
-  where
-    p :: Builder
-    p = case d of Proved _ -> "PROVED\t\t"; _ -> "DISPROVED\t"
-
--- ==================== Q1 ====================
 isDoorStatable :: Sing s -> Decision (SDoorState s)
 isDoorStatable = Proved
 

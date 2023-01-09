@@ -22,3 +22,5 @@ cradle:
       component: haskellInDepthGHC9:test:dependentTypes-test
     - path: "./src/singletons/part3"
       component: haskellInDepthGHC9:exe:singletonsPart3
+    - path: "./src/singletons/part4"
+      component: haskellInDepthGHC9:exe:singletonsPart4

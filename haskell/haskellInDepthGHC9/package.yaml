@@ -92,6 +92,7 @@ executables:
     - singletons > 3 && < 4
     - singletons-th > 3 && < 4
     - fin > 0.2 && < 0.3
+    - dec > 0.0.4 && < 1
     - optparse-applicative >= 0.17 && < 0.20
     ghc-options: []
     # - -ddump-to-file
@@ -154,6 +155,16 @@ executables:
     description:  https://blog.jle.im/entry/introduction-to-singletons-3.html
     main:         main.hs
     source-dirs:  ./src/singletons/part3/
+    dependencies:
+    - singletons > 3 && < 4
+    - singletons-th > 3 && < 4
+    - singletons-base >= 3 && < 4
+    ghc-options:
+    - -Werror=incomplete-patterns
+  singletonsPart4:
+    description:  https://blog.jle.im/entry/introduction-to-singletons-4.html
+    main:         main.hs
+    source-dirs:  ./src/singletons/part4/
     dependencies:
     - singletons > 3 && < 4
     - singletons-th > 3 && < 4

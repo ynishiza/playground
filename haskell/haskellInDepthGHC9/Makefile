@@ -62,6 +62,7 @@ run:  ## Run test
 run-singletons: ## Singletons tutorial https://blog.jle.im/entries/series/+introduction-to-singletons.html
 	@echo "Singletons tutorial https://blog.jle.im/entries/series/+introduction-to-singletons.html"
 	@stack exec -- singletonsPart3
+	@stack exec -- singletonsPart4
 
 run-profile:
 	stack exec --profile -- $(MAINEXE_NAME) +RTS -p

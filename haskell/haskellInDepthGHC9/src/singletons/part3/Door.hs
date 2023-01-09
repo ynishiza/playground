@@ -2,6 +2,7 @@
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
@@ -50,17 +51,21 @@ where
 
 import Data.Kind
 import Data.Singletons
+import Data.Singletons.Base.TH
 import Data.Singletons.Decide
-import Data.Singletons.TH qualified as S
+-- import Data.Eq.Singletons
+-- import Data.Ord.Singletons
+-- import Data.Singletons.Base.Enum
 import Fmt
 import Utils
 
-$( S.singletons
+$( singletons
      [d|
        data DoorState where
          Opened :: DoorState
          Closed :: DoorState
          Locked :: DoorState
+         deriving (Eq, Ord, Show)
        |]
  )
 
@@ -83,12 +88,6 @@ allSomeDoors = [MkSomeDoor openedDoor, MkSomeDoor closedDoor, MkSomeDoor lockedD
 type SomeDoor :: Type
 data SomeDoor where
   MkSomeDoor :: forall (s :: DoorState). SingI s => Door s -> SomeDoor
-
-deriving instance Show DoorState
-
-deriving instance Eq DoorState
-
-instance Show (SDoorState a) where show = show . getDoorState
 
 getDoorState :: SDoorState a -> DoorState
 getDoorState SOpened = Opened
@@ -138,12 +137,6 @@ isKnockable SClosed = Proved KnockClosed
 isKnockable SLocked = Proved KnockLocked
 isKnockable _ = Disproved $ \v -> case v of {}
 
-instance SDecide DoorState where
-  SOpened %~ SOpened = Proved Refl
-  SClosed %~ SClosed = Proved Refl
-  SLocked %~ SLocked = Proved Refl
-  _ %~ _ = Disproved $ \case {}
-
 knockSomeDoor :: SomeDoor -> IO ()
 knockSomeDoor (MkSomeDoor (d :: Door s)) = case isKnockable (sing @s) of
   Proved proof -> doorMessage d "knockSomeDoor: allowed" >> knock proof d
@@ -157,21 +150,16 @@ disprovedOpened v = case v of {}
 -------------------- START Predicate with type family --------------------
 --
 --
-$( S.singletons
+$( singletons
      [d|
        data Pass = Allow | Obstruct
+        deriving (Eq, Show)
 
        invertPass :: Pass -> Pass
        invertPass Allow = Obstruct
        invertPass Obstruct = Allow
        |]
  )
-
-deriving instance Eq Pass
-
-deriving instance Show Pass
-
-deriving instance Show (SPass s)
 
 getPass :: SPass s -> Pass
 getPass SAllow = Allow
@@ -183,10 +171,11 @@ type family StatePass (s :: DoorState) where
   StatePass 'Locked = 'Allow
   StatePass 'Opened = 'Obstruct
 
-sStatePass :: SDoorState s -> Sing (StatePass s)
-sStatePass SClosed = SAllow
-sStatePass SLocked = SAllow
-sStatePass SOpened = SObstruct
+sStatePass :: forall s. SDoorState s -> Sing (StatePass s)
+-- sStatePass x = sing @(StatePass s)        -- "No instance for SingI (StatePass s) arising from a use of sing". Why?
+sStatePass SClosed = sing @(StatePass s)
+sStatePass SLocked = sing @(StatePass s)
+sStatePass SOpened = sing @(StatePass s)
 
 knockP :: (StatePass s ~ 'Allow) => Door s -> IO ()
 knockP = (putStr "[knockP]" >>) . knock'
