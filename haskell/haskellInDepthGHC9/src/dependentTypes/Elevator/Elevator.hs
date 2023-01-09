@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -10,6 +11,7 @@
 module Elevator.Elevator
   ( Elevator (..),
     SomeElevator (..),
+    mkSomeElevatorFromState,
     getFloor,
     getDoorState,
     moveUp,
@@ -28,14 +30,14 @@ where
 
 import Door.Common as X
 import Elevator.Floor
+import Elevator.LowLevel as X hiding (closeDoor, moveDown, moveUp, openDoor)
 import Elevator.LowLevel qualified as L
-import Elevator.LowLevel as X hiding (moveUp, moveDown, openDoor, closeDoor) 
 import Elevator.Move
 import Fmt
 
 type Elevator :: Nat -> Nat -> DoorState -> Type
 data Elevator mx f d where
-  MkElevator :: (GoodFloor mx f, SingI d) => Elevator mx f d
+  MkElevator :: (GoodFloor mx f, SDoorStateI d) => Elevator mx f d
 
 data SomeElevator mx where
   MkSomeElevator :: forall mx f d. Elevator mx f d -> SomeElevator mx
@@ -45,6 +47,14 @@ instance Show (Elevator mx f d) where
 
 instance Show (SomeElevator mx) where
   show (MkSomeElevator e@MkElevator) = "SomeElevator (" +|| e ||+ ")"
+
+mkSomeElevatorFromState :: forall mx. SNatI mx => ElevatorState -> Maybe (SomeElevator mx)
+mkSomeElevatorFromState (MkElevatorState {..}) = withSomeSing doorState $ mk currentFloor
+  where
+    mk :: forall d. Int -> SDoorState d -> Maybe (SomeElevator mx)
+    mk n s = do
+      (MkSomeFloor (MkFloor :: Floor mx a)) <- mkSomeFloor @mx n
+      return $ MkSomeElevator $ withSingI s $ MkElevator @mx @a @d
 
 getState :: forall mx f d. Elevator mx f d -> L.ElevatorState
 getState MkElevator = L.MkElevatorState (fromIntegral $ snatToNatural $ snat @f) (fromSing $ sing @d)
@@ -59,12 +69,13 @@ moveUp :: forall mx f. (BelowTop mx f) => Elevator mx f 'Closed -> ElevatorSyste
 moveUp MkElevator = L.moveUp >> pure MkElevator
 
 moveDown :: Elevator mx ('S f) 'Closed -> ElevatorSystem (Elevator mx f 'Closed)
-moveDown e@MkElevator = L.moveDown
+moveDown e@MkElevator =
+  L.moveDown
     >> pure (withFloor (prevFloor $ getFloor e) MkElevator)
 
 openDoor :: Elevator mx f 'Closed -> ElevatorSystem (Elevator mx f 'Opened)
 openDoor MkElevator =
-   L.openDoor
+  L.openDoor
     >> pure MkElevator
 
 closeDoor :: Elevator mx f 'Opened -> ElevatorSystem (Elevator mx f 'Closed)

@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Elevator.Base
@@ -32,24 +33,27 @@ module Elevator.Base
     Mx,
     simulate,
     simulateFromText,
+    simulateFrom,
     initialElevator,
-    test,
+    parseFloor,
   )
 where
 
-import Control.Monad
 import Control.Exception
-import Text.Read
+import Control.Monad
+import Control.Monad.Catch as X
 import Data.Text qualified as T
 import Elevator.Elevator as X
 import Elevator.Floor as X
 import Elevator.FloorTH
 import Fmt
+import Text.Read
 
 $(genNumAliases 0 100)
 $(genFloors 10)
 
 type Mx = MaxFloor_10
+
 mx :: Int
 mx = fromIntegral $ snatToNatural $ snat @Mx
 
@@ -59,24 +63,32 @@ topFloor = f10_10
 bottomFloor :: Floor Mx MyNum0
 bottomFloor = f0_10
 
-initialElevator :: Elevator Mx 'Z 'Closed
-initialElevator = MkElevator @Mx @'Z @'Closed
+initialElevator :: Elevator Mx 'Z 'Opened
+initialElevator = MkElevator @Mx @'Z @'Opened
 
 simulateFromText :: T.Text -> IO (ElevatorState, [ElevatorLog])
-simulateFromText txt = simulate $ prep . T.unpack <$> l
+simulateFromText txt = traverse (parseFloor . T.unpack) inputs >>= simulate
   where
-    l = filter (not . T.null) $ T.strip <$> T.lines txt
-    prep term = case readMaybe @Int term of
-        Nothing -> throw $ userError $ "Failed to parse "+|term|+""
-        Just n -> case mkSomeFloor @Mx n of
-                  Nothing -> throw $ userError $ "Invalid floor number " +|n|+". Must be 0 <= x < " +|mx|+"."
-                  Just fl -> fl
+    inputs = filter (not . T.null) $ T.strip <$> T.lines txt
+
+parseFloor :: String -> IO (SomeFloor Mx)
+parseFloor input = case readMaybe @Int input of
+  Nothing -> throwError $ "Failed to parse " +| input |+ ""
+  Just n -> case mkSomeFloor @Mx n of
+    Nothing -> throwError $ "Invalid floor number " +| n |+ ". Must be 0 <= x < " +| mx |+ "."
+    Just fl -> pure fl
 
 simulate :: [SomeFloor Mx] -> IO (ElevatorState, [ElevatorLog])
-simulate sims = do
-  (final, logs, _) <- runElevatorSystem (logElevatorState >> x) (getState initialElevator)
+simulate = simulateFrom (getState initialElevator)
+
+simulateFrom :: ElevatorState -> [SomeFloor Mx] -> IO (ElevatorState, [ElevatorLog])
+simulateFrom st sims = do
+  (final, logs, _) <- runElevatorSystem (logElevatorState >> x) st
   return (final, logs)
   where
-    x = foldM_ (flip callSome) (MkSomeElevator initialElevator) sims
+    x = case mkSomeElevatorFromState st of
+      Just e -> foldM_ (flip callSome) e sims
+      Nothing -> throwError $ "Failed to create elevator from state " +|| st ||+ ""
 
-test = simulate [MkSomeFloor (MkFloor @Mx @Nat5)]
+throwError :: forall a m. MonadThrow m => String -> m a
+throwError m = throwM $ userError m

@@ -11,7 +11,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module SingletonPlay
+module Chapter13.SingletonPlay
   ( test,
     SState (..),
     SBool (..),
@@ -19,7 +19,7 @@ module SingletonPlay
   )
 where
 
-import SingletonCommon
+import Chapter13.SingletonCommon
 import Data.Foldable
 import Data.Singletons.TH
 import Data.Typeable

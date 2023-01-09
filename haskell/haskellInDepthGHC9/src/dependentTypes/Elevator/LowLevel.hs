@@ -7,9 +7,9 @@ module Elevator.LowLevel
     moveDown,
     openDoor,
     closeDoor,
-    ElevatorSystem(..),
-    ElevatorLog(..),
-    ElevatorState(..),
+    ElevatorSystem (..),
+    ElevatorLog (..),
+    ElevatorState (..),
     runElevatorSystem,
     logElevatorState,
     logElevatorStateWith,
@@ -55,20 +55,24 @@ runElevatorSystem (Runner s) st = do
   pure (final, logs, v)
 
 moveUp :: ElevatorSystem ()
-moveUp = updateElevatorState (\e -> e { currentFloor = currentFloor e + 1 }) 
-  >> liftIO (putStrLn "Moving up")
+moveUp =
+  updateElevatorState (\e -> e {currentFloor = currentFloor e + 1})
+    >> liftIO (putStrLn "Moving up")
 
 moveDown :: ElevatorSystem ()
-moveDown = updateElevatorState (\e -> e { currentFloor = currentFloor e - 1 }) 
-  >> liftIO (putStrLn "Moving down")
+moveDown =
+  updateElevatorState (\e -> e {currentFloor = currentFloor e - 1})
+    >> liftIO (putStrLn "Moving down")
 
 openDoor :: ElevatorSystem ()
-openDoor = updateElevatorState (\e -> e { doorState = Opened }) 
-  >> liftIO (putStrLn "Opening door")
+openDoor =
+  updateElevatorState (\e -> e {doorState = Opened})
+    >> liftIO (putStrLn "Opening door")
 
 closeDoor :: ElevatorSystem ()
-closeDoor = updateElevatorState (\e -> e { doorState = Closed }) 
-  >> liftIO (putStrLn "Closing door")
+closeDoor =
+  updateElevatorState (\e -> e {doorState = Closed})
+    >> liftIO (putStrLn "Closing door")
 
 updateElevatorState :: (ElevatorState -> ElevatorState) -> ElevatorSystem ()
 updateElevatorState f = get >>= updateElevatorStateWith . f
@@ -81,5 +85,3 @@ logElevatorState = get >>= logElevatorStateWith
 
 logElevatorStateWith :: ElevatorState -> ElevatorSystem ()
 logElevatorStateWith st = tell [MkElevatorLog Nothing st]
-  
-

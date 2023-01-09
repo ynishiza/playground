@@ -9,8 +9,8 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module MyNat
-  ( test,
+module Chapter13.MyNat
+  ( run,
     Nat (..),
     SNat (..),
     SNatI (..),
@@ -31,6 +31,26 @@ import Data.Kind
 import Data.Proxy
 import Fmt
 import GHC.TypeLits qualified as T
+import Utils
+
+run :: TestState
+run = createChapterTest "13" "singleton with Nat" (do
+  p "N0" $ toNum (Proxy @N0)
+  p "N1" $ toNum (Proxy @N1)
+  p "N2" $ toNum (Proxy @N2)
+  p "N3" $ toNum (Proxy @N3)
+  p "N4" $ toNum (Proxy @N4)
+
+  p "f 0 0" $ f sn0 sn0
+  p "f 0 1" $ f sn0 sn1
+  -- p "f 1 0" $ f sn1 sn0
+  p "f 0 2" $ f sn1 sn1
+  p "f 1 1" $ f sn1 sn2
+  p "f 1 2" $ f sn1 sn3
+  pure ()
+
+  )
+  where p n v = fmt $ nameF n (build $ show v)
 
 type Nat :: Type
 data Nat where
@@ -97,21 +117,3 @@ toNum _ = stoNum $ snat @n
 
 f :: LENat x y => m x -> m y -> (m x, m y)
 f = (,)
-
-test :: IO ()
-test = do
-  p "N0" $ toNum (Proxy @N0)
-  p "N1" $ toNum (Proxy @N1)
-  p "N2" $ toNum (Proxy @N2)
-  p "N3" $ toNum (Proxy @N3)
-  p "N4" $ toNum (Proxy @N4)
-
-  p "f 0 0" $ f sn0 sn0
-  p "f 0 1" $ f sn0 sn1
-  -- p "f 1 0" $ f sn1 sn0
-  p "f 0 2" $ f sn1 sn1
-  p "f 1 1" $ f sn1 sn2
-  p "f 1 2" $ f sn1 sn3
-  pure ()
-
-p n v = fmt $ nameF n (build $ show v)

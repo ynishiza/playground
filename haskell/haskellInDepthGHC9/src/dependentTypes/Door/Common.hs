@@ -1,18 +1,20 @@
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Door.Common
   ( DoorState (..),
     SDoorState (..),
+    SDoorStateI,
     SingI (..),
     OpenedSym0,
     ClosedSym0,
@@ -20,8 +22,8 @@ module Door.Common
   )
 where
 
-import Data.Singletons.TH
 import Data.Singletons as X
+import Data.Singletons.TH
 
 $( singletons
      [d|
@@ -30,6 +32,8 @@ $( singletons
          Closed :: DoorState
        |]
  )
+
+type SDoorStateI s = SingI (s :: DoorState)
 
 deriving instance Show DoorState
 

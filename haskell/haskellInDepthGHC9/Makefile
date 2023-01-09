@@ -52,8 +52,16 @@ run:  ## Run test
 
 	@echo "Chapter 12"
 	@echo 9 $$'\n' | stack exec -- $(MAINEXE_NAME) 
+
+	@echo "Chapter 13"
+	@echo 10 $$'\n' | stack exec -- $(MAINEXE_NAME) 
 	
+	@make run-singletons
 	@make test
+
+run-singletons: ## Singletons tutorial https://blog.jle.im/entries/series/+introduction-to-singletons.html
+	@echo "Singletons tutorial https://blog.jle.im/entries/series/+introduction-to-singletons.html"
+	@stack exec -- singletonsPart3
 
 run-profile:
 	stack exec --profile -- $(MAINEXE_NAME) +RTS -p
@@ -85,4 +93,4 @@ clean: ## Clean
 help: ## Display this help
 	@grep -E '^[0-9a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-.PHONY: default install uninstall compile compile-profile run  run-profile benchmark test ide debug clean help
+.PHONY: default install uninstall compile compile-profile run  run-profile run-singletons benchmark test ide debug clean help

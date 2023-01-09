@@ -9,11 +9,25 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module TypePatternMatching where
+module Chapter13.TypePatternMatching (
+  run,
+  ) where
 
 import Data.Kind
 import Data.Proxy
 import GHC.TypeLits
+import Utils
+
+run :: TestState
+run = createChapterTest "13" "Type level programming" (do
+  putStrLn $ symbolVal (Proxy @(ToSymbol V1))
+  putStrLn $ symbolVal (Proxy @(ToSymbol V2))
+  putStrLn $ symbolVal (Proxy @(ToSymbol V3))
+
+  print $ getSecreteCode (Proxy @V1)
+  print $ getSecreteCode (Proxy @V2)
+  print $ getSecreteCode (Proxy @V3)
+  testDone)
 
 data Value = A | B | C | D 
 type Fn1 :: forall a. a -> Type
@@ -47,12 +61,3 @@ instance (HasSecretCode a, HasSecretCode b) => HasSecretCode (a :+ b) where getS
 type V1 = 'A :+ 'B
 type V2 = 'A :+ 'B :+ 'C :+ 'D
 type V3 = (Fn1 (Fn2 (Fn1 'A)) :+ Fn1 V1) :+ Fn2 V1
-
-testScratch = do
-  putStrLn $ symbolVal (Proxy @(ToSymbol V1))
-  putStrLn $ symbolVal (Proxy @(ToSymbol V2))
-  putStrLn $ symbolVal (Proxy @(ToSymbol V3))
-
-  print $ getSecreteCode (Proxy @V1)
-  print $ getSecreteCode (Proxy @V2)
-  print $ getSecreteCode (Proxy @V3)

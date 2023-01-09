@@ -11,18 +11,19 @@ import Data.Maybe
 import Data.Type.Nat
 import Elevator.Base
 import GHC.IO.Exception
+import System.IO.Error
 import Test.Hspec
 
 fromFloor :: Floor mx f -> Elevator mx f 'Closed
 fromFloor MkFloor = MkElevator
 
 testIO :: ElevatorSystem a -> (a -> IO ()) -> IO ()
-testIO e f = do
-  (_, _, v) <- runElevatorSystem e (getState initialElevator)
-  f v
+testIO sys runTest = do
+  (_, _, v) <- runElevatorSystem sys (getState initialElevator)
+  runTest v
 
 mkLog :: Int -> DoorState -> ElevatorLog
-mkLog f s = MkElevatorLog Nothing (MkElevatorState f s)
+mkLog flr dstate = MkElevatorLog Nothing (MkElevatorState flr dstate)
 
 spec :: SpecWith ()
 spec = describe "Elevator" $ do
@@ -83,11 +84,12 @@ spec = describe "Elevator" $ do
       ensureClosedDoor (MkElevator @Mx @Mx @'Opened) `testIO` ((`shouldBe` Closed) . getDoorState)
 
   describe "Simulate" $ do
-    it "runs a simulations" $ do
+    it "runs a simulation" $ do
       simulate [MkSomeFloor (MkFloor @Mx @MyNum5), MkSomeFloor (MkFloor @Mx @MyNum3)]
         >>= ( `shouldBe`
                 ( MkElevatorState 3 Opened,
-                  [ mkLog 0 Closed,
+                  [ mkLog 0 Opened,
+                    mkLog 0 Closed,
                     mkLog 1 Closed,
                     mkLog 2 Closed,
                     mkLog 3 Closed,
@@ -102,11 +104,26 @@ spec = describe "Elevator" $ do
                 )
             )
 
-    it "runs a simulations from test" $ do
+    it "runs a simulation from a state" $ do
+      simulateFrom (MkElevatorState 5 Opened) [MkSomeFloor (MkFloor @Mx @MyNum8)]
+        >>= ( `shouldBe`
+                ( MkElevatorState 8 Opened,
+                  [ mkLog 5 Opened,
+                    mkLog 5 Closed,
+                    mkLog 6 Closed,
+                    mkLog 7 Closed,
+                    mkLog 8 Closed,
+                    mkLog 8 Opened
+                  ]
+                )
+            )
+
+    it "runs a simulations from text" $ do
       simulateFromText "4\n2"
         >>= ( `shouldBe`
                 ( MkElevatorState 2 Opened,
-                  [ mkLog 0 Closed,
+                  [ mkLog 0 Opened,
+                    mkLog 0 Closed,
                     mkLog 1 Closed,
                     mkLog 2 Closed,
                     mkLog 3 Closed,
@@ -121,8 +138,8 @@ spec = describe "Elevator" $ do
             )
 
     it "should throw an error if the input is not a number" $ do
-      simulateFromText "a" `shouldThrow` (\(e :: IOException) -> "Failed to parse a" `isInfixOf` show e)
+      simulateFromText "a" `shouldThrow` (\(e :: IOException) -> "Failed to parse a" `isInfixOf` ioeGetErrorString e)
 
     it "should throw an error if the number is invalid" $ do
-      simulateFromText "100" `shouldThrow` (\(e :: IOException) -> "Invalid floor number 100" `isInfixOf` show e)
-      simulateFromText "-1" `shouldThrow` (\(e :: IOException) -> "Invalid floor number -1" `isInfixOf` show e)
+      simulateFromText "100" `shouldThrow` (\(e :: IOException) -> "Invalid floor number 100" `isInfixOf` ioeGetErrorString e)
+      simulateFromText "-1" `shouldThrow` (\(e :: IOException) -> "Invalid floor number -1" `isInfixOf` ioeGetErrorString e)

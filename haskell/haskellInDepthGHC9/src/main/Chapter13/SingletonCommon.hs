@@ -12,11 +12,12 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module SingletonCommon (
-  SBool(..),
-  SMaybe(..),
-  module X
-) where
+module Chapter13.SingletonCommon
+  ( SBool (..),
+    SMaybe (..),
+    module X,
+  )
+where
 
 import Data.Singletons as X
 import Data.Singletons.TH

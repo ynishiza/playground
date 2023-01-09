@@ -89,6 +89,10 @@ executables:
     - criterion >= 1.5.12 && < 2
     - timeit >= 2.0 && < 3
     - template-haskell >=2.18 && <2.19
+    - singletons > 3 && < 4
+    - singletons-th > 3 && < 4
+    - fin > 0.2 && < 0.3
+    - optparse-applicative >= 0.17 && < 0.20
     ghc-options: []
     # - -ddump-to-file
     # - -ddump-file-prefix=mydump
@@ -146,6 +150,18 @@ executables:
     - dec > 0.0.4 && < 1
     - template-haskell >=2.18 && <2.19
 
+  singletonsPart3:
+    description:  https://blog.jle.im/entry/introduction-to-singletons-3.html
+    main:         main.hs
+    source-dirs:  ./src/singletons/part3/
+    dependencies:
+    - singletons > 3 && < 4
+    - singletons-th > 3 && < 4
+    - singletons-base >= 3 && < 4
+    ghc-options:
+    - -Werror=incomplete-patterns
+
+
 internal-libraries: {}
 
 tests:
@@ -156,6 +172,9 @@ tests:
     - haskellInDepthGHC9
     - random
     - aeson >= 2 && <3
+    - singletons > 3 && < 4
+    - singletons-th > 3 && < 4
+    - fin > 0.2 && < 0.3
     - tasty >= 0.11 && < 1.6
     - tasty-hspec >= 1.1 && < 1.3
     - tasty-hedgehog >= 0.1 && <= 1.4

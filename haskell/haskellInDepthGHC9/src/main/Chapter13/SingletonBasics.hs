@@ -1,28 +1,57 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Use if" #-}
 
-module SingletonBasics
-  ( test,
+module Chapter13.SingletonBasics
+  ( run,
   )
 where
 
+import Chapter13.SingletonCommon
 import Data.Kind
-import Data.Singletons
 import Data.Type.Nat
 import Fmt
-import SingletonCommon
+import Utils
+
+run :: TestState
+run =
+  createChapterTest
+    "13"
+    "Bool singleton"
+    ( do
+        let v1 = MkBoolData @'True
+            -- v2 = MkTaggedData @('Just 'True)
+            a1 = getBoolTag v1
+            -- a2 = getBoolTag v2
+            v1' = mkBoolData a1
+            -- v2' = mkTaggedData2 a2       -- BAD. Shouldn't be able to change
+
+            v3 = MkNatData @Nat1
+            n3 = getNumTag v3
+            v3' = mkNumData n3
+
+        pretty $ nameF "v1" (build v1)
+        pretty $ nameF "getBoolTag v1'" (build $ show a1)
+        fmt $ nameF "mkBoolData $ getBoolTag v1'" (build v1')
+
+        -- pretty $ nameF "v2" (build v2)
+        -- pretty $ nameF "getBoolTag v2'" (build $ show a2)
+        -- pretty $ nameF "mkBoolData $ getBoolTag v2'" (build v2')
+
+        pretty $ nameF "v3" (build v3)
+        pretty $ nameF "getNumTag v3" (build $ show n3)
+        pretty $ nameF "mkNumData $ getNumTag v3" (build v3')
+    )
 
 type SomeCond :: forall {k}. k -> Constraint
 class SomeCond a
@@ -57,12 +86,10 @@ getBoolTag MkBoolData = withSing @a fromSing
 
 -- reify i.e value -> type
 mkBoolData :: Bool -> Container
-mkBoolData v = case v of
-  True -> MkContainer $ sn STrue
-  False -> MkContainer $ sn SFalse
+mkBoolData v = withSomeSing v mk
   where
-    sn :: forall (s :: Bool). SBool s -> TaggedData s
-    sn sg = withSingI sg MkBoolData
+    mk :: forall a. SBool a -> Container
+    mk s = MkContainer $ withSingI s $ MkBoolData @a
 
 -- reflect: type (Nat) -> value (Int)
 getNumTag :: forall a. TaggedData (a :: Nat) -> Int
@@ -80,28 +107,3 @@ mkNumData _ = undefined
 -- reify: value (Int) -> type (Nat)
 mkNumData' :: SNat s -> TaggedData s
 mkNumData' n = withSNat n MkNatData
-
-test :: IO ()
-test = do
-  let v1 = MkBoolData @'True
-      -- v2 = MkTaggedData @('Just 'True)
-      a1 = getBoolTag v1
-      -- a2 = getBoolTag v2
-      v1' = mkBoolData a1
-      -- v2' = mkTaggedData2 a2       -- BAD. Shouldn't be able to change
-
-      v3 = MkNatData @Nat1
-      n3 = getNumTag v3
-      v3' = mkNumData n3
-
-  pretty $ nameF "v1" (build v1)
-  pretty $ nameF "getBoolTag v1'" (build $ show a1)
-  fmt $ nameF "mkBoolData $ getBoolTag v1'" (build v1')
-
-  -- pretty $ nameF "v2" (build v2)
-  -- pretty $ nameF "getBoolTag v2'" (build $ show a2)
-  -- pretty $ nameF "mkBoolData $ getBoolTag v2'" (build v2')
-
-  pretty $ nameF "v3" (build v3)
-  pretty $ nameF "getNumTag v3" (build $ show n3)
-  pretty $ nameF "mkNumData $ getNumTag v3" (build v3')

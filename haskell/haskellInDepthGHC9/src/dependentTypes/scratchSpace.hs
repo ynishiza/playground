@@ -1,12 +1,22 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 import Data.Kind
 import Data.Singletons
-import SingletonCommon
+import Data.Singletons.TH
+
+genSingletons [''Bool]
+
+main :: IO ()
+main = do
+  pure ()
 
 type MyData :: Bool -> Type
 data MyData a where
@@ -14,7 +24,7 @@ data MyData a where
 
 -- Bad
 mkMyDataBad :: Bool -> MyData a
-mkMyDataBad True = withSingI STrue MkMyData
+-- mkMyDataBad True = MkMyData @'True
 mkMyDataBad False = withSingI SFalse MkMyData
 
 x1 = mkMyDataBad @'True True
@@ -22,13 +32,14 @@ x1 = mkMyDataBad @'True True
 x2 = mkMyDataBad @'False True
 
 -- solution 1: with witness
-mkMyDataS :: Sing Bool -> MyData a
-mkMyDataS = flip withSingI MkMyData
+mkMyDataS :: Sing a -> MyData a
+mkMyDataS s = withSingI s MkMyData
 
 -- solution 2: with opaque container
 data SomeData where
   MkSomeData :: forall (a :: Bool). MyData a -> SomeData
 
 mkMyData :: Bool -> SomeData
-mkMyData True = MkSomeData (MkMyData @'True)
-mkMyData False = MkSomeData (MkMyData @'False)
+mkMyData v = withSomeSing v $
+  \(s :: SBool d) -> withSingI s $
+      MkSomeData (MkMyData @d)
