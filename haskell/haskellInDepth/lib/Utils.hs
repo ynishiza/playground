@@ -1,6 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PolyKinds #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda using `infix`" #-}
@@ -31,6 +32,7 @@ module Utils
     shouldNeverHappenIO,
     notImplemented,
     showBuilder,
+    showType,
   )
 where
 
@@ -47,6 +49,9 @@ import Fmt
 data UtilErrors = ShouldNeverHappen | NotImplemented !String deriving (Show)
 
 instance Exception UtilErrors where
+
+showType :: forall p s. (Typeable s, Typeable p) => p s -> String
+showType x = show $ typeOf x
 
 shouldNeverHappen :: a
 shouldNeverHappen = throw ShouldNeverHappen

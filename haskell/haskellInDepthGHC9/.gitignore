@@ -5,3 +5,4 @@
 # Profiler
 *.prof
 bench*
+*.dyn*
