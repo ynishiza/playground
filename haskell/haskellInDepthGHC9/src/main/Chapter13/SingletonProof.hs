@@ -111,9 +111,8 @@ type family InvertEvenOdd a = r | r -> a where
   InvertEvenOdd 'IsOdd = 'IsEven
 
 decideEO :: forall n. SNat n -> Sing (EO n)
-decideEO sn = case sn of
-  SZ -> SIsEven
-  m@SS -> eoStep (snatPred m) $ decideEO (snatPred m)
+decideEO SZ = SIsEven
+decideEO m@SS = eoStep (snatPred m) $ decideEO (snatPred m)
 
 eoStep :: forall a. SNat a -> Sing (EO a) -> Sing (EO ('S a))
 eoStep _ SIsEven = SIsOdd
@@ -143,10 +142,8 @@ data EvenProof n where
   EPSS :: SNatI n => EvenProof n -> EvenProof ('S ('S n))
 
 decideEven4 :: forall n. SNat n -> Dec (EvenProof n)
-decideEven4 sn = case sn of
-  -- case: n == 0
-  SZ -> Yes EPZ
-  SS -> case snatPred sn of
+decideEven4 SZ = Yes EPZ
+decideEven4 sn@SS = case snatPred sn of
     -- case: n - 1 == 0
     SZ -> No $ \case {}
     -- case: n - 1 > 0

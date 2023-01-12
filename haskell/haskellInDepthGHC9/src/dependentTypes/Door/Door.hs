@@ -38,6 +38,7 @@ module Door.Door
     doorState,
     toggleState,
     openAnyDoor,
+    toggleStateSafe,
   )
 where
 
@@ -129,6 +130,13 @@ openAnyDoor :: forall s. SDoorStateI s => Door s -> Door 'Opened
 openAnyDoor = openAnyDoorV3
 toggleState :: forall s. SDoorStateI s => Door s -> SomeDoor 
 toggleState = toggleStateV3 
+
+type family ToggledState d where
+  ToggledState 'Opened = 'Closed
+  ToggledState 'Closed = 'Opened
+
+toggleStateSafe :: Door s -> Door (ToggledState s) 
+toggleStateSafe MkDoor = MkDoor 
 
 toS :: forall s r. SDoorStateI s => (SDoorState s -> r) -> r
 toS f = f (sDoorState @s) 

@@ -18,9 +18,9 @@ module Elevator.Floor
     mkSomeFloor,
     prevFloor,
     nextFloor,
-    sameFloor,
     belowFloor,
     aboveFloor,
+    sameFloor,
     compareFloor,
     mkFloor,
     prevFloorBad,
@@ -98,7 +98,10 @@ prevFloorBad :: (GoodFloor mx f) => Floor mx ('S f) -> Floor mx f
 prevFloorBad MkFloor = MkFloor
 
 sameFloor :: Floor mx k -> Floor mx l -> Maybe (k :~: l)
-sameFloor x y = case compareFloor x y of GEQ -> Just Refl; _ -> Nothing
+sameFloor = testEquality
+
+instance TestEquality (Floor mx) where
+  testEquality x y = case compareFloor x y of GEQ -> Just Refl; _ -> Nothing
 
 belowFloor :: Floor mx k -> Floor mx l -> Bool
 belowFloor x y = case compareFloor x y of GLT -> True; _ -> False

@@ -17,6 +17,7 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Use lambda-case" #-}
+{-# HLINT ignore "Use for_" #-}
 {- ORMOLU_DISABLE -}
 module Door
   ( 
@@ -24,24 +25,44 @@ module Door
     SomeDoor (..),
     DoorState (..),
     SDoorState (..),
-    Hallway(..),
     traverseSomeDoors,
     foldSomeDoors,
-    test,
+    doorMessage, 
+    getDoorState,
+
+    MergeState,
+    Hallway(..),
+    SomeHallway(..),
     MergeStateList,
-    -- MF2,
-    -- MF,
+
+    openedDoor,
+    closedDoor,
+    lockedDoor,
+
+    h1, h2, h3,
+    allSomeDoors,
+    someHallways,
+    module X,
+    test,
+
+    Foldr,
+    FoldrSym0,
+    FoldrSym1,
+    FoldrSym2,
   )
 where
 {- ORMOLU_ENABLE -}
 
 import Data.Eq.Singletons
+import Data.Foldable
 -- import Data.Foldable.Singletons
 import Data.Kind
 import Data.Ord.Singletons
-import Data.Singletons
+import Data.Singletons as X
 -- import Data.Singletons.Base.TH
-import Data.Singletons.Base.TH hiding (Foldr, FoldrSym0, FoldrSym1, FoldrSym2, FoldrSym3, PFoldable, sFoldr)
+import Data.Singletons.Base.TH as X hiding (Foldr, FoldrSym0, FoldrSym1, FoldrSym2, FoldrSym3, PFoldable, sFoldr, type (@@))
+import Data.Singletons.Base.TH qualified as S
+import Data.Singletons.Sigma as X
 import Defunctionalization (FOLDR)
 import Defunctionalization qualified as D
 import Fmt
@@ -79,17 +100,13 @@ lockedDoor :: Door 'Locked
 lockedDoor = MkDoor @'Locked
 
 allSomeDoors :: [SomeDoor]
-allSomeDoors = [MkSomeDoor openedDoor, MkSomeDoor closedDoor, MkSomeDoor lockedDoor]
+allSomeDoors = [SOpened :&: openedDoor, SClosed :&: closedDoor, SLocked :&: lockedDoor]
 
 type SomeDoor :: Type
-data SomeDoor where
-  MkSomeDoor :: forall (s :: DoorState). SingI s => Door s -> SomeDoor
+type SomeDoor = Sigma DoorState (TyCon Door)
 
 instance Show (Door s) where
   show MkDoor = fmt $ "Door " +|| sing @s ||+ ""
-
-instance Show SomeDoor where
-  show (MkSomeDoor d@MkDoor) = fmtLn $ "SomeDoor " +|| d ||+ ""
 
 getDoorState :: SDoorState a -> DoorState
 getDoorState SOpened = Opened
@@ -111,8 +128,8 @@ mergeDoors :: forall s t. Door s -> Door t -> Door (MergeState s t)
 mergeDoors d@MkDoor e@MkDoor = withMeredDoorState d e MkDoor
 
 mergeSomeDoors :: SomeDoor -> SomeDoor -> SomeDoor
-mergeSomeDoors (MkSomeDoor d@MkDoor) (MkSomeDoor e@MkDoor) =
-  withMeredDoorState d e $ MkSomeDoor $ mergeDoors d e
+mergeSomeDoors (s1 :&: d@MkDoor) (s2 :&: e@MkDoor) =
+  withMeredDoorState d e $ sMergeState s1 s2 :&: mergeDoors d e
 
 withMeredDoorState :: forall s t r. Door s -> Door t -> (SingI (MergeState s t) => r) -> r
 withMeredDoorState MkDoor MkDoor = withMergedState (sing @s) (sing @t)
@@ -139,8 +156,10 @@ instance Show (Hallway a) where
   show HEnd = "_"
   show (d :<# h) = fmt $ d ||+ " -> " +|| h ||+ ""
 
-data SomeHallways where
-  MkSomeHallways :: forall a. Hallway a -> SomeHallways
+type SomeHallway = Sigma [DoorState] (TyCon Hallway)
+
+-- data SomeHallway where
+--   MkSomeHallways :: forall a. Hallway a -> SomeHallway
 
 $( singletons
      [d|
@@ -158,16 +177,13 @@ $( singletons
        |]
  )
 
--- collapseHallway :: Hallway a -> Door (MergeStateList a)
 collapseHallway :: Hallway a -> Door (MergeStateList a)
 collapseHallway HEnd = MkDoor
 collapseHallway (d :<# h) = mergeDoors d $ collapseHallway h
 
--- collapseHallwayWithFold :: Hallway s -> Door (MF s)
--- collapseHallwayWithFold HEnd = MkDoor
--- collapseHallwayWithFold (d :<# h) = d `mergeDoors` (collapseHallwayWithFold h)
-
 collapseHallwayWithFold' :: Hallway s -> Door (FOLDR MERGESym0 'Opened s)
+-- collapseHallwayWithFold' :: Hallway s -> Door (S.Foldr' MergeStateSym0 'Opened s)
+-- collapseHallwayWithFold' :: Hallway s -> Door (S.Foldr MergeStateSym0 'Opened s)
 collapseHallwayWithFold' HEnd = MkDoor
 collapseHallwayWithFold' (d :<# h) = d `mergeDoors` collapseHallwayWithFold' h
 
@@ -176,6 +192,12 @@ collapseHallway' ::
   Door (FoldrSym2 MergeStateSym0 'Opened @@ ss)
 collapseHallway' HEnd = MkDoor
 collapseHallway' (d :<# ds) = d `mergeDoors` collapseHallway' ds
+
+collapseSomeHallway :: SomeHallway -> SomeDoor
+collapseSomeHallway (s :&: h) = sMergeStateList s :&: collapseHallway h
+
+collapseSomeHallway' :: SomeHallway -> SomeDoor
+collapseSomeHallway' (s :&: h) = sFoldr (sing @MergeStateSym0) SOpened s :&: collapseHallway' h
 
 type MERGESym0 :: DoorState D.~> (DoorState D.~> DoorState)
 data MERGESym0 a'
@@ -187,48 +209,26 @@ type instance D.APPLY MERGESym0 x = MERGESym1 x
 
 type instance D.APPLY (MERGESym1 x) y = MergeState x y
 
--- data MG1 :: DoorState -> DoorState ~> DoorState
-
--- type instance Apply (MG1 s) t = MergeState s t
-
--- data MG2 :: DoorState ~> (DoorState ~> DoorState)
-
--- type instance Apply MG2 s = MG1 s
-
--- type MF :: [DoorState] -> DoorState
--- type MF x = Foldr MG2 'Opened x
-
--- type MF2 = FoldrSym2 MergeStateSym0 'Opened
-
--- type H1 = '[]
-
--- type H2 = ('Opened ': '[])
-
--- type H3 = ('Closed ': 'Opened ': '[])
-
--- type H4 = ('Opened ': 'Opened ': '[])
-
--- type H5 = ('Opened ': 'Locked ': 'Closed ': '[])
-
--- deq :: forall {k} (a :: k) (b :: k). (SDecide k, SingI a, SingI b) => Decision (a :~: b)
--- deq = (sing @a) %~ (sing @b)
-
--- e1 = deq @(MF H1) @(MergeStateList H1)
-
--- e2 = deq @(MF H2) @(MergeStateList H2)
-
--- e3 = deq @(MF H3) @(MergeStateList H3)
 h1 :: Hallway '[]
 h1 = HEnd
+
 h2 :: Hallway '[ 'Opened]
 h2 = openedDoor :<# HEnd
+
 h3 :: Hallway '[ 'Opened, 'Closed, 'Locked]
 h3 = openedDoor :<# closedDoor :<# lockedDoor :<# HEnd
+
+someHallways :: [SomeHallway]
+someHallways =
+  [ sing @'[] :&: h1,
+    sing @'[ 'Opened] :&: h2,
+    sing @'[ 'Opened, 'Closed, 'Locked] :&: h3
+  ]
 
 test :: IO ()
 test = do
   foldSomeDoors
-    ( \(MkSomeDoor (d@MkDoor :: Door s)) -> do
+    ( \(_ :&: (d@MkDoor :: Door s)) -> do
         let st = show $ getDoorState $ sing @s
         printWithLabel ("mergeDoors: " <> st <> " Opened") $ show $ mergeDoors d openedDoor
         printWithLabel ("mergeDoors: " <> st <> " Closed") $ show $ mergeDoors d closedDoor
@@ -241,15 +241,26 @@ test = do
   printWithLabel "Opened" h2
   printWithLabel "Opened -> Cloed -> Locked" h3
 
-  printWithLabel "Collapse" $ collapseHallway h1
-  printWithLabel "Collapse" $ collapseHallway h2
-  printWithLabel "Collapse" $ collapseHallway' h1
-  printWithLabel "Collapse" $ collapseHallway' h2
+  printHeader "collapseHallway"
+  printWithLabel ("collapseHallway" +|| h1 ||+ "") $ collapseHallway h1
+  printWithLabel ("collapseHallway" +|| h2 ||+ "") $ collapseHallway h2
+  printWithLabel ("collapseHallway" +|| h3 ||+ "") $ collapseHallway h3
 
-  -- printHeader "Equality"
-  -- printWithLabel "" $ showProof $ deq @(MF H1) @(MF H1)
-  -- printWithLabel "" $ showProof $ deq @(MF H1) @(MF H2)
-  -- printWithLabel "" $ showProof $ deq @(MF H1) @(MF H3)
-  -- printWithLabel "" $ showProof $ deq @(MF H1) @(MF H4)
-  -- printWithLabel "" $ showProof $ deq @(MF H1) @(MF H5)
-  -- printWithLabel "" $ showProof $ deq @(MF H5) @(MF H5)
+  printHeader "Fold symos"
+  printWithLabel ("FoldrSym2: " +|| h2 ||+ "\t") (collapseHallway h3 :: Door (S.FoldrSym2 MergeStateSym0 'Opened @@ '[ 'Locked]))
+  printWithLabel ("FoldrSym1: " +|| h2 ||+ "\t") (collapseHallway h3 :: Door (S.FoldrSym1 MergeStateSym0 @@ 'Opened @@ '[ 'Locked]))
+  printWithLabel ("FoldrSym0: " +|| h2 ||+ "\t") (collapseHallway h3 :: Door (S.FoldrSym0 @@ MergeStateSym0 @@ 'Opened @@ '[ 'Locked]))
+
+  printHeader ""
+  flip traverse_ someHallways $ \s@(_ :&: h) -> do
+    printWithLabel ("collapseHallway " +|| h ||+ ": \t") $ collapseHallway h
+    printWithLabel ("collapseSomeHallway " +|| s ||+ ": \t") $ collapseSomeHallway s
+    printWithLabel ("collapseSomeHallway' " +|| s ||+ ": \t") $ collapseSomeHallway' s
+
+-- printHeader "Equality"
+-- printWithLabel "" $ showProof $ deq @(MF H1) @(MF H1)
+-- printWithLabel "" $ showProof $ deq @(MF H1) @(MF H2)
+-- printWithLabel "" $ showProof $ deq @(MF H1) @(MF H3)
+-- printWithLabel "" $ showProof $ deq @(MF H1) @(MF H4)
+-- printWithLabel "" $ showProof $ deq @(MF H1) @(MF H5)
+-- printWithLabel "" $ showProof $ deq @(MF H5) @(MF H5)

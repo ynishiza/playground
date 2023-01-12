@@ -106,7 +106,7 @@ moveTo f e@MkElevator = case decideMove f (getFloor e) of
   GoingDown -> moveDown e >>= moveTo f
 
 call :: Floor mx to -> Elevator mx from d -> ElevatorSystem (Elevator mx to 'Opened)
-call f e@MkElevator = case sameFloor f (getFloor e) of
+call f e@MkElevator = case f `testEquality` getFloor e of
   Just p -> gcastWith p $ ensureOpenedDoor e
   Nothing -> ensureClosedDoor e >>= moveTo f >>= ensureOpenedDoor
 

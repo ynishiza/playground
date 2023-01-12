@@ -12,11 +12,18 @@ module Defunctionalization
     APPLY,
     ID,
     IDSym0,
+    IDSym1,
     NOTSym0,
+    NOTSym1,
+    AND,
+    ANDSym0,
+    ANDSym1,
+    ANDSym2,
     FOLDR,
     FOLDRSym2,
     FOLDRSym0,
     FOLDRSym1,
+    FOLDRSym3,
     type (~>),
     type (@@),
   )
@@ -44,9 +51,13 @@ type family ID x where
   ID x = x
 
 type IDSym0 :: forall a. a ~> a
+-- type IDSym0 :: forall a. TyFunc a a -> Type      Same
 data IDSym0 a'
 
 type instance APPLY IDSym0 x = ID x
+
+type IDSym1 :: forall a. a -> a
+type IDSym1 a = ID a
 
 -- case: Not
 type family NOT x where
@@ -55,6 +66,9 @@ type family NOT x where
 
 type NOTSym0 :: Bool ~> Bool
 data NOTSym0 a
+
+type NOTSym1 :: Bool -> Bool
+type NOTSym1 a = NOT a
 
 type instance APPLY NOTSym0 x = NOT x
 
@@ -65,11 +79,13 @@ type family AND x y where
   AND _ _ = 'False
 
 type ANDSym0 :: Bool ~> (Bool ~> Bool)
+-- type ANDSym0 :: TyFunc Bool (TyFunc Bool Bool -> Type) -> Type
 data ANDSym0 a'
 
 type ANDSym1 :: Bool -> Bool ~> Bool
 data ANDSym1 a b'
 
+type ANDSym2 :: Bool -> Bool -> Bool
 type ANDSym2 a b = AND a b
 
 type instance APPLY ANDSym0 x = ANDSym1 x
@@ -96,6 +112,9 @@ data FOLDRSym1 f a'
 
 type FOLDRSym2 :: (a ~> (b ~> b)) -> b -> ([a] ~> b)
 data FOLDRSym2 f a b'
+
+type FOLDRSym3 :: (a ~> (b ~> b)) -> b -> [a] -> b
+type FOLDRSym3 f a b = FOLDR f a b
 
 type instance APPLY FOLDRSym0 f = FOLDRSym1 f
 

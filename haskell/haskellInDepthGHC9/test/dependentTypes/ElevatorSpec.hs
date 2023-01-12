@@ -39,15 +39,15 @@ spec = describe "Elevator" $ do
       prevFloor topFloor `shouldBe` f9_10
 
     it "should get floor equal" $ do
-      sameFloor bottomFloor bottomFloor `shouldSatisfy` isJust
-      sameFloor f1_10 f1_10 `shouldSatisfy` isJust
-      sameFloor f2_10 f2_10 `shouldSatisfy` isJust
-      sameFloor topFloor topFloor `shouldSatisfy` isJust
+      bottomFloor `testEquality` bottomFloor `shouldSatisfy` isJust
+      f1_10 `testEquality` f1_10 `shouldSatisfy` isJust
+      f2_10 `testEquality` f2_10 `shouldSatisfy` isJust
+      topFloor `testEquality` topFloor `shouldSatisfy` isJust
 
     it "should get floor not equal" $ do
-      sameFloor bottomFloor f1_10 `shouldNotSatisfy` isJust
-      sameFloor bottomFloor topFloor `shouldNotSatisfy` isJust
-      sameFloor f1_10 f2_10 `shouldNotSatisfy` isJust
+      bottomFloor `testEquality` f1_10 `shouldNotSatisfy` isJust
+      bottomFloor `testEquality` topFloor `shouldNotSatisfy` isJust
+      f1_10 `testEquality` f2_10 `shouldNotSatisfy` isJust
 
     it "should make floor" $ do
       mkFloor @Mx @MyNum0 `shouldBe` Just bottomFloor
