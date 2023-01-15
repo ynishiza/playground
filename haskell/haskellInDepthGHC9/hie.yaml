@@ -24,3 +24,7 @@ cradle:
       component: haskellInDepthGHC9:exe:singletonsPart3
     - path: "./src/singletons/part4"
       component: haskellInDepthGHC9:exe:singletonsPart4
+    - path: "./src/scratch"
+      component: haskellInDepthGHC9:exe:scratch
+    - path: "./src/radarSafe"
+      component: haskellInDepthGHC9:exe:radarSafe

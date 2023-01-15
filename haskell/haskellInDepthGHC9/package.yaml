@@ -91,6 +91,7 @@ executables:
     - template-haskell >=2.18 && <2.19
     - singletons > 3 && < 4
     - singletons-th > 3 && < 4
+    - singletons-base >= 3 && < 4
     - fin > 0.2 && < 0.3
     - dec > 0.0.4 && < 1
     - optparse-applicative >= 0.17 && < 0.20
@@ -98,6 +99,36 @@ executables:
     # - -ddump-to-file
     # - -ddump-file-prefix=mydump
     # - -ddump-deriv
+  radarSafe:
+    main:               main.hs
+    source-dirs:        ./src/radarSafe
+    dependencies: 
+    - haskellInDepthGHC9
+    - aeson >= 2 && <3
+    - template-haskell >=2.18 && <2.19
+    - singletons > 3 && < 4
+    - singletons-th > 3 && < 4
+    - singletons-base >= 3 && < 4
+    - fin > 0.2 && < 0.3
+    - dec > 0.0.4 && < 1
+    ghc-options:
+    - -Werror=incomplete-patterns
+
+  scratch:
+    main:               main.hs
+    source-dirs:        ./src/scratch
+    dependencies: 
+    - haskellInDepthGHC9
+    - random
+    - aeson >= 2 && <3
+    - criterion >= 1.5.12 && < 2
+    - timeit >= 2.0 && < 3
+    - template-haskell >=2.18 && <2.19
+    - singletons > 3 && < 4
+    - singletons-th > 3 && < 4
+    - singletons-base >= 3 && < 4
+    - fin > 0.2 && < 0.3
+    - dec > 0.0.4 && < 1
 
   rpc-lib:
     main:               main.hs
@@ -185,7 +216,9 @@ tests:
     - aeson >= 2 && <3
     - singletons > 3 && < 4
     - singletons-th > 3 && < 4
+    - singletons-base >= 3 && < 4
     - fin > 0.2 && < 0.3
+    - dec > 0.0.4 && < 1
     - tasty >= 0.11 && < 1.6
     - tasty-hspec >= 1.1 && < 1.3
     - tasty-hedgehog >= 0.1 && <= 1.4
