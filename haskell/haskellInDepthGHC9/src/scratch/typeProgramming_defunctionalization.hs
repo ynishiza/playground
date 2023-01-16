@@ -35,3 +35,7 @@ type B = FoldrSym0 `Apply` FSym0 `Apply` 0 `Apply` '[1, 2]
 
 type C :: [Nat]
 type C = Map (FSym1 10) '[1, 2, 3]
+
+type E :: (Bool, Bool)
+type E = '( 'True, 'False)
+

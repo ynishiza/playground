@@ -9,12 +9,12 @@ import Fmt
 import RadarSafe
 
 main :: IO ()
-main = run $ mkSomeSafeRadar (MkSafeRadar @'North)
+main = startRepl $ mkSomeSafeRadar (MkSafeRadar @'North)
 
 instance Buildable (SafeRadar d) where build = build . show
 
-run :: SomeSafeRadar -> IO ()
-run r =
+startRepl :: SomeSafeRadar -> IO ()
+startRepl r =
   (runStep r >>= again)
     `catch` ( \(e :: IOError) -> print e >> again r)
   where
@@ -22,7 +22,7 @@ run r =
     again r' = do
       fmtLn "Run again? (y/n)"
       response <- getLine
-      if response == "y" then run r' else putStrLn "bye"
+      if response == "y" then startRepl r' else putStrLn "bye"
 
 runStep :: SomeSafeRadar -> IO SomeSafeRadar
 runStep (_ :&: r@MkSafeRadar) = do

@@ -34,6 +34,7 @@ module RadarSafe
     toAntiClockwise,
     rotateClockwise,
     rotateAnticlockwise,
+    rotateAround,
     rotateClockwiseIO,
     rotateAntiClockwiseIO,
     rotateAroundIO,
@@ -60,7 +61,6 @@ where
 {- ORMOLU_ENABLE -}
 
 import Control.Monad.Catch
-import Control.Monad
 import Control.Monad.IO.Class
 import Data.Kind
 import Data.Ord.Singletons
@@ -80,6 +80,11 @@ $( singletons
          East :: Direction
          South :: Direction
          West :: Direction
+         deriving (Show, Eq, Ord, Bounded)
+
+       data A where
+         A :: A
+         B :: A
          deriving (Show, Eq, Ord, Bounded)
        |]
  )
@@ -142,13 +147,13 @@ type family AntiClockwise d where
 
 type Around d = Clockwise (Clockwise d)
 
-toClockWise :: Sing (d :: Direction) -> Sing (Clockwise d)
+toClockWise :: SDirection (d :: Direction) -> SDirection (Clockwise d)
 toClockWise SNorth = SEast
 toClockWise SEast = SSouth
 toClockWise SSouth = SWest
 toClockWise SWest = SNorth
 
-toAntiClockwise :: Sing (d :: Direction) -> Sing (AntiClockwise d)
+toAntiClockwise :: SDirection (d :: Direction) -> SDirection (AntiClockwise d)
 toAntiClockwise SNorth = SWest
 toAntiClockwise SEast = SNorth
 toAntiClockwise SSouth = SEast
@@ -172,31 +177,36 @@ getTurnDirection SWest SNorth = TurnClockwise
 getTurnDirection SWest SEast = TurnAround
 getTurnDirection SWest SSouth = TurnAntiClockwise
 
-rotateClockwise :: forall d. SafeRadar d -> SafeRadar (Clockwise d)
+rotateClockwise :: forall d e. (e ~ Clockwise d) => SafeRadar d -> SafeRadar e
 rotateClockwise MkSafeRadar = withSingI (toClockWise (sing @d)) MkSafeRadar
 
-rotateAnticlockwise :: forall d. SafeRadar d -> SafeRadar (AntiClockwise d)
+rotateAnticlockwise :: forall d e. (e ~ AntiClockwise d) => SafeRadar d -> SafeRadar e
 rotateAnticlockwise MkSafeRadar = withSingI (toAntiClockwise (sing @d)) MkSafeRadar
 
-rotateToIO :: forall m d e. MonadIO m => SafeRadar d -> Sing e -> m (SafeRadar e)
+rotateAround :: forall d e. (e ~ Around d) => SafeRadar d -> SafeRadar e
+rotateAround = rotateClockwise . rotateClockwise
+
+rotateToIO :: forall m d e. MonadIO m => SafeRadar d -> SDirection e -> m (SafeRadar e)
 rotateToIO r@MkSafeRadar e = case getTurnDirection (sing @d) e of
   TurnNone -> pure r
   TurnClockwise -> rotateClockwiseIO r
   TurnAntiClockwise -> rotateAntiClockwiseIO r
   TurnAround -> rotateAroundIO r
 
-rotateClockwiseIO :: forall m d. MonadIO m => SafeRadar d -> m (SafeRadar (Clockwise d))
+rotateClockwiseIO :: forall m d e. (e ~ Clockwise d, MonadIO m) => SafeRadar d -> m (SafeRadar e)
 rotateClockwiseIO d@MkSafeRadar = liftIO (putStrLn (rotateLog d to)) >> pure to
   where
     to = rotateClockwise d
 
-rotateAntiClockwiseIO :: forall m d. MonadIO m => SafeRadar d -> m (SafeRadar (AntiClockwise d))
+rotateAntiClockwiseIO :: forall m d e. (e ~ AntiClockwise d, MonadIO m) => SafeRadar d -> m (SafeRadar e)
 rotateAntiClockwiseIO d@MkSafeRadar = liftIO (putStrLn (rotateLog d to)) >> pure to
   where
     to = rotateAnticlockwise d
 
-rotateAroundIO :: forall m d. MonadIO m => SafeRadar d -> m (SafeRadar (Around d))
-rotateAroundIO r@MkSafeRadar = (rotateClockwiseIO >=> rotateClockwiseIO) r
+rotateAroundIO :: forall m d e. (e ~ Around d, MonadIO m) => SafeRadar d -> m (SafeRadar e)
+rotateAroundIO d@MkSafeRadar = liftIO (putStrLn (rotateLog d to)) >> pure to
+  where
+    to = rotateAround d
 
 rotateLog :: forall d e. SafeRadar d -> SafeRadar e -> String
 rotateLog MkSafeRadar MkSafeRadar = fmt $ d1 ||+ "\t->\t" +|| d2 ||+ ""
@@ -204,7 +214,7 @@ rotateLog MkSafeRadar MkSafeRadar = fmt $ d1 ||+ "\t->\t" +|| d2 ||+ ""
     d1 = sing @d
     d2 = withSingI d1 $ sing @e
 
-rotateUnit :: forall (d :: Direction) (e :: Direction) m. (MonadIO m, MonadThrow m) => SafeRadar d -> Sing e -> m (SafeRadar e)
+rotateUnit :: forall (d :: Direction) (e :: Direction) m. (MonadIO m, MonadThrow m) => SafeRadar d -> SDirection e -> m (SafeRadar e)
 rotateUnit r@MkSafeRadar e = case getTurnDirection (sing @d) e of
   TurnClockwise -> rotateClockwiseIO r
   TurnAntiClockwise -> rotateAntiClockwiseIO r
@@ -242,7 +252,7 @@ type CanRotateAntiClockwiseTo from to = AntiClockwise from :~: to
 
 type CanRotateOne from to = Either (CanRotateClockwiseTo from to) (CanRotateAntiClockwiseTo from to)
 
-canRotateClockwiseTo :: forall d (e :: Direction). SafeRadar d -> Sing e -> Dec (CanRotateClockwiseTo d e)
+canRotateClockwiseTo :: forall d (e :: Direction). SafeRadar d -> SDirection e -> Dec (CanRotateClockwiseTo d e)
 canRotateClockwiseTo MkSafeRadar e = case (sing @d, e) of
   (SNorth, SEast) -> Yes Refl
   (SEast, SSouth) -> Yes Refl
@@ -250,7 +260,7 @@ canRotateClockwiseTo MkSafeRadar e = case (sing @d, e) of
   (SWest, SNorth) -> Yes Refl
   _ -> No $ \case {}
 
-canRotateAntiClockwiseTo :: forall d (e :: Direction). SafeRadar d -> Sing e -> Dec (CanRotateAntiClockwiseTo d e)
+canRotateAntiClockwiseTo :: forall d (e :: Direction). SafeRadar d -> SDirection e -> Dec (CanRotateAntiClockwiseTo d e)
 canRotateAntiClockwiseTo MkSafeRadar e = case (sing @d, e) of
   (SNorth, SWest) -> Yes Refl
   (SEast, SNorth) -> Yes Refl
@@ -258,7 +268,7 @@ canRotateAntiClockwiseTo MkSafeRadar e = case (sing @d, e) of
   (SWest, SSouth) -> Yes Refl
   _ -> No $ \case {}
 
-canRotateOne :: forall d (e :: Direction). SafeRadar d -> Sing e -> Dec (CanRotateOne d e)
+canRotateOne :: forall d (e :: Direction). SafeRadar d -> SDirection e -> Dec (CanRotateOne d e)
 canRotateOne d e = case canRotateClockwiseTo d e of
   Yes Refl -> Yes $ Left Refl
   No rv1 -> case canRotateAntiClockwiseTo d e of
