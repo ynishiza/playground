@@ -5,7 +5,7 @@ get_source_in_directory=$(wildcard $(value)/*.hs)
 COMPILER=ghc
 EXEC=runhaskell
 
-PROJECTNAME=haskellInDepth
+PROJECTNAME=haskellInDepthGHC9
 MAINEXE_NAME=main
 MAINEXE=$(PROJECTNAME):exe:$(MAINEXE_NAME)
 MAINTEST=$(PROJECTNAME):test:main-test
@@ -64,6 +64,10 @@ run-singletons: ## Singletons tutorial https://blog.jle.im/entries/series/+intro
 	@stack exec -- singletonsPart3
 	@stack exec -- singletonsPart4
 
+run-scratch: ## Run scratch space
+	@stack build $(PROJECTNAME):exe:scratch
+	@stack exec -- scratch
+
 run-profile:
 	stack exec --profile -- $(MAINEXE_NAME) +RTS -p
 
@@ -75,9 +79,17 @@ test: ## Run tests
 	@stack test 
 
 ide: ## Check IDE setup
-	haskell-language-server-wrapper ./lib/*.hs
-	haskell-language-server-wrapper ./src/main/*.hs
+	haskell-language-server-wrapper ./src/main/main.hs
 	haskell-language-server-wrapper ./test/main/*.hs
+	haskell-language-server-wrapper ./src/rpc/*.hs
+	haskell-language-server-wrapper ./test/rpc/*.hs
+	haskell-language-server-wrapper ./src/restapi/*.hs
+	haskell-language-server-wrapper ./test/restapi/*.hs
+	haskell-language-server-wrapper ./src/dependentTypes/*.hs
+	haskell-language-server-wrapper ./test/dependentTypes/*.hs
+	haskell-language-server-wrapper ./src/radarSafe/*.hs
+	haskell-language-server-wrapper ./src/singletons/part3/*.hs
+	haskell-language-server-wrapper ./src/singletons/part4/*.hs
 
 debug: ## Print variables
 	@echo SHELL=$(SHELL)
@@ -88,6 +100,7 @@ clean: ## Clean
 	find src test benchmark \
 		-iname '*.o' \
 		-o -iname '*.hi' \
+		-o -iname '*.hy' \
 		-o -iname '*dump-*' \
 		-delete
 
