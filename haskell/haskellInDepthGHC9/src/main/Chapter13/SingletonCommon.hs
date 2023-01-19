@@ -11,6 +11,9 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC  -Werror=incomplete-patterns #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE EmptyCase #-}
 
 module Chapter13.SingletonCommon
   ( SBool (..),
@@ -21,6 +24,7 @@ where
 
 import Data.Singletons as X
 import Data.Singletons.TH
+import Data.Singletons.Decide
 import Fmt
 
 data State where
@@ -54,6 +58,12 @@ instance SingKind Bool where
   toSing True = SomeSing STrue
   toSing False = SomeSing SFalse
 
+instance SDecide Bool where
+  STrue %~ STrue = Proved Refl
+  SFalse %~ SFalse = Proved Refl
+  STrue %~ SFalse = Disproved $ \case
+  SFalse %~ STrue = Disproved $ \case
+
 data SMaybe k where
   SNothing :: SMaybe 'Nothing
   SJust :: Sing x -> SMaybe ('Just x)
@@ -78,6 +88,15 @@ instance SingKind k => SingKind (Maybe k) where
   toSing :: Demote (Maybe k) -> SomeSing (Maybe k)
   toSing Nothing = SomeSing SNothing
   toSing (Just x) = withSomeSing x (SomeSing . SJust)
+
+instance SDecide a => SDecide (Maybe a) where
+  SNothing %~ SNothing = Proved Refl
+  SNothing %~ SJust _ = Disproved $ \case
+  SJust _ %~ SNothing = Disproved $ \case
+  SJust v  %~ SJust w = case v %~ w of 
+                          Proved Refl  -> Proved Refl
+                          Disproved rv -> Disproved $ \case Refl -> rv Refl
+
 
 instance Show (SBool 'True) where show STrue = "STrue"
 
