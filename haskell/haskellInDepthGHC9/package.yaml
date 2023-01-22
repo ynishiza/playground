@@ -204,6 +204,19 @@ executables:
     ghc-options:
     - -Werror=incomplete-patterns
 
+  stream:
+    main:               main.hs
+    source-dirs:        ./src/stream
+    dependencies: 
+    - haskellInDepthGHC9
+    - template-haskell >=2.18 && <2.19
+    - singletons > 3 && < 4
+    - singletons-th > 3 && < 4
+    - singletons-base >= 3 && < 4
+    - fin > 0.2 && < 0.3
+    - dec > 0.0.4 && < 1
+    - optparse-applicative >= 0.17 && < 0.20
+    ghc-options: []
 
 internal-libraries: {}
 
