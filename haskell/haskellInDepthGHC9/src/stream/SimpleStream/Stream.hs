@@ -1,3 +1,5 @@
+{-# HLINT ignore "Use <&>" #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -5,10 +7,8 @@
 {-# LANGUAGE StandaloneKindSignatures #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
-{-# HLINT ignore "Use <&>" #-}
-
 {- ORMOLU_DISABLE -}
-module SimpleStream
+module SimpleStream.Stream
   ( Stream (..),
   empty,
   effect,
@@ -21,6 +21,9 @@ module SimpleStream
   zipCompose,
   decompose,
   withEffect,
+  withEffectMap,
+  splitsAt,
+  chunks,
 
   Of(..),
   StreamOf,
@@ -29,19 +32,21 @@ module SimpleStream
   ssum,
   printStream,
   promptOne,
+  module X,
   )
 where
 {- ORMOLU_ENABLE -}
 
+import Control.Exception
+import Control.Monad as X
+import Control.Monad.IO.Class as X
+import Data.Bifunctor as X
 import Data.Coerce
-import Data.Monoid
-import Control.Monad
-import Control.Monad.IO.Class
-import Data.Bifunctor
-import Data.Functor.Compose
+import Data.Functor.Compose as X
 import Data.Kind
+import Data.Monoid as X
 import Fmt
-import Text.Read
+import Text.Read (readMaybe)
 
 type Stream :: (Type -> Type) -> (Type -> Type) -> Type -> Type
 data Stream f m r where
@@ -51,12 +56,12 @@ data Stream f m r where
 
 instance Functor (Stream f m) where
   fmap :: forall a b. (a -> b) -> Stream f m a -> Stream f m b
-  fmap f = transform
+  fmap f = loop
     where
-      transform :: Stream f m a -> Stream f m b
-      transform (Return r) = Return $ f r
-      transform (Step s) = Step $ transform <$> s
-      transform (Effect e) = Effect $ transform <$> e
+      loop :: Stream f m a -> Stream f m b
+      loop (Return r) = Return $ f r
+      loop (Step s) = Step $ loop <$> s
+      loop (Effect e) = Effect $ loop <$> e
 
 instance Applicative (Stream f m) where
   pure = Return
@@ -65,40 +70,42 @@ instance Applicative (Stream f m) where
 instance Monad (Stream f m) where
   return = pure
   (>>=) :: forall a b. Stream f m a -> (a -> Stream f m b) -> Stream f m b
-  m >>= k = transform m
+  m >>= k = loop m
     where
-      transform :: Stream f m a -> Stream f m b
-      transform (Return r) = k r
-      transform (Step s) = Step $ transform <$> s
-      transform (Effect e) = Effect $ transform <$> e
+      loop :: Stream f m a -> Stream f m b
+      loop (Return r) = k r
+      loop (Step s) = Step $ loop <$> s
+      loop (Effect e) = Effect $ loop <$> e
 
-type StreamOf a m r = Stream (Of a) m r
+type StreamOf a = Stream (Of a)
 
 type Of :: Type -> Type -> Type
 data Of a b where
   (:>) :: a -> b -> Of a b
-  deriving (Show)
+  deriving (Show, Eq)
+
+infixr 1 :>
 
 maps :: forall f g m r. (Functor g) => (forall x. f x -> g x) -> Stream f m r -> Stream g m r
-maps fn = transform
+maps fn = loop
   where
-    transform :: Stream f m r -> Stream g m r
-    transform (Return r) = Return r
-    transform (Step s) = Step $ fn $ transform <$> s
-    transform (Effect e) = Effect $ transform <$> e
+    loop :: Stream f m r -> Stream g m r
+    loop (Return r) = Return r
+    loop (Step s) = Step $ fn $ loop <$> s
+    loop (Effect e) = Effect $ loop <$> e
 
 mapOf :: (a -> b) -> StreamOf a m r -> StreamOf b m r
-mapOf fn = maps $ first fn 
+mapOf fn = maps $ first fn
 
 zipsWith :: forall f g h m r. Functor h => (forall x y z. (x -> y -> z) -> f x -> g y -> h z) -> Stream f m r -> Stream g m r -> Stream h m r
-zipsWith fn = transform
+zipsWith fn = loop
   where
-    transform :: Stream f m r -> Stream g m r -> Stream h m r
-    transform (Return r) _ = Return r
-    transform _ (Return r) = Return r
-    transform (Effect e) s = Effect $ flip transform s <$> e
-    transform s (Effect e) = Effect $ transform s <$> e
-    transform (Step s1) (Step s2) = Step $ fn transform s1 s2
+    loop :: Stream f m r -> Stream g m r -> Stream h m r
+    loop (Return r) _ = Return r
+    loop _ (Return r) = Return r
+    loop (Effect e) s = Effect $ flip loop s <$> e
+    loop s (Effect e) = Effect $ loop s <$> e
+    loop (Step s1) (Step s2) = Step $ fn loop s1 s2
 
 zipPair :: StreamOf a m r -> StreamOf b m r -> StreamOf (a, b) m r
 zipPair = zipsWith (\f (a :> x) (b :> y) -> (a, b) :> f x y)
@@ -116,6 +123,37 @@ mapsM fn = decompose . maps (Compose . fn)
 
 withEffect :: forall a m r. Monad m => (a -> m ()) -> StreamOf a m r -> StreamOf a m r
 withEffect f = mapsM (\v@(a :> _) -> f a >> pure v)
+
+withEffectMap :: forall a b m r. Monad m => (a -> m b) -> StreamOf a m r -> StreamOf b m r
+withEffectMap f = mapsM (\(a :> as) -> f a >>= pure . (:> as))
+
+splitsAt :: (Functor f, Monad m) => Int -> Stream f m r -> Stream f m (Stream f m r)
+splitsAt n str
+  | n > 0 = case str of
+      (Return _) -> Return str
+      (Effect e) -> Effect $ splitsAt n <$> e
+      (Step s) -> Step $ splitsAt (n - 1) <$> s
+  | otherwise = Return str
+
+chunks :: forall f m r. (Functor f, Monad m) => Int -> Stream f m r -> Stream (Stream f m) m r
+chunks n
+  | n <= 0 = throw $ userError $ "chunk size must be > 0 but received " +| n |+ ""
+  | otherwise = loop
+  where
+    loop :: Stream f m r -> Stream (Stream f m) m r
+    loop (Return r) = Return r
+    loop (Effect e) = Effect $ loop <$> e
+    loop (Step s) = Step $ Step $ stepN s
+
+    stepN :: f (Stream f m r) -> f (Stream f m (Stream (Stream f m) m r))
+    stepN s = (loop <$>) . splitsAt (n - 1) <$> s
+
+-- chunksOf :: (Functor f, Monad m
+-- splitsAt _ (Return r) = Return $ Return r
+-- splitsAt n (Effect e) = Effect $ splitsAt n <$> e
+-- splitsAt n (Step s)
+--   | n < 0 = Step $ splitsAt 0 <$> s
+--   | otherwise = Return $ Step s
 
 -- ==================== Of a ====================
 --
@@ -144,7 +182,7 @@ ssumM (Step (a :> str)) = first (a <>) <$> ssumM str
 ssumM (Effect e) = e >>= ssumM
 
 ssum :: forall a m r. (Monad m, Num a) => StreamOf a m r -> m (Of a r)
-ssum = (coerce <$>) . ssumM . mapOf Sum 
+ssum = (coerce <$>) . ssumM . mapOf Sum
 
 printStream :: (MonadIO m, Show a, Show r) => StreamOf a m r -> m ()
 printStream (Return r) = liftIO $ fmtLn $ "Return:" +|| r ||+ ""

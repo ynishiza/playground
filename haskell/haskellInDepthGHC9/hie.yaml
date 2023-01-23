@@ -30,3 +30,5 @@ cradle:
       component: haskellInDepthGHC9:exe:radarSafe
     - path: "./src/stream"
       component: haskellInDepthGHC9:exe:stream
+    - path: "./test/stream"
+      component: haskellInDepthGHC9:test:stream-test

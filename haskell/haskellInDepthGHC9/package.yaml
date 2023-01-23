@@ -209,12 +209,6 @@ executables:
     source-dirs:        ./src/stream
     dependencies: 
     - haskellInDepthGHC9
-    - template-haskell >=2.18 && <2.19
-    - singletons > 3 && < 4
-    - singletons-th > 3 && < 4
-    - singletons-base >= 3 && < 4
-    - fin > 0.2 && < 0.3
-    - dec > 0.0.4 && < 1
     - optparse-applicative >= 0.17 && < 0.20
     ghc-options: []
 
@@ -298,5 +292,18 @@ tests:
     - tasty-hedgehog >= 0.1 && <= 1.4
     - hspec >= 0.1 && <= 3
     - hedgehog >= 0.5 && < 1.2
+
+  stream-test:
+    main:               main.hs
+    source-dirs:        ./test/stream
+    dependencies: 
+    - haskellInDepthGHC9
+    - tasty >= 0.11 && < 1.6
+    - tasty-hspec >= 1.1 && < 1.3
+    - tasty-hedgehog >= 0.1 && <= 1.4
+    - hspec >= 0.1 && <= 3
+    - hedgehog >= 0.5 && < 1.2
+
+    ghc-options: []
 
 benchmarks: {}
