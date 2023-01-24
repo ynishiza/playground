@@ -23,7 +23,9 @@ module SimpleStream.Stream
   withEffect,
   withEffectMap,
   splitsAt,
+  ChunkedStream,
   chunks,
+  joins,
 
   Of(..),
   StreamOf,
@@ -40,6 +42,8 @@ where
 import Control.Exception
 import Control.Monad as X
 import Control.Monad.IO.Class as X
+import Control.Monad.Trans.Maybe as X
+import Control.Monad.Free.Class
 import Data.Bifunctor as X
 import Data.Coerce
 import Data.Functor.Compose as X
@@ -54,13 +58,16 @@ data Stream f m r where
   Step :: Functor f => f (Stream f m r) -> Stream f m r
   Effect :: Monad m => m (Stream f m r) -> Stream f m r
 
+instance Functor f => MonadFree f (Stream f m) where
+  wrap = Step
+
 instance Functor (Stream f m) where
   fmap :: forall a b. (a -> b) -> Stream f m a -> Stream f m b
   fmap f = loop
     where
       loop :: Stream f m a -> Stream f m b
       loop (Return r) = Return $ f r
-      loop (Step s) = Step $ loop <$> s
+      loop (Step s) = wrap $ loop <$> s
       loop (Effect e) = Effect $ loop <$> e
 
 instance Applicative (Stream f m) where
@@ -74,7 +81,7 @@ instance Monad (Stream f m) where
     where
       loop :: Stream f m a -> Stream f m b
       loop (Return r) = k r
-      loop (Step s) = Step $ loop <$> s
+      loop (Step s) = wrap $ loop <$> s
       loop (Effect e) = Effect $ loop <$> e
 
 type StreamOf a = Stream (Of a)
@@ -135,25 +142,33 @@ splitsAt n str
       (Step s) -> Step $ splitsAt (n - 1) <$> s
   | otherwise = Return str
 
-chunks :: forall f m r. (Functor f, Monad m) => Int -> Stream f m r -> Stream (Stream f m) m r
+type ChunkedStream f m = Stream (Stream f m) m
+
+chunks :: forall f m r. (Functor f, Monad m) => Int -> Stream f m r -> ChunkedStream f m r
 chunks n
   | n <= 0 = throw $ userError $ "chunk size must be > 0 but received " +| n |+ ""
   | otherwise = loop
   where
-    loop :: Stream f m r -> Stream (Stream f m) m r
+    loop :: Stream f m r -> ChunkedStream f m r
     loop (Return r) = Return r
     loop (Effect e) = Effect $ loop <$> e
-    loop (Step s) = Step $ Step $ stepN s
+    loop (Step s) = Step $ Step $ chunkN s
 
-    stepN :: f (Stream f m r) -> f (Stream f m (Stream (Stream f m) m r))
-    stepN s = (loop <$>) . splitsAt (n - 1) <$> s
+    -- chunk N by
+    --      1   +       N - 1
+    --      f       (Stream f m *)
+    chunkN :: f (Stream f m r) -> f (Stream f m (ChunkedStream f m r))
+    chunkN s = (loop <$>) . splitsAt (n - 1) <$> s
 
--- chunksOf :: (Functor f, Monad m
--- splitsAt _ (Return r) = Return $ Return r
--- splitsAt n (Effect e) = Effect $ splitsAt n <$> e
--- splitsAt n (Step s)
---   | n < 0 = Step $ splitsAt 0 <$> s
---   | otherwise = Return $ Step s
+joins :: forall f m r. Stream f m (Stream f m r) -> Stream f m r
+joins (Return r) = r
+joins (Effect e) = Effect $ joins <$> e
+joins (Step s) = Step $ joins <$> s
+
+copy :: forall f m r. Stream f m r -> Stream f (Stream f m) r
+copy (Return r) = Return r
+copy (Step s) = Step $ copy <$> s
+copy (Effect e) = undefined
 
 -- ==================== Of a ====================
 --
@@ -196,3 +211,4 @@ promptOne = Effect $ do
   case readMaybe input of
     (Just a) -> pure $ yield a
     Nothing -> liftIO (fmtLn $ "Failed at parse input" +|| input ||+ "") >> pure empty
+

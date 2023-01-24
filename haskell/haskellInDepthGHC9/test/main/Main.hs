@@ -1,3 +1,4 @@
+import Chapter14.StreamPlaySpec qualified
 import Chapter12_GenericsSQL qualified
 import Chapter12_Template qualified
 import Chapter2_1 qualified
@@ -17,3 +18,4 @@ main = do
       Chapter5_2_2.specs
       Chapter12_GenericsSQL.specs
       Chapter12_Template.specs
+      Chapter14.StreamPlaySpec.spec

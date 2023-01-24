@@ -168,8 +168,8 @@ spec = describe "Simple Stream" $ do
         y `shouldBe` []
 
   describe "chunks" $ do
-    let extractChunk2 :: forall a m r. Monad m => Stream (StreamOf a m) m r -> m ([[a]], r)
-        extractChunk2 =
+    let extractChunk :: forall a m r. Monad m => ChunkedStream (Of a) m r -> m ([[a]], r)
+        extractChunk =
           collects
             ( \s -> do
                 (x :> r) <- collectsOf s
@@ -178,7 +178,7 @@ spec = describe "Simple Stream" $ do
 
     it "splits the stream into chunks" $ do
       let s = each [1 .. 10 :: Int]
-      (r, _) <- extractChunk2 $ chunks 3 s
+      (r, _) <- extractChunk $ chunks 3 s
       r
         `shouldBe` [ [1, 2, 3],
                      [4, 5, 6],
