@@ -11,29 +11,26 @@
 module SimpleStream.Stream
   ( Stream (..),
   empty,
+  yields,
   effect,
-  yield,
+  replicates,
+  repeats,
+  repeatsM,
+  unfold,
   maps, 
   mapsM,
-  mapOf,
+  takes,
   zipsWith,
-  zipPair,
   zipCompose,
   decompose,
-  withEffect,
-  withEffectMap,
   splitsAt,
   ChunkedStream,
   chunks,
+  concats,
   joins,
+  copy,
+  store,
 
-  Of(..),
-  StreamOf,
-  each,
-  ssumM,
-  ssum,
-  printStream,
-  promptOne,
   module X,
   )
 where
@@ -41,16 +38,14 @@ where
 
 import Control.Exception
 import Control.Monad as X
+import Control.Monad.Free.Class
 import Control.Monad.IO.Class as X
 import Control.Monad.Trans.Maybe as X
-import Control.Monad.Free.Class
 import Data.Bifunctor as X
-import Data.Coerce
 import Data.Functor.Compose as X
 import Data.Kind
 import Data.Monoid as X
 import Fmt
-import Text.Read (readMaybe)
 
 type Stream :: (Type -> Type) -> (Type -> Type) -> Type -> Type
 data Stream f m r where
@@ -84,14 +79,39 @@ instance Monad (Stream f m) where
       loop (Step s) = wrap $ loop <$> s
       loop (Effect e) = Effect $ loop <$> e
 
-type StreamOf a = Stream (Of a)
+instance MonadIO m => MonadIO (Stream f m) where
+  liftIO :: IO a -> Stream f m a
+  liftIO io = Effect $ do
+    x <- liftIO io
+    return $ Return x
 
-type Of :: Type -> Type -> Type
-data Of a b where
-  (:>) :: a -> b -> Of a b
-  deriving (Show, Eq)
+-- ==================== Utils  ====================
 
-infixr 1 :>
+empty :: Stream f m ()
+empty = Return ()
+
+effect :: Monad m => m r -> Stream f m r
+effect e = Effect $ Return <$> e
+
+yields :: (Functor f) => f r -> Stream f m r
+yields v = Step $ Return <$> v
+
+replicates :: (Monad m, Functor f) => Int -> f () -> Stream f m ()
+replicates n = takes n . repeats 
+
+repeats :: (Functor f) => f () -> Stream f m ()
+repeats v = yields v >> repeats v
+
+repeatsM :: (Monad m, Functor f) => m (f ()) -> Stream f m ()
+repeatsM v = Effect (yields <$> v) >> repeatsM v
+
+unfold :: (Monad m, Functor f) => (s -> m (Either r (f s))) -> s -> Stream f m r
+unfold fn s = Effect $ fn s >>= return . either Return step
+  where
+    step f = Step $ unfold fn <$> f
+
+never :: (Monad m, Applicative f) => Stream f m r
+never = undefined
 
 maps :: forall f g m r. (Functor g) => (forall x. f x -> g x) -> Stream f m r -> Stream g m r
 maps fn = loop
@@ -100,9 +120,6 @@ maps fn = loop
     loop (Return r) = Return r
     loop (Step s) = Step $ fn $ loop <$> s
     loop (Effect e) = Effect $ loop <$> e
-
-mapOf :: (a -> b) -> StreamOf a m r -> StreamOf b m r
-mapOf fn = maps $ first fn
 
 zipsWith :: forall f g h m r. Functor h => (forall x y z. (x -> y -> z) -> f x -> g y -> h z) -> Stream f m r -> Stream g m r -> Stream h m r
 zipsWith fn = loop
@@ -113,9 +130,6 @@ zipsWith fn = loop
     loop (Effect e) s = Effect $ flip loop s <$> e
     loop s (Effect e) = Effect $ loop s <$> e
     loop (Step s1) (Step s2) = Step $ fn loop s1 s2
-
-zipPair :: StreamOf a m r -> StreamOf b m r -> StreamOf (a, b) m r
-zipPair = zipsWith (\f (a :> x) (b :> y) -> (a, b) :> f x y)
 
 zipCompose :: (Functor f, Functor g) => Stream f m r -> Stream g m r -> Stream (Compose f g) m r
 zipCompose = zipsWith (\fn s1 s2 -> Compose $ (<$> s2) <$> (fn <$> s1))
@@ -128,13 +142,10 @@ decompose (Step s) = Effect $ getCompose s >>= pure . Step . (decompose <$>)
 mapsM :: forall f g m r. (Functor g, Monad m) => (forall x. f x -> m (g x)) -> Stream f m r -> Stream g m r
 mapsM fn = decompose . maps (Compose . fn)
 
-withEffect :: forall a m r. Monad m => (a -> m ()) -> StreamOf a m r -> StreamOf a m r
-withEffect f = mapsM (\v@(a :> _) -> f a >> pure v)
+takes :: (Monad m, Functor f) => Int -> Stream f m r -> Stream f m ()
+takes n str = void $ splitsAt n str
 
-withEffectMap :: forall a b m r. Monad m => (a -> m b) -> StreamOf a m r -> StreamOf b m r
-withEffectMap f = mapsM (\(a :> as) -> f a >>= pure . (:> as))
-
-splitsAt :: (Functor f, Monad m) => Int -> Stream f m r -> Stream f m (Stream f m r)
+splitsAt :: (Monad m, Functor f) => Int -> Stream f m r -> Stream f m (Stream f m r)
 splitsAt n str
   | n > 0 = case str of
       (Return _) -> Return str
@@ -144,7 +155,7 @@ splitsAt n str
 
 type ChunkedStream f m = Stream (Stream f m) m
 
-chunks :: forall f m r. (Functor f, Monad m) => Int -> Stream f m r -> ChunkedStream f m r
+chunks :: forall f m r. (Monad m, Functor f) => Int -> Stream f m r -> ChunkedStream f m r
 chunks n
   | n <= 0 = throw $ userError $ "chunk size must be > 0 but received " +| n |+ ""
   | otherwise = loop
@@ -165,50 +176,34 @@ joins (Return r) = r
 joins (Effect e) = Effect $ joins <$> e
 joins (Step s) = Step $ joins <$> s
 
+concats :: forall f m r. Stream (Stream f m) m r -> Stream f m r
+concats (Return r) = Return r
+concats (Effect e) = Effect $ concats <$> e
+concats (Step (Return r)) = concats r
+concats (Step (Effect e)) = Effect $ joins . (concats <$>) <$> e
+concats (Step (Step s)) = Step $ joins . (concats <$>) <$> s
+
 copy :: forall f m r. Stream f m r -> Stream f (Stream f m) r
 copy (Return r) = Return r
-copy (Step s) = Step $ copy <$> s
-copy (Effect e) = undefined
+copy (Step s) = Effect $ Step z
+  where
+    z = (copy <$>) . copyReturn <$> s
+copy (Effect e) = Effect y
+  where
+    z = (copy <$>) . copyReturn <$> e
+    y = Effect z
 
--- ==================== Of a ====================
---
-instance Functor (Of a) where
-  fmap f (a :> b) = a :> f b
+copyReturn :: Stream f m r -> Stream f m (Stream f m r)
+copyReturn s@(Return _) = Return s
+copyReturn (Step s) = do
+  r <- Step $ copyReturn <$> s
+  error "BROKEN"
+  return $ r >> Step s
+-- return $ r >> Step s
+copyReturn (Effect e) = do
+  r <- Effect $ copyReturn <$> e
+  error "BROKEN"
+  return $ r >> Effect e
 
-instance Bifunctor Of where
-  bimap f g (a :> b) = f a :> g b
-
-empty :: Stream f m ()
-empty = Return ()
-
-effect :: Monad m => m r -> Stream f m r
-effect e = Effect $ Return <$> e
-
-yield :: a -> StreamOf a m ()
-yield a = Step $ a :> empty
-
-each :: [a] -> StreamOf a m ()
-each [] = empty
-each (a : as) = Step $ a :> each as
-
-ssumM :: (Monad m, Monoid a) => StreamOf a m r -> m (Of a r)
-ssumM (Return r) = pure $ mempty :> r
-ssumM (Step (a :> str)) = first (a <>) <$> ssumM str
-ssumM (Effect e) = e >>= ssumM
-
-ssum :: forall a m r. (Monad m, Num a) => StreamOf a m r -> m (Of a r)
-ssum = (coerce <$>) . ssumM . mapOf Sum
-
-printStream :: (MonadIO m, Show a, Show r) => StreamOf a m r -> m ()
-printStream (Return r) = liftIO $ fmtLn $ "Return:" +|| r ||+ ""
-printStream (Step (a :> str)) = liftIO (fmtLn $ "Item:" +|| a ||+ "") >> printStream str
-printStream (Effect e) = e >>= printStream
-
-promptOne :: forall a m. (MonadIO m, Read a) => StreamOf a m ()
-promptOne = Effect $ do
-  liftIO $ fmtLn "Enter number"
-  input <- liftIO getLine
-  case readMaybe input of
-    (Just a) -> pure $ yield a
-    Nothing -> liftIO (fmtLn $ "Failed at parse input" +|| input ||+ "") >> pure empty
-
+store :: (Stream f (Stream f m) r -> t) -> Stream f m r -> t
+store f = f . copy

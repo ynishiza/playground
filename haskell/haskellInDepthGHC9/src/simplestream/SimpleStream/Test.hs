@@ -10,7 +10,7 @@ import Control.Applicative qualified as M
 import Control.Arrow ((>>>))
 import Data.Bifunctor
 import Fmt
-import SimpleStream.Stream
+import SimpleStream.Of
 import Text.Read
 import Utils
 

@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TupleSections #-}
 
@@ -12,9 +13,13 @@ import Control.Applicative hiding (empty)
 import Control.Applicative as M
 import Control.Concurrent (threadDelay)
 import Control.Exception
+import Data.Char
+import Data.IORef
 import Data.List (isInfixOf)
+import Data.Text qualified as T
 import Data.Time.Clock.POSIX
-import SimpleStream.Stream
+import Fmt
+import SimpleStream.Of
 import Test.Hspec
 
 oneSecond :: Int
@@ -26,8 +31,14 @@ ofToTuple (a :> b) = (a, b)
 tupleToOf :: (a, b) -> Of a b
 tupleToOf (a, b) = a :> b
 
-collectsOf :: forall t e m r. (Monad m, Alternative t) => StreamOf e m r -> m (Of (t e) r)
+collectsOf :: (Alternative t, Monad m) => StreamOf a m r -> m (Of (t a) r)
 collectsOf = (tupleToOf <$>) . collects (\(a :> str) -> return (pure a, str))
+
+mapsM_ :: Monad m => (a -> m x) -> StreamOf a m r -> m r
+mapsM_ f str = snd . ofToTuple <$> y
+  where
+    y = collectsOf @[] x
+    x = mapsM (\(a :> as) -> (:> as) <$> f a) str
 
 collects :: forall t a f m r. (Monad m, Alternative t) => (forall x. f x -> m (t a, x)) -> Stream f m r -> m (t a, r)
 collects f = loop
@@ -93,6 +104,29 @@ spec = describe "Simple Stream" $ do
             s1
             yield 10
       testStream_ @Int [3, 1, 2, 10] s2
+
+  describe "creation" $ do
+    it "replicates" $ do
+      testStream_ @Int [1, 1, 1, 1] $
+        replicates 4 (1 :> ())
+
+    it "repeats" $ do
+      let s = repeats (1 :> ())
+      testStream_ @Int [1, 1] $
+        takes 2 s
+      testStream_ @Int [1, 1, 1, 1] $
+        takes 4 s
+
+    it "repeatsM" $ do
+      let s = repeatsM $ return (1 :> ())
+      testStream_ @Int [1, 1] $
+        takes 2 s
+      testStream_ @Int [1, 1, 1, 1] $
+        takes 4 s
+
+    it "unfolds" $ do
+      testStream_ @Int [0, 10, 20, 30, 40] $
+        unfold (\x -> return $ if x < 5 then Right (x * 10 :> x + 1) else Left ()) 0
 
   describe "maps" $ do
     it "maps steps" $ do
@@ -190,3 +224,36 @@ spec = describe "Simple Stream" $ do
       let s = each @Int @IO [1 .. 4 :: Int]
       evaluate (chunks 0 s) `shouldThrow` (\(e :: IOException) -> "chunk size" `isInfixOf` show e)
       evaluate (chunks (-10) s) `shouldThrow` (\(e :: IOException) -> "chunk size" `isInfixOf` show e)
+
+    it "concatenates" $ do
+      let s = chunks 3 $ each [1 .. 10 :: Int]
+      extractChunk s >>= (`shouldBe` 4) . length . fst
+      testStream_ [1 .. 10] $ concats s
+
+  describe "copy" $ do
+    let logCharRaw :: (MonadIO m) => (forall n. MonadIO n => Char -> n ()) -> Stream (Of Char) m r -> m r
+        logCharRaw = logCharWith
+
+        logCharCode :: (MonadIO m) => (forall n. MonadIO n => Int -> n ()) -> Stream (Of Char) m r -> m r
+        logCharCode l = logCharWith (l . ord)
+
+        logCharRawAndCodeWithRef :: forall m r. (MonadIO m) => IORef T.Text -> Stream (Of Char) m r -> m r
+        logCharRawAndCodeWithRef ref = logCharRawAndCodeWith writeLog
+          where
+            writeLog :: MonadIO n => T.Text -> n ()
+            writeLog txt = liftIO $ modifyIORef ref (`T.append` ("" +| txt |+ " "))
+        logCharWith :: (Monad m) => (Char -> m ()) -> Stream (Of Char) m r -> m r
+        logCharWith = mapsM_
+
+        logCharRawAndCodeWith :: forall m r. (MonadIO m) => (forall n. MonadIO n => T.Text -> n ()) -> Stream (Of Char) m r -> m r
+        logCharRawAndCodeWith f str = logCharCode (writeLog . pretty) x
+          where
+            writeLog :: forall n. MonadIO n => T.Text -> n ()
+            writeLog txt = liftIO $ pretty txt >> f txt
+            x = store (logCharRaw (writeLog . pretty)) str
+
+    it "copy" $ do
+      pending
+      ref <- newIORef @T.Text ""
+      logCharRawAndCodeWithRef ref $ each ("haskell" :: String)
+      readIORef ref >>= (`shouldBe` "")

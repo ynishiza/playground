@@ -95,6 +95,9 @@ executables:
     - fin > 0.2 && < 0.3
     - dec > 0.0.4 && < 1
     - streaming > 0.2 && <0.3
+    - streaming-utils > 0.2 && < 0.3
+    - streaming-bytestring > 0.2 && < 0.3
+    - resourcet
     - free > 5.1 && < 6
     - optparse-applicative >= 0.17 && < 0.20
     ghc-options: []
@@ -231,6 +234,9 @@ tests:
     - fin > 0.2 && < 0.3
     - dec > 0.0.4 && < 1
     - streaming > 0.2 && <0.3
+    - streaming-utils > 0.2 && < 0.3
+    - streaming-bytestring > 0.2 && < 0.3
+    - resourcet > 1 && < 2
     - free > 5.1 && < 6
     - tasty >= 0.11 && < 1.6
     - tasty-hspec >= 1.1 && < 1.3
