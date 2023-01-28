@@ -5,33 +5,31 @@ module SimpleStream.Test
   )
 where
 
-import Control.Applicative hiding (empty)
-import Control.Applicative qualified as M
 import Control.Arrow ((>>>))
-import Data.Bifunctor
 import Fmt
-import SimpleStream.Of
+import SimpleStream.Prelude as S
+import SimpleStream.Stream
 import Text.Read
 import Utils
 
 test :: IO ()
 test = do
-  let str1 = do
+  let stream1 = do
         yield @Int 1
         yield 2
         yield 3
         yield 4
 
   printBannerWrap "test: yield" $ do
-    runStream "stream" str1
-    fmt "sum\t:" >> (ssum str1 >>= print)
-    fmt "collect:\t" >> (collects @[] str1 >>= print)
+    runStream "stream" stream1
+    fmt "sum\t:" >> (S.ssum stream1 >>= print)
+    fmt "collect:\t" >> (collectsOf @[] stream1 >>= print)
   enterNext
 
   printBannerWrap "stream3" $ do
     runStream "stream" $ do
           yield 100
-          Effect $ putStr "read str1:" >> pure str1
+          Effect $ putStr "read stream1:" >> pure stream1
           yield 300
   enterNext
 
@@ -45,9 +43,9 @@ test = do
           do
             strShowItem
             >>> filtersOf even
-            >>> mapOf (* 2)
+            >>> S.map (* 2)
             >>> strShowItem
-            >>> mapOf (* 10)
+            >>> S.map (* 10)
             >>> strShowItem
     runStream "stdio" $ f s
   enterNext
@@ -58,7 +56,7 @@ test = do
     let s = each n
         f =
           filtersOf even
-            >>> mapOf (* 10)
+            >>> S.map (* 10)
     runStream "read and apply" $ f s
   enterNext
 
@@ -70,7 +68,7 @@ test = do
     runStream "zipPairt s1 s2" $ zipPair s1 s2
 
   printBannerWrap "test: withEffect" $ do
-    runStream "withEffect" $ withEffect (\x -> fmtLn $ "[EFFECT] element:" +||x||+"") str1
+    runStream "withEffect" $ withEffect (\x -> fmtLn $ "[EFFECT] element:" +||x||+"") stream1
   pure ()
 
 enterNext :: IO ()
@@ -79,7 +77,7 @@ enterNext = do
   pure ()
 
 runStream :: (Show r, Show e) => String -> Stream (Of e) IO r -> IO ()
-runStream name s = fmt (name ||+":\t") >> (collects @[] s >>= print)
+runStream name s = fmt (name ||+":\t") >> (collectsOf @[] s >>= print)
 
 readNumbers :: forall e. (Num e, Read e) => IO [e]
 readNumbers = do
@@ -87,10 +85,10 @@ readNumbers = do
   r <- readMaybe @e <$> getLine
   maybe (pure []) (\n -> (n :) <$> readNumbers) r
 
-collects :: forall t e m r. (Monad m, Alternative t) => Stream (Of e) m r -> m (Of (t e) r)
-collects (Return r) = pure (M.empty :> r)
-collects (Step (e :> s)) = first (pure e <|>) <$> collects s
-collects (Effect e) = e >>= collects
+-- collects :: forall t e m r. (Monad m, Alternative t) => Stream (Of e) m r -> m (Of (t e) r)
+-- collects (Return r) = pure (M.empty :> r)
+-- collects (Step (e :> s)) = first (pure e <|>) <$> collects s
+-- collects (Effect e) = e >>= collects
 
 
 strShowItem :: (Show e) => Stream (Of e) IO r -> Stream (Of e) IO r

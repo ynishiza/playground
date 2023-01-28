@@ -57,6 +57,7 @@ run:  ## Run test
 	@echo 10 $$'\n' | stack exec -- $(MAINEXE_NAME) 
 	
 	@make run-singletons
+	@make run-scratch
 	@make test
 
 run-singletons: ## Singletons tutorial https://blog.jle.im/entries/series/+introduction-to-singletons.html
