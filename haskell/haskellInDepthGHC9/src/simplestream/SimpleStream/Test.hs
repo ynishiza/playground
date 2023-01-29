@@ -9,6 +9,7 @@ import Control.Arrow ((>>>))
 import Fmt
 import SimpleStream.Prelude as S
 import SimpleStream.Stream
+import SimpleStream.Extra
 import Text.Read
 import Utils
 
@@ -22,7 +23,7 @@ test = do
 
   printBannerWrap "test: yield" $ do
     runStream "stream" stream1
-    fmt "sum\t:" >> (S.ssum stream1 >>= print)
+    fmt "sum\t:" >> (ssum stream1 >>= print)
     fmt "collect:\t" >> (collectsOf @[] stream1 >>= print)
   enterNext
 
@@ -99,7 +100,7 @@ strShowItem = withEffect (\a -> fmtLn $ "item:" +||a||+"")
 --   return $ Step (e :> strShowItem s)
 -- strShowItem (Effect e) = Effect $ strShowItem <$> e
 
-filtersOf :: forall a m r. (a -> Bool) -> StreamOf a m r -> StreamOf a m r
+filtersOf :: forall a m r. Monad m => (a -> Bool) -> StreamOf a m r -> StreamOf a m r
 filtersOf f = transform
   where
     transform :: StreamOf a m r -> StreamOf a m r

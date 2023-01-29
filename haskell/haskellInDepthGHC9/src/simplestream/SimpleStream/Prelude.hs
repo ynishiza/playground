@@ -10,44 +10,44 @@ module SimpleStream.Prelude (
   StreamOf,
   lazily,
   strictly,
+  fst',
+  snd',
+  _first,
+  _second,
+  mapOf,
+
   yield,
   each,
-  ssumM,
-  printStream,
-  promptOne,
+  iterate,
+  iterateM,
 
-  zipPair,
-  withEffect,
-  withEffectMap,
   prints,
-  prints2,
-  ssum,
   map,
   mapM_,
   copy,
   store,
-  collectsOf,
+
   toList,
   toList_,
+  toListEffect_,
+  toListReturn_,
 
   strWords,
   str10,
   str1,
+  collectsOf,
   ) where
 {- ORMOLU_ENABLE -}
 
 import Control.Applicative as M
 import Control.Monad.IO.Class
 import Data.Bifunctor
-import Data.Coerce
 import Data.Kind
-import Data.Monoid qualified as M
-import Fmt
+import Data.Tuple (swap)
 import SimpleStream.Stream as S
-import Text.Read (readMaybe)
-import Prelude hiding (map, mapM_)
+import Prelude hiding (map, mapM_, iterate)
 
-strWords :: Stream (Of String) m ()
+strWords :: Monad m => Stream (Of String) m ()
 strWords = do
   yield "abc"
   yield "def"
@@ -86,6 +86,23 @@ lazily (a :> b) = (a, b)
 strictly :: (a, b) -> Of a b
 strictly (a, b) = a :> b
 
+mapOf :: (a -> b) -> Of a x -> Of b x
+mapOf f (a :> x) = f a :> x
+
+fst' :: Of a x -> a
+fst' (a :> _) = a
+
+snd' :: Of a x -> x
+snd' (_ :> x) = x
+
+_first :: Functor f => (a -> f a') -> Of a x -> f (Of a' x)
+_first f (a :> x) = (:> x) <$> f a
+
+_second :: Functor f => (x -> f x') -> Of a x -> f (Of a x')
+_second f (a :> x) = (a :>) <$> f x
+
+-- ==================== Introducing streams of elements  ====================
+
 yield :: a -> StreamOf a m ()
 yield a = Step $ a :> empty_
 
@@ -93,73 +110,78 @@ each :: [a] -> StreamOf a m ()
 each [] = empty_
 each (a : as) = Step $ a :> each as
 
+iterate :: Monad m => (a -> a) -> a -> StreamOf a m r
+iterate iterator = loop 
+  where loop n = yield n >> loop (iterator n)
+
+iterateM :: forall m a r. Monad m => (a -> m a) -> m a -> StreamOf a m r
+iterateM iterator = loop 
+  where 
+    loop :: m a -> StreamOf a m r
+    loop n = Effect $ do
+          v <- n
+          return $ Step (v :> loop (iterator v))
+
+-- ==================== Consuming ====================
+
 prints :: (MonadIO m, Show a) => StreamOf a m r -> m r
 prints (Return r) = pure r
 prints (Step (a :> str)) = liftIO (print a) >> prints str
 prints (Effect e) = e >>= prints
 
-prints2 :: (MonadIO m, Show a) => StreamOf a m r -> m r
-prints2 str = prints (cp str) >>= prints
+toList :: Monad m => StreamOf a m r -> m (Of [a] r)
+toList = collectsOf @[]
 
-map :: (a -> b) -> StreamOf a m r -> StreamOf b m r
-map fn = maps $ strictly . first fn . lazily
+toList_ :: Monad m => StreamOf a m r -> m [a]
+toList_ = (fst' <$>) . collectsOf @[]
+
+toListEffect_ :: Monad m => StreamOf a (StreamOf b m) r -> m ([a], [b])
+toListEffect_ s = swap . lazily <$> toList (toList_ s)
+
+toListReturn_ :: Monad m => StreamOf a m (StreamOf b m r) -> m ([a], [b])
+toListReturn_ s = lazily <$> (toList s >>= _second toList_)
+
+-- ==================== Transforming ====================
+
+map :: Monad m => (a -> b) -> StreamOf a m r -> StreamOf b m r
+map fn = maps $ mapOf fn
 
 mapM_ :: Monad m => (a -> m x) -> StreamOf a m r -> m r
-mapM_ f str = snd . lazily <$> y
+mapM_ f str = snd' <$> y
   where
     y = collectsOf @[] x
-    x = mapsM (\(a :> as) -> (:> as) <$> f a) str
+    x = mapped (\(a :> as) -> (:> as) <$> f a) str
 
 copy :: forall a m r. Monad m => StreamOf a m r -> StreamOf a (StreamOf a m) r
 copy (Return r) = Return r
 copy (Step (a :> str)) = Step (a :> copied)
   where
     copied = Effect $ yield a >> return (copy str)
-copy (Effect e) = Effect x
-  where
-    x = Effect $ Return . copy <$> e
+copy (Effect e) = streamEffectFromEffect_ $ copy <$> e
 
 store :: Monad m => (StreamOf a (StreamOf a m) r -> t) -> StreamOf a m r -> t
 store f = f . copy
 
-toList :: Monad m => StreamOf a m r -> m (Of [a] r)
-toList = collectsOf @[]
+-- ==================== Splitting ====================
 
-toList_ :: Monad m => StreamOf a m r -> m [a]
-toList_ = (fst . lazily <$>) . collectsOf @[]
+-- ==================== Sum and Compose ====================
+
+-- ==================== Fold ====================
+
+-- ==================== Zipping ====================
+
+-- ==================== Splitting ====================
+
+-- ==================== Merge ====================
+
+-- ==================== Maybe ====================
+
+-- ==================== Pair manipulation ====================
+
+-- ==================== Interpolation ====================
 
 -- ==================== Haskell in depth exercise  ====================
 --
 
-ssumM :: (Monad m, Monoid a) => StreamOf a m r -> m (Of a r)
-ssumM (Return r) = pure $ mempty :> r
-ssumM (Step (a :> str)) = first (a <>) <$> ssumM str
-ssumM (Effect e) = e >>= ssumM
-
-printStream :: (MonadIO m, Show a, Show r) => StreamOf a m r -> m ()
-printStream (Return r) = liftIO $ fmtLn $ "Return:" +|| r ||+ ""
-printStream (Step (a :> str)) = liftIO (fmtLn $ "Item:" +|| a ||+ "") >> printStream str
-printStream (Effect e) = e >>= printStream
-
-promptOne :: forall a m. (MonadIO m, Read a) => StreamOf a m ()
-promptOne = Effect $ do
-  liftIO $ fmtLn "Enter number"
-  input <- liftIO getLine
-  case readMaybe input of
-    (Just a) -> pure $ yield a
-    Nothing -> liftIO (fmtLn $ "Failed at parse input" +|| input ||+ "") >> pure empty_
-
 collectsOf :: (Alternative t, Monad m) => StreamOf a m r -> m (Of (t a) r)
 collectsOf = (strictly <$>) . collects (\(a :> str) -> return (pure a, str))
-
-zipPair :: StreamOf a m r -> StreamOf b m r -> StreamOf (a, b) m r
-zipPair = zipsWith' (\f (a :> x) (b :> y) -> (a, b) :> f x y)
-
-withEffect :: forall a m r. Monad m => (a -> m ()) -> StreamOf a m r -> StreamOf a m r
-withEffect f = mapsM (\v@(a :> _) -> f a >> pure v)
-
-withEffectMap :: forall a b m r. Monad m => (a -> m b) -> StreamOf a m r -> StreamOf b m r
-withEffectMap f = mapsM (\(a :> as) -> f a >>= pure . (:> as))
-
-ssum :: forall a m r. (Monad m, Num a) => StreamOf a m r -> m (Of a r)
-ssum = (coerce <$>) . ssumM . map M.Sum

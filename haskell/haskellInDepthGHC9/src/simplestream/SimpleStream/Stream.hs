@@ -2,10 +2,13 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# HLINT ignore "Use section" #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {- ORMOLU_DISABLE -}
@@ -20,52 +23,69 @@ module SimpleStream.Stream
   unfold,
   never,
   untilJust,
+  streamBuild,
   delays,
 
   maps, 
   mapsPost,
-  mapsM,
-  mapsMPost,
+  mapped,
+  mappedPost,
   mapsMWithDecompose,
+  -- hoistExposed,
+  -- distribute,
+
   groups,
   takes,
-
   ChunkedStream,
   splitsAt,
   chunks,
-  concats,
   joins,
-  -- copy,
-  -- store,
+  concats,
+  intercalates,
+  -- cutoff,
 
   inspect, 
 
+  zipsWith,
   zipsWith',
   zips,
   unzips,
+  interleaves,
+  separate,
+  unseparate,
   decompose,
+  expand,
+  expandPost,
 
-  cp,
   mapsM_,
   run,
   iterTM,
   iterT,
   streamFold,
+  destroy,
   collects,
+
+  streamStepFromStep,
+  streamStepFromStep_,
+  streamStepFromEffect,
+  streamEffectFromEffect,
+  streamEffectFromEffect_,
+  streamEffectFromStep,
   )
 where
 {- ORMOLU_ENABLE -}
 
-import Data.Functor.Sum
-import Control.Monad.Trans.Class
 import Control.Applicative as X
 import Control.Concurrent
 import Control.Exception
 import Control.Monad as X
 import Control.Monad.Free.Class
 import Control.Monad.IO.Class as X
+import Control.Monad.Trans.Class
+import Control.Monad.Writer hiding (Sum)
 import Data.Bifunctor as X
 import Data.Functor.Compose as X
+import Data.Functor.Sum
 import Data.Kind
 import Fmt
 
@@ -73,12 +93,12 @@ type Stream :: (Type -> Type) -> (Type -> Type) -> Type -> Type
 data Stream f m r where
   Return :: r -> Stream f m r
   Step :: f (Stream f m r) -> Stream f m r
-  Effect :: Monad m => m (Stream f m r) -> Stream f m r
+  Effect :: m (Stream f m r) -> Stream f m r
 
-instance Functor f => MonadFree f (Stream f m) where
+instance (Monad m, Functor f) => MonadFree f (Stream f m) where
   wrap = Step
 
-instance Functor f => Functor (Stream f m) where
+instance (Monad m, Functor f) => Functor (Stream f m) where
   fmap :: forall a b. (a -> b) -> Stream f m a -> Stream f m b
   fmap f = loop
     where
@@ -87,11 +107,11 @@ instance Functor f => Functor (Stream f m) where
       loop (Step s) = wrap $ loop <$> s
       loop (Effect e) = Effect $ loop <$> e
 
-instance Functor f => Applicative (Stream f m) where
+instance (Monad m, Functor f) => Applicative (Stream f m) where
   pure = Return
   (<*>) = ap
 
-instance Functor f => Monad (Stream f m) where
+instance (Monad m, Functor f) => Monad (Stream f m) where
   return = pure
   (>>=) :: forall a b. Stream f m a -> (a -> Stream f m b) -> Stream f m b
   m >>= k = loop m
@@ -101,11 +121,24 @@ instance Functor f => Monad (Stream f m) where
       loop (Step s) = wrap $ loop <$> s
       loop (Effect e) = Effect $ loop <$> e
 
+instance MonadTrans (Stream f) where
+  lift :: Monad m => m a -> Stream f m a
+  lift = effect
+
 instance (MonadIO m, Functor f) => MonadIO (Stream f m) where
   liftIO :: IO a -> Stream f m a
   liftIO io = Effect $ do
     x <- liftIO io
     return $ Return x
+
+instance (Functor f, MonadWriter w m) => MonadWriter w (Stream f m) where
+  tell w = Effect $ tell w >> return (Return ())
+  pass s = s >>= effect . pass . pure
+  listen (Return r) = Return (r, mempty)
+  listen (Step s) = Step $ listen <$> s
+  listen (Effect e) = Effect $ do
+    (s, w) <- listen e
+    return $ (,w) <$> s
 
 instance (Monad m, Applicative f) => Alternative (Stream f m) where
   empty = never
@@ -118,16 +151,18 @@ instance (Monad m, Applicative f) => Alternative (Stream f m) where
 empty_ :: Stream f m ()
 empty_ = Return ()
 
+-- lift for Step
+yields :: Functor f => f r -> Stream f m r
+yields v = Step $ Return <$> v
+
+-- lift for Effect
 effect :: Monad m => m r -> Stream f m r
 effect e = Effect $ Return <$> e
-
-yields :: (Functor f) => f r -> Stream f m r
-yields v = Step $ Return <$> v
 
 replicates :: (Monad m, Functor f) => Int -> f () -> Stream f m ()
 replicates n = takes n . repeats
 
-repeats :: (Functor f) => f () -> Stream f m ()
+repeats :: (Monad m, Functor f) => f () -> Stream f m ()
 repeats v = yields v >> repeats v
 
 repeatsM :: (Monad m, Functor f) => m (f ()) -> Stream f m ()
@@ -147,32 +182,35 @@ untilJust m = Effect $ m >>= return . maybe never Return
 delays :: (MonadIO m) => Int -> Stream f m ()
 delays n = Effect $ liftIO (threadDelay n) >> return (Return ())
 
+streamBuild :: (forall b. (r -> b) -> (f b -> b) -> (m b -> b) -> b) -> Stream f m r
+streamBuild builder = builder Return Step Effect
+
 -- ==================== Section: transforming a stream  ====================
 -- https://hackage.haskell.org/package/streaming-0.2.3.1/docs/Streaming.html#g:3
 --
 
-maps :: forall f g m r. (Functor f) => (forall x. f x -> g x) -> Stream f m r -> Stream g m r
+maps :: forall f g m r. (Monad m, Functor f) => (forall x. f x -> g x) -> Stream f m r -> Stream g m r
 maps fn = mapsWithStep (fn . (maps fn <$>))
 
-mapsPost :: forall f g m r. (Functor g) => (forall x. f x -> g x) -> Stream f m r -> Stream g m r
+mapsPost :: forall f g m r. (Monad m, Functor g) => (forall x. f x -> g x) -> Stream f m r -> Stream g m r
 mapsPost fn = mapsWithStep ((mapsPost fn <$>) . fn)
 
-mapsWithStep :: forall f g m r. (forall x. f (Stream f m x) -> g (Stream g m x)) -> Stream f m r -> Stream g m r
-mapsWithStep fn = loop 
+mapsWithStep :: forall f g m r. Monad m => (forall x. f (Stream f m x) -> g (Stream g m x)) -> Stream f m r -> Stream g m r
+mapsWithStep fn = loop
   where
     loop :: Stream f m r -> Stream g m r
     loop (Return r) = Return r
     loop (Step s) = Step $ fn s
     loop (Effect e) = Effect $ loop <$> e
 
-mapsM :: forall f g m r. (Functor f, Monad m) => (forall x. f x -> m (g x)) -> Stream f m r -> Stream g m r
-mapsM fn = mapsMWithStep (fn . (mapsM fn <$>)) 
+mapped :: forall f g m r. (Functor f, Monad m) => (forall x. f x -> m (g x)) -> Stream f m r -> Stream g m r
+mapped fn = mapsMWithStep (fn . (mapped fn <$>))
 
-mapsMPost :: forall g m f r. (Functor g, Monad m) => (forall x. f x -> m (g x)) -> Stream f m r -> Stream g m r
-mapsMPost fn = mapsMWithStep (((mapsMPost fn <$>) <$>) . fn) 
+mappedPost :: forall g m f r. (Functor g, Monad m) => (forall x. f x -> m (g x)) -> Stream f m r -> Stream g m r
+mappedPost fn = mapsMWithStep (((mappedPost fn <$>) <$>) . fn)
 
 mapsMWithDecompose :: forall g m f r. (Functor f, Functor g, Monad m) => (forall x. f x -> m (g x)) -> Stream f m r -> Stream g m r
-mapsMWithDecompose fn = decompose . maps (Compose . fn) 
+mapsMWithDecompose fn = decompose . maps (Compose . fn)
 
 mapsMWithStep :: forall f g m r. (Monad m) => (forall x. f (Stream f m x) -> m (g (Stream g m x))) -> Stream f m r -> Stream g m r
 mapsMWithStep fn = loop
@@ -181,16 +219,15 @@ mapsMWithStep fn = loop
     loop (Step s) = Effect $ fn s >>= return . Step
     loop (Effect e) = Effect $ loop <$> e
 
-
 groups :: forall m f g r. (Monad m, Functor f, Functor g) => Stream (Sum f g) m r -> Stream (Sum (Stream f m) (Stream g m)) m r
-groups (Return r) = Return r
-groups (Effect e) = Effect $ groups <$> e
-groups (Step (InL f)) = Step $ InL leftStream
-  where
-    leftStream = Step $ Return . groups <$> f
-groups (Step (InR f)) = Step $ InR rightStream
-  where
-    rightStream = Step $ Return . groups <$> f
+groups =
+  streamFold
+    Return
+    ( \case
+        (InL x) -> streamStepFromStep InL x
+        (InR x) -> streamStepFromStep InR x
+    )
+    Effect
 
 takes :: (Monad m, Functor f) => Int -> Stream f m r -> Stream f m ()
 takes n str = void $ splitsAt n str
@@ -224,46 +261,26 @@ chunks n
     chunkN :: f (Stream f m r) -> f (Stream f m (ChunkedStream f m r))
     chunkN s = (loop <$>) . splitsAt (n - 1) <$> s
 
-joins :: forall f m r. Functor f => Stream f m (Stream f m r) -> Stream f m r
-joins (Return r) = r
-joins (Effect e) = Effect $ joins <$> e
-joins (Step s) = Step $ joins <$> s
+joins :: forall f m r. (Monad m, Functor f) => Stream f m (Stream f m r) -> Stream f m r
+joins =
+  streamFold
+    id
+    Step
+    Effect
 
-concats :: forall f m r. Functor f => Stream (Stream f m) m r -> Stream f m r
-concats (Return r) = Return r
-concats (Effect e) = Effect $ concats <$> e
-concats (Step (Return r)) = concats r
-concats (Step (Effect e)) = Effect $ joins . (concats <$>) <$> e
-concats (Step (Step s)) = Step $ joins . (concats <$>) <$> s
+concats :: forall f m r. (Monad m, Functor f) => Stream (Stream f m) m r -> Stream f m r
+concats =
+  streamFold
+    Return
+    joins
+    Effect
 
--- copy :: forall f m r. Functor f => Stream f m r -> Stream f (Stream f m) r
--- copy (Return r) = Return r
--- -- copy str@(Step _) = Effect $ (copy <$>) $ cp str
--- copy str@(Step _) = undefined
---   where
---     y :: Stream f (Stream f m) (Stream f m (Stream f m r))
---     y = Return $ cp str
--- copy str@(Effect _) = Effect $ (copy <$>) $ cp str
-
-cp :: Functor f => Stream f m r -> Stream f m (Stream f m r)
-cp s@(Effect _) = s >> Return s
-cp s@(Step _) = s >> Return s
-cp s@(Return _) = Return s
-
--- copyReturn :: Stream f m r -> Stream f m (Stream f m r)
--- copyReturn s@(Return _) = Return s
--- copyReturn (Step s) = do
---   r <- Step $ copyReturn <$> s
---   error "BROKEN"
---   return $ r >> Step s
--- -- return $ r >> Step s
--- copyReturn (Effect e) = do
---   r <- Effect $ copyReturn <$> e
---   error "BROKEN"
---   return $ r >> Effect e
-
--- store :: Functor f => (Stream f (Stream f m) r -> t) -> Stream f m r -> t
--- store f = f . copy
+intercalates :: (Monad m, MonadTrans t, Monad (t m)) => t m x -> Stream (t m) m r -> t m r
+intercalates v =
+  streamFold
+    return
+    ((v >>) =<<)
+    (join . lift)
 
 -- ==================== Section: Inspect ====================
 
@@ -275,10 +292,10 @@ inspect (Effect m) = m >>= inspect
 -- ==================== Section: ZIpping ====================
 -- https://hackage.haskell.org/package/streaming-0.2.3.1/docs/Streaming.html#g:6
 
-zipsWith :: forall f g h m r. Functor h => (forall x y. f x -> g y -> h (x, y)) -> Stream f m r -> Stream g m r -> Stream h m r
+zipsWith :: forall f g h m r. (Monad m, Functor h) => (forall x y. f x -> g y -> h (x, y)) -> Stream f m r -> Stream g m r -> Stream h m r
 zipsWith fn = zipsWith' (\fn' f g -> uncurry fn' <$> fn f g)
 
-zipsWith' :: forall f g h m r. (forall x y z. (x -> y -> z) -> f x -> g y -> h z) -> Stream f m r -> Stream g m r -> Stream h m r
+zipsWith' :: forall f g h m r. (Monad m) => (forall x y z. (x -> y -> z) -> f x -> g y -> h z) -> Stream f m r -> Stream g m r -> Stream h m r
 zipsWith' fn = loop
   where
     loop :: Stream f m r -> Stream g m r -> Stream h m r
@@ -288,24 +305,56 @@ zipsWith' fn = loop
     loop s (Effect e) = Effect $ loop s <$> e
     loop (Step s1) (Step s2) = Step $ fn loop s1 s2
 
-zips :: (Functor f, Functor g) => Stream f m r -> Stream g m r -> Stream (Compose f g) m r
+zips :: (Monad m, Functor f, Functor g) => Stream f m r -> Stream g m r -> Stream (Compose f g) m r
 zips = zipsWith' (\fn s1 s2 -> Compose $ (<$> s2) <$> (fn <$> s1))
 
-unzips :: (Functor f, Functor g) => Stream (Compose f g) m r -> Stream f (Stream g m) r
-unzips (Return r) = Return r
-unzips (Effect e) = Effect $ Effect $ Return <$> inner
-  where
-    inner = unzips <$> e
-unzips (Step c) = Step x
-  where
-    x = Effect <$> (Step <$> getCompose (Return <$> inner))
-    inner = unzips <$> c
+unzips :: (Monad m, Functor f, Functor g) => Stream (Compose f g) m r -> Stream f (Stream g m) r
+unzips =
+  streamFold
+    Return
+    (\(Compose c) -> Step (Effect . yields <$> c))
+    streamEffectFromEffect_
 
+interleaves :: (Monad m, Applicative h) => Stream h m r -> Stream h m r -> Stream h m r
+interleaves = zipsWith' (\p f g -> p <$> f <*> g)
 
-decompose :: forall f m r. (Monad m, Functor f) => Stream (Compose m f) m r -> Stream f m r
-decompose (Return r) = Return r
-decompose (Effect e) = Effect $ decompose <$> e
-decompose (Step s) = Effect $ getCompose s >>= pure . Step . (decompose <$>)
+separate :: (Functor f, Functor g, Monad m) => Stream (Sum f g) m r -> Stream f (Stream g m) r
+separate =
+  streamFold
+    Return
+    ( \case
+        (InL s) -> Step s
+        (InR s) -> streamEffectFromStep id s
+    )
+    streamEffectFromEffect_
+
+unseparate :: (Monad m, Functor f, Functor g) => Stream f (Stream g m) r -> Stream (Sum f g) m r
+unseparate =
+  streamFold
+    Return
+    (Step . InL)
+    (joins . maps InR)
+
+decompose :: (Monad m, Functor f) => Stream (Compose m f) m r -> Stream f m r
+decompose =
+  streamFold
+    Return
+    (Effect . (Step <$>) . getCompose)
+    Effect
+
+expand :: (Functor f, Monad m) => (forall a b. (g a -> b) -> f a -> h b) -> Stream f m r -> Stream g (Stream h m) r
+expand mapf =
+  streamFold
+    Return
+    (Effect . Step . mapf (Return . Step))
+    (Effect . effect)
+
+expandPost :: (Functor g, Monad m) => (forall a b. (g a -> b) -> f a -> h b) -> Stream f m r -> Stream g (Stream h m) r
+expandPost mapf = loop
+  where
+    loop (Return r) = Return r
+    loop (Effect e) = Effect $ effect $ loop <$> e
+    loop (Step s) = Effect $ Step $ mapf (Return . Step . (loop <$>)) s
 
 -- ==================== Section: Eliminating ====================
 -- https://hackage.haskell.org/package/streaming-0.2.3.1/docs/Streaming.html#g:7
@@ -318,7 +367,7 @@ collects fn = streamFold foldReturn foldStep foldEffect
   where
     foldReturn r = pure (empty, r)
     foldStep f = appendStep $ fn f
-    foldEffect = join 
+    foldEffect = join
     appendStep :: m (t a, m (t a, r)) -> m (t a, r)
     appendStep x = do
       (a, res) <- x
@@ -327,16 +376,37 @@ collects fn = streamFold foldReturn foldStep foldEffect
 run :: Monad m => Stream m m r -> m r
 run = streamFold pure join join
 
-streamFold :: forall f m r b. (Functor f, Monad m) => (r -> b) -> (f b -> b) -> (m b -> b) -> Stream f m r -> b
-streamFold foldReturn foldStep foldEffect = loop
+streamFold :: (Monad m, Functor f) => (r -> b) -> (f b -> b) -> (m b -> b) -> Stream f m r -> b
+streamFold buildReturn buildStep buildEffect = loop
   where
-    loop :: Stream f m r -> b
-    loop (Return r) = foldReturn r
-    loop (Step s) = foldStep $ loop <$> s
-    loop (Effect e) = foldEffect $ loop <$> e
+    loop str = case str of
+      (Return r) -> buildReturn r
+      (Step s) -> buildStep $ loop <$> s
+      (Effect e) -> buildEffect $ loop <$> e
+
+destroy :: (Monad m, Functor f) => Stream f m r -> (f b -> b) -> (m b -> b) -> (r -> b) -> b
+destroy s a b c = streamFold c a b s
 
 iterTM :: (Functor f, MonadTrans t, Monad m, Monad (t m)) => (f (t m a) -> t m a) -> Stream f m a -> t m a
 iterTM f = streamFold pure f (join . lift)
 
 iterT :: (Functor f, Monad m) => (f (m a) -> m a) -> Stream f m a -> m a
 iterT f = streamFold pure f join
+
+streamStepFromStep_ :: Functor f => f (Stream (Stream f m) n r) -> Stream (Stream f m) n r
+streamStepFromStep_ = streamStepFromStep id
+
+streamStepFromStep :: Functor f => (Stream f x (Stream str n r) -> str (Stream str n r)) -> f (Stream str n r) -> Stream str n r
+streamStepFromStep fn = Step . fn . yields
+
+streamStepFromEffect :: Monad m => (Stream x m (Stream str n r) -> str (Stream str n r)) -> m (Stream str n r) -> Stream str n r
+streamStepFromEffect fn = Step . fn . lift
+
+streamEffectFromEffect_ :: (Monad m) => m (Stream f (Stream g m) r) -> Stream f (Stream g m) r
+streamEffectFromEffect_ = streamEffectFromEffect id
+
+streamEffectFromEffect :: (Monad m) => (Stream x m (Stream f str r) -> str (Stream f str r)) -> m (Stream f str r) -> Stream f str r
+streamEffectFromEffect fn = Effect . fn . lift
+
+streamEffectFromStep :: Functor f => (Stream f x (Stream g str r) -> str (Stream g str r)) -> f (Stream g str r) -> Stream g str r
+streamEffectFromStep fn = Effect . fn . yields
