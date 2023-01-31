@@ -5,6 +5,7 @@
 {-# HLINT ignore "Use section" #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TupleSections #-}
@@ -18,6 +19,7 @@ module SimpleStream.Stream
   yields,
   effect,
   replicates,
+  replicatesM,
   repeats,
   repeatsM,
   unfold,
@@ -27,7 +29,9 @@ module SimpleStream.Stream
   delays,
 
   maps, 
+  mapsM,
   mapsPost,
+  mapsMPost,
   mapped,
   mappedPost,
   mapsMWithDecompose,
@@ -71,6 +75,8 @@ module SimpleStream.Stream
   streamEffectFromEffect,
   streamEffectFromEffect_,
   streamEffectFromStep,
+  MFunctor(..),
+  MMonad(..),
   )
 where
 {- ORMOLU_ENABLE -}
@@ -91,8 +97,8 @@ import Fmt
 
 type Stream :: (Type -> Type) -> (Type -> Type) -> Type -> Type
 data Stream f m r where
-  Return :: r -> Stream f m r
-  Step :: f (Stream f m r) -> Stream f m r
+  Return :: !r -> Stream f m r
+  Step :: !(f (Stream f m r)) -> Stream f m r
   Effect :: m (Stream f m r) -> Stream f m r
 
 instance (Monad m, Functor f) => MonadFree f (Stream f m) where
@@ -145,6 +151,32 @@ instance (Monad m, Applicative f) => Alternative (Stream f m) where
   (<|>) :: Stream f m r -> Stream f m r -> Stream f m r
   (<|>) = zipsWith $ \f g -> (,) <$> f <*> g
 
+type MFunctor :: ((Type -> Type) -> k -> Type) -> Constraint
+class MFunctor (t :: (Type -> Type) -> k -> Type) where
+  -- monad layer fmap
+  hoist :: forall m n (b :: k). Monad m => (forall a. m a -> n a) -> t m b -> t n b
+
+type MMonad :: ((Type -> Type) -> Type -> Type) -> Constraint
+class (MonadTrans t, MFunctor t) => MMonad t where
+  -- monad layer >>=
+  embed :: forall m n b. Monad n => (forall a. m a -> t n a) -> t m b -> t n b
+
+instance Functor f => MFunctor (Stream f) where
+  hoist :: forall m n b. Monad m => (forall a. m a -> n a) -> Stream f m b -> Stream f n b
+  hoist fn =
+    streamFold
+      Return
+      Step
+      (Effect . fn)
+
+instance Functor f => MMonad (Stream f) where
+  embed :: forall m n b. Monad n => (forall a. m a -> Stream f n a) -> Stream f m b -> Stream f n b
+  embed fn = loop
+    where
+      loop (Return r) = Return r
+      loop (Step s) = Step $ loop <$> s
+      loop (Effect e) = fn e >>= loop
+
 -- ==================== Section: Constructing a stream  ====================
 -- https://hackage.haskell.org/package/streaming-0.2.3.1/docs/Streaming.html#g:2
 
@@ -162,10 +194,13 @@ effect e = Effect $ Return <$> e
 replicates :: (Monad m, Functor f) => Int -> f () -> Stream f m ()
 replicates n = takes n . repeats
 
-repeats :: (Monad m, Functor f) => f () -> Stream f m ()
+replicatesM :: (Monad m, Functor f) => Int -> m (f ()) -> Stream f m ()
+replicatesM n = takes n . repeatsM
+
+repeats :: (Monad m, Functor f) => f () -> Stream f m r
 repeats v = yields v >> repeats v
 
-repeatsM :: (Monad m, Functor f) => m (f ()) -> Stream f m ()
+repeatsM :: (Monad m, Functor f) => m (f ()) -> Stream f m r
 repeatsM v = Effect (yields <$> v) >> repeatsM v
 
 unfold :: (Monad m, Functor f) => (s -> m (Either r (f s))) -> s -> Stream f m r
@@ -176,11 +211,16 @@ unfold fn s = Effect $ fn s >>= return . either Return step
 never :: (Monad m, Applicative f) => Stream f m r
 never = Step $ pure never
 
-untilJust :: (Monad m, Applicative f) => m (Maybe r) -> Stream f m r
-untilJust m = Effect $ m >>= return . maybe never Return
+untilJust :: forall m f r. (Monad m, Applicative f) => m (Maybe r) -> Stream f m r
+untilJust m = loop
+  where
+    loop :: Stream f m r
+    loop = Effect $ m >>= return . maybe (Step $ pure loop) Return
 
-delays :: (MonadIO m) => Int -> Stream f m ()
-delays n = Effect $ liftIO (threadDelay n) >> return (Return ())
+delays :: (MonadIO m, Applicative f) => Int -> Stream f m r
+delays n = loop
+  where
+    loop = Effect $ liftIO (threadDelay n) >> return (Step $ pure loop)
 
 streamBuild :: (forall b. (r -> b) -> (f b -> b) -> (m b -> b) -> b) -> Stream f m r
 streamBuild builder = builder Return Step Effect
@@ -192,8 +232,14 @@ streamBuild builder = builder Return Step Effect
 maps :: forall f g m r. (Monad m, Functor f) => (forall x. f x -> g x) -> Stream f m r -> Stream g m r
 maps fn = mapsWithStep (fn . (maps fn <$>))
 
+mapsM :: forall f g m r. (Monad m, Functor f) => (forall x. f x -> m (g x)) -> Stream f m r -> Stream g m r
+mapsM fn = mapsMWithStep (fn . (mapsM fn <$>))
+
 mapsPost :: forall f g m r. (Monad m, Functor g) => (forall x. f x -> g x) -> Stream f m r -> Stream g m r
 mapsPost fn = mapsWithStep ((mapsPost fn <$>) . fn)
+
+mapsMPost :: forall m g f r. (Monad m, Functor g) => (forall x. f x -> m (g x)) -> Stream f m r -> Stream g m r
+mapsMPost fn = mapsMWithStep (((mapsMPost fn <$>) <$>) . fn)
 
 mapsWithStep :: forall f g m r. Monad m => (forall x. f (Stream f m x) -> g (Stream g m x)) -> Stream f m r -> Stream g m r
 mapsWithStep fn = loop
@@ -262,11 +308,7 @@ chunks n
     chunkN s = (loop <$>) . splitsAt (n - 1) <$> s
 
 joins :: forall f m r. (Monad m, Functor f) => Stream f m (Stream f m r) -> Stream f m r
-joins =
-  streamFold
-    id
-    Step
-    Effect
+joins = join
 
 concats :: forall f m r. (Monad m, Functor f) => Stream (Stream f m) m r -> Stream f m r
 concats =
@@ -363,18 +405,15 @@ mapsM_ :: (Monad m, Functor f) => (forall x. f x -> m x) -> Stream f m r -> m r
 mapsM_ fn = (snd <$>) . collects (((Nothing,) <$>) . fn)
 
 collects :: forall t a f m r. (Monad m, Functor f, Alternative t) => (forall x. f x -> m (t a, x)) -> Stream f m r -> m (t a, r)
-collects fn = streamFold foldReturn foldStep foldEffect
+collects fn = streamFold (return . (empty,)) (appendStep . fn) join
   where
-    foldReturn r = pure (empty, r)
-    foldStep f = appendStep $ fn f
-    foldEffect = join
     appendStep :: m (t a, m (t a, r)) -> m (t a, r)
     appendStep x = do
       (a, res) <- x
       first (a <|>) <$> res
 
 run :: Monad m => Stream m m r -> m r
-run = streamFold pure join join
+run = iterT join
 
 streamFold :: (Monad m, Functor f) => (r -> b) -> (f b -> b) -> (m b -> b) -> Stream f m r -> b
 streamFold buildReturn buildStep buildEffect = loop
@@ -387,11 +426,13 @@ streamFold buildReturn buildStep buildEffect = loop
 destroy :: (Monad m, Functor f) => Stream f m r -> (f b -> b) -> (m b -> b) -> (r -> b) -> b
 destroy s a b c = streamFold c a b s
 
-iterTM :: (Functor f, MonadTrans t, Monad m, Monad (t m)) => (f (t m a) -> t m a) -> Stream f m a -> t m a
-iterTM f = streamFold pure f (join . lift)
-
+-- run the stream in its effect (m a)
 iterT :: (Functor f, Monad m) => (f (m a) -> m a) -> Stream f m a -> m a
-iterT f = streamFold pure f join
+iterT f = streamFold return f join
+
+-- run the stream in a transformed effect (t m a)
+iterTM :: (Functor f, MonadTrans t, Monad m, Monad (t m)) => (f (t m a) -> t m a) -> Stream f m a -> t m a
+iterTM f = streamFold return f (join . lift)
 
 streamStepFromStep_ :: Functor f => f (Stream (Stream f m) n r) -> Stream (Stream f m) n r
 streamStepFromStep_ = streamStepFromStep id
