@@ -33,6 +33,7 @@ module SimpleStream.Prelude (
   -- Consuming
   stdoutLn,
   stdoutLn',
+  readLine,
   prints,
   mapM_,
   drained,
@@ -49,9 +50,13 @@ module SimpleStream.Prelude (
   duplicate,
   store,
   chain,
-  -- sequence,
+  sequence,
   filter,
   filterM,
+  take,
+  concat,
+  read,
+  show,
 
   -- Folding
   fold,
@@ -95,6 +100,7 @@ import SimpleStream.Stream as S
 import Prelude hiding
   ( all,
     any,
+    concat,
     cycle,
     elem,
     filter,
@@ -105,13 +111,17 @@ import Prelude hiding
     map,
     mapM,
     mapM_,
+    read,
+    show,
     notElem,
     product,
     repeat,
     replicate,
     sequence,
     sum,
+    take,
   )
+import qualified Prelude
 
 strWords :: Monad m => Stream (Of String) m ()
 strWords = do
@@ -215,6 +225,11 @@ stdoutLn = (const () <$>) . stdoutLn'
 stdoutLn' :: MonadIO m => StreamOf String m r -> m r
 stdoutLn' = iterT (\(s :> x) -> liftIO (putStrLn s) >> x)
 
+readLine :: (MonadIO m, Read a) => StreamOf a m ()
+readLine = Effect $ do
+  v <- liftIO $ Prelude.read <$> getLine
+  return (Step (v :> readLine))
+
 mapM_ :: Monad m => (a -> m x) -> StreamOf a m r -> m r
 mapM_ f =
   effects
@@ -277,8 +292,12 @@ store f = f . copy
 chain :: Monad m => (a -> m y) -> StreamOf a m r -> StreamOf a m r
 chain fn = mapM (\a -> fn a >> return a)
 
--- sequence :: Monad m => StreamOf (m a) m r -> StreamOf a m r
--- sequence = undefined
+sequence :: Monad m => StreamOf (m a) m r -> StreamOf a m r
+sequence =
+  streamFold
+    Return
+    (\(mx :> rest) -> Effect $ Step . (:> rest) <$> mx)
+    Effect
 
 filter :: Monad m => (a -> Bool) -> StreamOf a m r -> StreamOf a m r
 filter fn = filterM (pure . fn)
@@ -297,6 +316,26 @@ filterM fn =
 
 -- delay :: MonadIO m => Int -> StreamOf a m r -> StreamOf a m r
 -- delay n = undefined
+--
+
+take :: Monad m => Int -> StreamOf a m r -> StreamOf a m ()
+take = takes
+
+concat :: (Foldable f, Monad m) => StreamOf (f a) m r -> StreamOf a m r
+concat =
+  streamFold
+    Return
+    (\(f :> xs) -> foldr createStep xs f)
+    Effect
+  where
+    createStep x xs = Step (x :> xs)
+
+read :: (Monad m, Read a) => StreamOf String m r -> StreamOf a m r
+read = map Prelude.read
+
+show :: (Monad m, Show a) => StreamOf a m r -> StreamOf String m r
+show = map Prelude.show
+
 
 -- ==================== Splitting ====================
 

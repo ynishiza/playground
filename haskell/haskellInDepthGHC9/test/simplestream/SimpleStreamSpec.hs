@@ -27,12 +27,12 @@ import Data.Functor.Compose
 import Data.Functor.Sum
 import Data.List (isInfixOf)
 import Data.Time.Clock.POSIX
+import Fmt
 import SimpleStream.Extra
 import SimpleStream.Prelude
   ( Of (..),
     StreamOf,
     each,
-    mapOf,
     toList,
     toListEffect_,
     toListReturn_,
@@ -42,6 +42,7 @@ import SimpleStream.Prelude
 import SimpleStream.Prelude qualified as S
 import SimpleStream.Stream
 import System.IO.Extra
+import System.Random
 import Test.Hspec
 
 emptyInt :: StreamOf Int m ()
@@ -56,8 +57,8 @@ oneSecond = 1 * 1000 * 1000
 withTrivialEffect :: (Monad m, Functor f) => Stream f m r -> Stream f m r
 withTrivialEffect = mapped pure
 
-createTestStreamFromList :: Monad m => [a] -> StreamOf a m ()
-createTestStreamFromList v = withTrivialEffect $ each v
+eachForTest :: Monad m => [a] -> StreamOf a m ()
+eachForTest v = withTrivialEffect $ each v
 
 testStream :: (Show a, Eq a, Show r, Eq r) => ([a], r) -> StreamOf a IO r -> IO ()
 testStream (expected, r) str = toList str >>= (`shouldBe` (expected :> r))
@@ -78,6 +79,12 @@ testStreamWithBase_ expected str = do
 
 testStreamWithBase_' :: (Show a, Eq a) => StreamOf a IO () -> [a] -> IO ()
 testStreamWithBase_' = flip testStreamWithBase_
+
+randomList :: (Uniform a, MonadIO m) => Int -> m [a]
+randomList n = replicateM n (getStdRandom uniform)
+
+printEffect :: Show a => a -> IO a
+printEffect x = print x >> return x
 
 type IOWriter a = WriterT a IO
 
@@ -102,9 +109,9 @@ baseSpec = describe "Stream" $ do
             yield 1
             Effect $ do
               threadDelay oneSecond
-              createTestStreamFromList <$> replicateM 2 getTimestamp
+              eachForTest <$> replicateM 2 getTimestamp
             Effect $ do
-              createTestStreamFromList <$> replicateM 3 getTimestamp
+              eachForTest <$> replicateM 3 getTimestamp
             yield 4
       (res :> _) <- toList s
       endTime <- getTimestamp
@@ -125,14 +132,14 @@ baseSpec = describe "Stream" $ do
       s2 `testStreamWithBase_'` [3, 1, 2, 10 :: Int]
 
     it "[Monoid] sum" $ do
-      let s1 = createTestStreamFromList ["a", "b", "c"]
-          s2 = createTestStreamFromList ["w", "x", "y", "z"]
+      let s1 = eachForTest ["a", "b", "c"]
+          s2 = eachForTest ["w", "x", "y", "z"]
       (s1 <|> s2) `testStreamWithBase_'` ["aw", "bx", "cy" :: String]
       (s2 <|> s1) `testStreamWithBase_'` ["wa", "xb", "yc"]
 
     -- Laws
     it "[Monoid] empty law empty <|> x == x <|> empty == x" $ do
-      let s1 = createTestStreamFromList ["a", "b", "c"]
+      let s1 = eachForTest ["a", "b", "c"]
       ( empty <|> s1
         )
         `testStreamWithBase_'` ["a", "b", "c" :: String]
@@ -180,7 +187,7 @@ baseSpec = describe "Stream" $ do
 
       startTime <- getTimestamp
       x <-
-        createTestStreamFromList [1 .. 5 :: Int]
+        eachForTest [1 .. 5 :: Int]
           & zipPair (delays @IO @(Of String) t)
           & S.toList_
       endTime <- getTimestamp
@@ -191,16 +198,16 @@ baseSpec = describe "Stream" $ do
 
   describe "Transforming streams" $ do
     it "[maps]" $ do
-      ( createTestStreamFromList [1 .. 4 :: Int]
-          & maps (\(a :> str) -> 10 * a :> str)
-          & maps (\(a :> str) -> show a :> str)
+      ( eachForTest [1 .. 4 :: Int]
+          & maps (S.mapOf (10 *))
+          & maps (S.mapOf show)
         )
         `testStreamWithBase_'` ["10", "20", "30", "40"]
 
     it "[mapsM]" $ do
-      ( createTestStreamFromList [1 .. 4 :: Int]
-          & mapsM (\(a :> str) -> pure $ 10 * a :> str)
-          & mapsM (\(a :> str) -> pure $ show a :> str)
+      ( eachForTest [1 .. 4 :: Int]
+          & mapsM (pure . S.mapOf (10 *))
+          & mapsM (pure . S.mapOf show)
         )
         `testStreamWithBase_'` ["10", "20", "30", "40"]
 
@@ -245,7 +252,7 @@ baseSpec = describe "Stream" $ do
 
   describe "Inspecting streams" $ do
     it "[inspects]" $ do
-      (Right (x1 :> s1)) <- inspect $ createTestStreamFromList [1, 2, 3 :: Int]
+      (Right (x1 :> s1)) <- inspect $ eachForTest [1, 2, 3 :: Int]
       (Right (x2 :> s2)) <- inspect s1
       (Right (x3 :> s3)) <- inspect s2
       (Left r) <- inspect s3
@@ -258,7 +265,7 @@ baseSpec = describe "Stream" $ do
     describe "[splitsAt]" $ do
       it "splits the stream" $ do
         (x, y) <-
-          createTestStreamFromList [1 .. 5 :: Int]
+          eachForTest [1 .. 5 :: Int]
             & splitsAt 2
             & toListReturn_
         x `shouldBe` [1, 2]
@@ -267,7 +274,7 @@ baseSpec = describe "Stream" $ do
       it "preserves effect" $ do
         startTime <- getTimestamp
         (x, y) <-
-          createTestStreamFromList [1 .. 5 :: Int]
+          eachForTest [1 .. 5 :: Int]
             & S.map (* 10)
             & S.mapM (\a -> (a,) <$> getTimestamp)
             & splitsAt 2
@@ -280,7 +287,7 @@ baseSpec = describe "Stream" $ do
 
       it "splits the stream at 0" $ do
         (x, y) <-
-          createTestStreamFromList [1 .. 5 :: Int]
+          eachForTest [1 .. 5 :: Int]
             & splitsAt 0
             & toListReturn_
         x `shouldBe` []
@@ -288,7 +295,7 @@ baseSpec = describe "Stream" $ do
 
       it "splits the stream longer" $ do
         (x, y) <-
-          createTestStreamFromList [1 .. 5 :: Int]
+          eachForTest [1 .. 5 :: Int]
             & splitsAt 100
             & toListReturn_
         x `shouldBe` [1 .. 5]
@@ -301,9 +308,9 @@ baseSpec = describe "Stream" $ do
                 (x :> r) <- toList s
                 return ([x], r)
             )
-    describe "[chunks]" $ do
+    describe "[chunks, concats]" $ do
       it "splits the stream into chunks" $ do
-        let s = createTestStreamFromList [1 .. 10 :: Int]
+        let s = eachForTest [1 .. 10 :: Int]
         (r, _) <- extractChunk $ chunks 3 s
         r
           `shouldBe` [ [1, 2, 3],
@@ -312,30 +319,37 @@ baseSpec = describe "Stream" $ do
                        [10]
                      ]
 
+      it "[concats]" $ do
+        let chunkedStream = chunks 3 $ eachForTest [1 .. 10 :: Int]
+        concats chunkedStream `testStreamWithBase_'` [1 .. 10]
+
+      it "concats and chunks are inverses" $ do
+        l <- randomList @Int 10
+        let stream = eachForTest l
+        ( chunks 3 stream
+            & concats
+          )
+          `testStreamWithBase_'` l
+
       it "throws an error if the chunk size is not positive" $ do
-        let s = createTestStreamFromList @IO [1 .. 4 :: Int]
+        let s = eachForTest @IO [1 .. 4 :: Int]
         evaluate (chunks 0 s) `shouldThrow` (\(e :: IOException) -> "chunk size" `isInfixOf` show e)
         evaluate (chunks (-10) s) `shouldThrow` (\(e :: IOException) -> "chunk size" `isInfixOf` show e)
 
     it "[joins]" $ do
-      let s = createTestStreamFromList ['a' .. 'd']
-          s2 = do
+      let innerStream = eachForTest ['a' .. 'd']
+          stream = do
             yield 'A'
             yield 'X'
-            return s
-      joins s2 `testStreamWithBase_'` "AXabcd"
-
-    it "[concats]" $ do
-      let s = chunks 3 $ createTestStreamFromList [1 .. 10 :: Int]
-      extractChunk s >>= (`shouldBe` 4) . length . fst
-      concats s `testStreamWithBase_'` [1 .. 10]
+            return innerStream
+      joins stream `testStreamWithBase_'` "AXabcd"
 
     it "[intercalates]" $ do
-      let s = createTestStreamFromList ['a' .. 'm']
-          t = yield '_' >> yield '#' >> yield '_'
+      let s = eachForTest ['a' .. 'm']
+          delim = yield '_' >> yield '#' >> yield '_'
 
       ( chunks 3 s
-          & intercalates t
+          & intercalates delim
         )
         `testStreamWithBase_'` "abc_#_def_#_ghi_#_jkl_#_m_#_"
 
@@ -384,8 +398,8 @@ baseSpec = describe "Stream" $ do
                                ]
 
     it "[zipsWith]" $ do
-      let s1 = createTestStreamFromList [1 .. 5 :: Int]
-          s2 = createTestStreamFromList [100 .. 2000 :: Int]
+      let s1 = eachForTest [1 .. 5 :: Int]
+          s2 = eachForTest [100 .. 2000 :: Int]
       ( zipsWith (\(x :> s) (y :> s') -> x + y :> (s, s')) s1 s2
           & S.map (* 2)
         )
@@ -396,15 +410,33 @@ baseSpec = describe "Stream" $ do
         `testStreamWithBase_'` [202, 206, 210, 214, 218]
 
     it "[decompose]" $ do
-      let s = createTestStreamFromList [1 .. 5 :: Int]
-      ( maps (Compose . pure . mapOf (* 2)) s
-          & decompose
-        )
-        `testStreamWithBase_'` [2, 4, 6, 8, 10]
+      let s = eachForTest [1 .. 5 :: Int]
+      (logData, d :> _) <-
+        captureOutput $
+          S.map (* 2) s
+            & maps (Compose . S._first printEffect)
+            & decompose
+            & toList
+      logData `shouldBe` "2\n4\n6\n8\n10\n"
+      d `shouldBe` [2, 4, 6, 8, 10]
+
+    it "[expand,expandPost]" $ do
+      let s = eachForTest [1 .. 5 :: Int]
+      (l, r) <-
+        expand (\inner (x :> xs) -> x * 100 :> inner (x * 10 :> xs)) s
+          & toListEffect_
+      l `shouldBe` [10, 20, 30, 40, 50]
+      r `shouldBe` [100, 200, 300, 400, 500]
+
+      (l', r') <-
+        expandPost (\inner (x :> xs) -> x * 100 :> inner (x * 10 :> xs)) s
+          & toListEffect_
+      l `shouldBe` l'
+      r `shouldBe` r'
 
     describe "[zips,unzipped]" $ do
       it "is invertible" $ do
-        let zipped = zips (createTestStreamFromList ['a' .. 'd']) (createTestStreamFromList [1 .. 4])
+        let zipped = zips (eachForTest ['a' .. 'd']) (eachForTest [1 .. 4])
             unzipped = unzips zipped
         (v2, v1) <- toListEffect_ unzipped
         v1 `shouldBe` [1, 2, 3, 4 :: Int]
@@ -458,7 +490,7 @@ preludeSpec = describe "Prelude" $ do
     it "[stdoutLn]" $ do
       (out, result) <-
         captureOutput $
-          createTestStreamFromList @IO [1 .. 10 :: Int]
+          eachForTest @IO [1 .. 10 :: Int]
             & S.map show
             & S.stdoutLn
       result `shouldBe` ()
@@ -466,20 +498,20 @@ preludeSpec = describe "Prelude" $ do
 
   describe "Transforming" $ do
     it "[map]" $ do
-      ( createTestStreamFromList [1 .. 4 :: Int]
+      ( eachForTest [1 .. 4 :: Int]
           & S.map (* 2)
           & S.map show
         )
         `testStreamWithBase_'` ["2", "4", "6", "8"]
 
     it "[for]" $ do
-      ( createTestStreamFromList [97, 100, 120]
+      ( eachForTest [97, 100, 120]
           & flip S.for (\a -> S.replicate 3 (chr a) >> S.yield ' ')
         )
         `testStreamWithBase_'` "aaa ddd xxx "
 
     it "[with]" $ do
-      ( createTestStreamFromList [1 .. 3 :: Int]
+      ( eachForTest [1 .. 3 :: Int]
           & flip S.with (\a -> replicates a (a :> ()))
           & concats
         )
@@ -489,7 +521,7 @@ preludeSpec = describe "Prelude" $ do
       it "should copy" $ do
         (out, res) <-
           captureOutput $
-            createTestStreamFromList "haskell"
+            eachForTest "haskell"
               & S.copy
               & S.map ord
               & S.mapM (liftIO . putStr . show)
@@ -501,7 +533,7 @@ preludeSpec = describe "Prelude" $ do
         out `shouldBe` "104H97A115S107K101E108L108L"
 
       it "should produce the same result regardless the streams are processed" $ do
-        let str = createTestStreamFromList "haskell"
+        let str = eachForTest "haskell"
             mapping =
               S.map toUpper
                 >>> S.mapM putChar
@@ -532,26 +564,44 @@ preludeSpec = describe "Prelude" $ do
 
     it "[chain]" $ do
       let s :: StreamOf Int (Writer [Int]) ()
-          s = createTestStreamFromList [1 .. 3]
-          (_, logData) =
+          s = eachForTest [1 .. 3]
+          (result :> _, logData) =
             runWriter $
               s
                 & S.chain (\v -> tell [v])
                 & S.chain (\v -> tell [v * 10])
                 & S.chain (\v -> tell [v * 100])
-                & S.effects
+                & S.product
       logData `shouldBe` [1, 10, 100, 2, 20, 200, 3, 30, 300]
+      result `shouldBe` 6
+
+    it "[sequence] interleaves the effects" $ do
+      (logData, x :> _) <-
+        captureOutput $
+          eachForTest [1 .. 3 :: Int]
+            & S.map (\x -> fmtLn ("value: " +|| x ||+ "") >> fmtLn ("even: " +|| even x ||+ "") >> pure x)
+            & S.sequence
+            & S.toList
+      logData `shouldBe` "value: 1\neven: False\nvalue: 2\neven: True\nvalue: 3\neven: False\n"
+      x `shouldBe` [1, 2, 3]
 
     it "[filter]" $ do
-      ( createTestStreamFromList [1 .. 10 :: Int]
+      ( eachForTest [1 .. 10 :: Int]
           & S.filter even
         )
         `testStreamWithBase_'` [2, 4, 6, 8, 10]
 
-      ( createTestStreamFromList [1 .. 10 :: Int]
+      ( eachForTest [1 .. 10 :: Int]
           & S.filterM (pure . odd)
         )
         `testStreamWithBase_'` [1, 3, 5, 7, 9]
+
+    it "[concat]" $ do
+      ( eachForTest [1 .. 4 :: Int]
+          & S.map (\x -> [1 .. x])
+          & S.concat
+        )
+        `testStreamWithBase_'` [1, 1, 2, 1, 2, 3, 1, 2, 3, 4]
 
   describe "Folding" $ do
     it "[fold] folds with effects" $ do
@@ -588,7 +638,7 @@ preludeSpec = describe "Prelude" $ do
       (out, items :> r) <-
         captureOutput $
           S.foldM
-            (\items v -> print v >> return (v : items))
+            (\items v -> (: items) <$> printEffect v)
             (pure [])
             pure
             s
@@ -597,8 +647,8 @@ preludeSpec = describe "Prelude" $ do
       r `shouldBe` ()
 
     it "[all,any]" $ do
-      let allEven = createTestStreamFromList [0, 2 .. 10 :: Int]
-          allOdd = createTestStreamFromList [1, 3 .. 9 :: Int]
+      let allEven = eachForTest [0, 2 .. 10 :: Int]
+          allOdd = eachForTest [1, 3 .. 9 :: Int]
 
       S.all even allEven >>= (`shouldBe` True) . S.fst'
       S.all even allOdd >>= (`shouldBe` False) . S.fst'
@@ -608,16 +658,18 @@ preludeSpec = describe "Prelude" $ do
       S.any even (allEven >> allOdd) >>= (`shouldBe` True) . S.fst'
 
     it "[sum, product, head, elem, notElem]" $ do
-      let num1 = createTestStreamFromList [1 .. 10 :: Int]
+      l <- randomList @Int 10
+      let num1 = eachForTest [1 .. 10 :: Int]
+          randomStream = eachForTest l
 
-      S.sum num1 >>= (`shouldBe` 55) . S.fst'
+      S.sum randomStream >>= (`shouldBe` sum l) . S.fst'
       S.sum emptyInt >>= (`shouldBe` (0 :: Int)) . S.fst'
-      S.product num1 >>= (`shouldBe` 3628800) . S.fst'
+      S.product randomStream >>= (`shouldBe` product l) . S.fst'
       S.product emptyInt >>= (`shouldBe` (1 :: Int)) . S.fst'
 
-      S.head num1 >>= (`shouldBe` Just 1) . S.fst'
+      S.head randomStream >>= (`shouldBe` Just (head l)) . S.fst'
       S.head emptyInt >>= (`shouldBe` Nothing) . S.fst'
-      S.last num1 >>= (`shouldBe` Just 10) . S.fst'
+      S.last randomStream >>= (`shouldBe` Just (last l)) . S.fst'
       S.last emptyInt >>= (`shouldBe` Nothing) . S.fst'
 
       S.elem 1 num1 >>= (`shouldBe` True) . S.fst'
@@ -627,21 +679,21 @@ preludeSpec = describe "Prelude" $ do
 
   describe "Splitting" $ do
     it "[next]" $ do
-      let l = createTestStreamFromList [1 .. 10 :: Int]
+      let l = eachForTest [1 .. 10 :: Int]
       S.next emptyInt >>= (`shouldBe` Left ()) . (fst <$>)
       S.next l >>= (`shouldBe` Right 1) . (fst <$>)
 
 extraSpec :: SpecWith ()
 extraSpec = describe "extraSpec" $ do
   it "[zipPair]" $ do
-    let s1 = createTestStreamFromList [1 .. 10]
-        s2 = createTestStreamFromList ["a", "b", "c", "d"]
+    let s1 = eachForTest [1 .. 10]
+        s2 = eachForTest ["a", "b", "c", "d"]
     zipPair s1 s2
       `testStreamWithBase_'` [(1 :: Int, "a" :: String), (2, "b"), (3, "c"), (4, "d")]
 
   it "[logStreamInWriter]" $ do
     let s :: StreamOf Int (IOWriter [String]) ()
-        s = createTestStreamFromList [1 .. 5]
+        s = eachForTest [1 .. 5]
         f = logStreamInWriter (\a -> [show $ 2 * a]) >>> toList_
     (_, logData) <- runWriterT $ f s
     logData `shouldBe` ["2", "4", "6", "8", "10"]
