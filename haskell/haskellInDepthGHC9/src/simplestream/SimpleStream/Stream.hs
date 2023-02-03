@@ -46,7 +46,7 @@ module SimpleStream.Stream
   joins,
   concats,
   intercalates,
-  -- cutoff,
+  cutoff,
 
   inspect, 
 
@@ -72,6 +72,7 @@ module SimpleStream.Stream
   streamStepFromStep,
   streamStepFromStep_,
   streamStepFromEffect,
+  streamStepFromEffect_,
   streamEffectFromEffect,
   streamEffectFromEffect_,
   streamEffectFromStep,
@@ -324,6 +325,12 @@ intercalates v =
     ((v >>) =<<)
     (join . lift)
 
+cutoff :: (Monad m, Functor f) => Int -> Stream f m r -> Stream f m ()
+cutoff n str
+  | n > 0, Step s <- str = Step $ cutoff (n - 1) <$> s
+  | n > 0, Effect e <- str = Effect $ cutoff n <$> e
+  | otherwise = Return ()
+
 -- ==================== Section: Inspect ====================
 
 inspect :: Monad m => Stream f m r -> m (Either r (f (Stream f m r)))
@@ -442,6 +449,9 @@ streamStepFromStep fn = Step . fn . yields
 
 streamStepFromEffect :: Monad m => (Stream x m (Stream str n r) -> str (Stream str n r)) -> m (Stream str n r) -> Stream str n r
 streamStepFromEffect fn = Step . fn . lift
+
+streamStepFromEffect_ :: Monad m => m (Stream (Stream f m) n r) -> Stream (Stream f m) n r
+streamStepFromEffect_ = streamStepFromEffect id
 
 streamEffectFromEffect_ :: (Monad m) => m (Stream f (Stream g m) r) -> Stream f (Stream g m) r
 streamEffectFromEffect_ = streamEffectFromEffect id

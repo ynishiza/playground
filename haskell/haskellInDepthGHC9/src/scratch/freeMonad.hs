@@ -1,44 +1,44 @@
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE InstanceSigs #-} 
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE RankNTypes #-}
 
 import Control.Monad
 
 data MyCont r a where
-  MkCont :: { runCont :: (a -> r) -> r } -> MyCont r a
+  MyCont :: {runCont :: (a -> r) -> r} -> MyCont r a
 
 instance Functor (MyCont r) where
   fmap :: (a -> b) -> MyCont r a -> MyCont r b
-  fmap f (MkCont c) = MkCont $ \cb -> c (cb . f)
+  fmap f (MyCont c) = MyCont $ \mkPure -> c (mkPure . f)
 
 instance Applicative (MyCont r) where
-  pure x = MkCont $ \cb -> cb x
+  pure x = MyCont $ \mkPure -> mkPure x
   (<*>) = ap
 
 instance Monad (MyCont r) where
   (>>=) :: MyCont r a -> (a -> MyCont r b) -> MyCont r b
-  (MkCont c) >>= k = MkCont $ 
-    \cb -> c (\a -> runCont (k a) cb)
+  (MyCont c) >>= k = MyCont $
+    \mkPure -> c (\a -> runCont (k a) mkPure)
 
-
-data Ft f m a where
-  MkFree :: { runFt :: forall r. (a -> m r) -> (forall x. (x -> m r) -> f x -> m r) -> m r } -> Ft f m a
+data FreeT f m a where
+  FreeT :: {runFt :: forall r. (a -> m r) -> (forall x. (x -> m r) -> f x -> m r) -> m r} -> FreeT f m a
 
 type Ftp m a r = a -> m r
+
 type Ftf f m a r = forall x. (x -> m r) -> f x -> m r
 
-liftConst :: a -> Ft f m a
-liftConst a = MkFree $ \cb _ -> cb a
+liftConst :: a -> FreeT f m a
+liftConst a = FreeT $ \mkPure _ -> mkPure a
 
-liftF :: Functor f => f a ->  Ft f m a
-liftF f = MkFree $ \cba cbf -> cbf cba f
+liftF :: f a -> FreeT f m a
+liftF f = FreeT $ \mkPure mkFree -> mkFree mkPure f
 
-instance Functor (Ft f m) where
-  fmap fn (MkFree f) = MkFree $ \cba cbf -> f (cba . fn) cbf
-  
-instance Applicative (Ft f m) where
+instance Functor (FreeT f m) where
+  fmap fn (FreeT f) = FreeT $ \mkPure mkFree -> f (mkPure . fn) mkFree
+
+instance Applicative (FreeT f m) where
   pure = liftConst
   (<*>) = ap
 
-instance Monad (Ft f m) where
-  (MkFree f) >>= k = MkFree $ \cba cbf -> f (\a -> runFt (k a) cba cbf) cbf
+instance Monad (FreeT f m) where
+  (FreeT f) >>= k = FreeT $ \mkPure mkFree -> f (\a -> runFt (k a) mkPure mkFree) mkFree

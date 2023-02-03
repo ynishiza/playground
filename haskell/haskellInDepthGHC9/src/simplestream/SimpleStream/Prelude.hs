@@ -2,22 +2,13 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE StandaloneKindSignatures #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Use =<<" #-}
 
 {- ORMOLU_DISABLE -}
 module SimpleStream.Prelude (
-  Of(..),
   StreamOf,
-  lazily,
-  strictly,
-  fst',
-  snd',
-  _first,
-  _second,
-  mapOf,
 
   -- Introducing
   yield,
@@ -79,12 +70,20 @@ module SimpleStream.Prelude (
   -- Splitting
   next,
   uncons,
+  breaks',
+  breakWhen,
+  breaks,
+  break,
+  split,
+  group,
+  groupBy,
 
   strWords,
   str10,
   str1,
   collectsOf,
 
+  module X,
   ) where
 {- ORMOLU_ENABLE -}
 
@@ -92,14 +91,14 @@ import Control.Applicative as M
 import Control.Monad (join, (>=>))
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Class
-import Data.Bifunctor
 import Data.Functor.Identity
-import Data.Kind
 import Data.Tuple (swap)
-import SimpleStream.Stream as S
+import SimpleStream.Of as X
+import SimpleStream.Stream as X
 import Prelude hiding
   ( all,
     any,
+    break,
     concat,
     cycle,
     elem,
@@ -111,17 +110,18 @@ import Prelude hiding
     map,
     mapM,
     mapM_,
-    read,
-    show,
     notElem,
     product,
+    read,
     repeat,
     replicate,
     sequence,
+    show,
+    span,
     sum,
     take,
   )
-import qualified Prelude
+import Prelude qualified
 
 strWords :: Monad m => Stream (Of String) m ()
 strWords = do
@@ -131,54 +131,15 @@ strWords = do
   yield "h"
   yield "i"
 
+type StreamOf a = Stream (Of a)
+
 str10 :: Stream (Of Int) m ()
 str10 = each [1 .. 10]
 
 str1 :: Monad m => Stream (Of Int) m ()
 str1 = takes 10 $ repeats (1 :> ())
 
-type StreamOf a = Stream (Of a)
-
-type Of :: Type -> Type -> Type
-data Of a b where
-  (:>) :: !a -> b -> Of a b
-  deriving (Show, Eq)
-
-infixr 1 :>
-
-instance Functor (Of a) where
-  fmap f (a :> b) = a :> f b
-
-instance Bifunctor Of where
-  bimap f g (a :> b) = f a :> g b
-
-instance Monoid a => Applicative (Of a) where
-  pure a = mempty :> a
-  (a :> f) <*> (b :> x) = a <> b :> f x
-
-lazily :: Of a b -> (a, b)
-lazily (a :> b) = (a, b)
-
-strictly :: (a, b) -> Of a b
-strictly (a, b) = a :> b
-
-mapOf :: (a -> b) -> Of a x -> Of b x
-mapOf f (a :> x) = f a :> x
-
-fst' :: Of a x -> a
-fst' (a :> _) = a
-
-snd' :: Of a x -> x
-snd' (_ :> x) = x
-
-_first :: Functor f => (a -> f a') -> Of a x -> f (Of a' x)
-_first f (a :> x) = (:> x) <$> f a
-
-_second :: Functor f => (x -> f x') -> Of a x -> f (Of a x')
-_second f (a :> x) = (a :>) <$> f x
-
 -- ==================== Introducing streams of elements  ====================
-
 yield :: a -> StreamOf a m ()
 yield a = Step $ a :> empty_
 
@@ -336,7 +297,6 @@ read = map Prelude.read
 show :: (Monad m, Show a) => StreamOf a m r -> StreamOf String m r
 show = map Prelude.show
 
-
 -- ==================== Splitting ====================
 
 -- ==================== Sum and Compose ====================
@@ -399,6 +359,59 @@ next = inspect >=> pure . (lazily <$>)
 
 uncons :: Monad m => StreamOf a m r -> m (Maybe (a, StreamOf a m r))
 uncons = (either (const Nothing) Just <$>) . next
+
+breaks' :: (Monad m, Functor f) => (forall x. f x -> Bool) -> Stream f m r -> Stream f m (Stream f m r)
+breaks' predicate = loop
+  where
+    loop (Return r) = Return $ Return r
+    loop (Effect e) = Effect $ loop <$> e
+    loop (Step s) =
+      if predicate s
+        then Return (Step s)
+        else Step $ loop <$> s
+
+breakWhen :: Monad m => (x -> a -> x) -> x -> (x -> b) -> (b -> Bool) -> StreamOf a m r -> StreamOf a m (StreamOf a m r)
+breakWhen redc v0 extract predicate = loop v0
+  where
+    loop _ (Return r) = Return $ Return r
+    loop accum (Effect e) = Effect $ loop accum <$> e
+    loop accum (Step s) =
+      if predicate (extract accum')
+        then Return (Step s)
+        else Step $ loop accum' <$> s
+      where
+        accum' = redc accum (fst' s)
+
+break :: Monad m => (a -> Bool) -> StreamOf a m r -> StreamOf a m (StreamOf a m r)
+break predicate = breakWhen (\_ a -> predicate a) False id id
+
+split :: forall m a r. (Monad m, Eq a) => a -> StreamOf a m r -> Stream (StreamOf a m) m r
+split a = breaks (== a)
+
+breaks :: forall m a r. Monad m => (a -> Bool) -> StreamOf a m r -> Stream (StreamOf a m) m r
+breaks predicate = loop
+  where
+    loop :: StreamOf a m r -> Stream (StreamOf a m) m r
+    loop (Return r) = Return r
+    loop (Effect e) = Step $ loop <$> break predicate (Effect e)
+    loop (Step s) =
+      if predicate (fst' s)
+        then loop $ snd' s
+        else Step x
+      where
+        x = Step $ (loop <$>) . break predicate <$> s
+
+group :: forall m a r. (Monad m, Eq a) => StreamOf a m r -> Stream (StreamOf a m) m r
+group = groupBy (==)
+
+groupBy :: forall m a r. Monad m => (a -> a -> Bool) -> StreamOf a m r -> Stream (StreamOf a m) m r
+groupBy comparer = loop
+  where
+    b v0 = breakWhen (\_ a -> a) v0 id (not . comparer v0)
+    loop :: StreamOf a m r -> Stream (StreamOf a m) m r
+    loop (Return r) = Return r
+    loop (Effect e) = streamStepFromEffect_ $ loop <$> e
+    loop (Step s) = Step $ Step $ (loop <$>) . b (fst' s) <$> s
 
 -- ==================== Merge ====================
 

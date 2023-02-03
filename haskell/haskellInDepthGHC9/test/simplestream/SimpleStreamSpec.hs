@@ -1,12 +1,13 @@
+{-# HLINT ignore "Alternative law, left identity" #-}
+{-# HLINT ignore "Alternative law, right identity" #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# HLINT ignore "Use map once" #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TupleSections #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
-{-# HLINT ignore "Alternative law, left identity" #-}
-{-# HLINT ignore "Alternative law, right identity" #-}
+{-# HLINT ignore "Use void" #-}
 
 module SimpleStreamSpec
   ( spec,
@@ -87,6 +88,12 @@ printEffect :: Show a => a -> IO a
 printEffect x = print x >> return x
 
 type IOWriter a = WriterT a IO
+
+toListAndPrint :: (MonadIO m, Buildable [a]) => StreamOf a m r -> m (Of [a] r)
+toListAndPrint s = do
+  (v :> r) <- S.toList s
+  liftIO $ fmt $ "[" +| v |+ "]"
+  return (v :> r)
 
 spec :: SpecWith ()
 spec = describe "Simple Stream" $ do
@@ -411,13 +418,13 @@ baseSpec = describe "Stream" $ do
 
     it "[decompose]" $ do
       let s = eachForTest [1 .. 5 :: Int]
-      (logData, d :> _) <-
+      (captured, d :> _) <-
         captureOutput $
           S.map (* 2) s
             & maps (Compose . S._first printEffect)
             & decompose
             & toList
-      logData `shouldBe` "2\n4\n6\n8\n10\n"
+      captured `shouldBe` "2\n4\n6\n8\n10\n"
       d `shouldBe` [2, 4, 6, 8, 10]
 
     it "[expand,expandPost]" $ do
@@ -563,26 +570,21 @@ preludeSpec = describe "Prelude" $ do
         out2 `shouldBe` out
 
     it "[chain]" $ do
-      let s :: StreamOf Int (Writer [Int]) ()
-          s = eachForTest [1 .. 3]
-          (result :> _, logData) =
-            runWriter $
-              s
-                & S.chain (\v -> tell [v])
-                & S.chain (\v -> tell [v * 10])
-                & S.chain (\v -> tell [v * 100])
-                & S.product
-      logData `shouldBe` [1, 10, 100, 2, 20, 200, 3, 30, 300]
-      result `shouldBe` 6
+      (captured, _) <-
+        captureOutput $
+          eachForTest [1 .. 10 :: Int]
+            & S.chain (putStr . show)
+            & S.effects
+      captured `shouldBe` "12345678910"
 
     it "[sequence] interleaves the effects" $ do
-      (logData, x :> _) <-
+      (captured, x :> _) <-
         captureOutput $
           eachForTest [1 .. 3 :: Int]
             & S.map (\x -> fmtLn ("value: " +|| x ||+ "") >> fmtLn ("even: " +|| even x ||+ "") >> pure x)
             & S.sequence
             & S.toList
-      logData `shouldBe` "value: 1\neven: False\nvalue: 2\neven: True\nvalue: 3\neven: False\n"
+      captured `shouldBe` "value: 1\neven: False\nvalue: 2\neven: True\nvalue: 3\neven: False\n"
       x `shouldBe` [1, 2, 3]
 
     it "[filter]" $ do
@@ -682,6 +684,122 @@ preludeSpec = describe "Prelude" $ do
       let l = eachForTest [1 .. 10 :: Int]
       S.next emptyInt >>= (`shouldBe` Left ()) . (fst <$>)
       S.next l >>= (`shouldBe` Right 1) . (fst <$>)
+    
+    describe "break group" $ do
+      let testWithCapture :: (Eq a, Show a) => StreamOf a IO () -> (String, [a]) -> IO ()
+          testWithCapture str expected = do
+            (captured, l) <- captureOutput $ S.toList_ str
+            captured `shouldBe` fst expected
+            l `shouldBe` snd expected
+          emptyWithPrint :: String -> StreamOf a IO ()
+          emptyWithPrint s = effect (putStr s >> pure ())
+
+      it "[breakWhen]" $ do
+        (l1 :> rest) <-
+          eachForTest [1 .. 15 :: Int]
+            & S.breakWhen (+) 0 id (> 30)
+            & S.toList
+        l2 <- S.toList_ rest
+        l1 `shouldBe` [1 .. 7]
+        l2 `shouldBe` [8 .. 15]
+
+      it "[breakWhen] may never break into all + empty" $ do
+        (l1 :> rest) <-
+          eachForTest [1 .. 10 :: Int]
+            & S.break (> 1000)
+            & S.toList
+        l2 <- S.toList_ rest
+        l1 `shouldBe` [1 .. 10]
+        l2 `shouldBe` []
+
+      it "[breakWhen] may break break into empty + all" $ do
+        (l :> rest2) <-
+          eachForTest [1 .. 10 :: Int]
+            & S.break (> -1000)
+            & S.toList
+        l2 <- S.toList_ rest2
+        l `shouldBe` []
+        l2 `shouldBe` [1 .. 10]
+
+      it "[break]" $ do
+        (l1 :> rest) <-
+          eachForTest [1 .. 10 :: Int]
+            & S.break (> 4)
+            & S.toList
+        l2 <- S.toList_ rest
+        l1 `shouldBe` [1 .. 4]
+        l2 `shouldBe` [5 .. 10]
+
+      it "[breaks]" $ do
+        (captured, l :> _) <-
+          captureOutput $
+            each "aaa   b   cc    dddd   "
+              & S.breaks (== ' ')
+              & mapped toListAndPrint
+              & S.toList
+
+        l `shouldBe` ["aaa", "b", "cc", "dddd"]
+        captured `shouldBe` "[aaa][b][cc][dddd]"
+
+      it "[breaks] may have empty breaks" $ do
+        (l :> ()) <-
+            each "     aaa   b   "
+              & S.breaks (== ' ')
+              & mapped toListAndPrint
+              & S.toList
+        l `shouldBe` ["aaa", "b"]
+
+      it "[breaks] preserves effect" $ do
+        (do
+              S.yield 'a'
+              emptyWithPrint "e1"
+              S.yield ' '
+              emptyWithPrint "e2"
+              S.yield 'a'
+            & S.breaks (== ' ')
+            & mapped S.toList
+          )`testWithCapture` ("e1e2", ["a", "a"])
+
+      it "[breaks] preserves effect between empty breaks" $ do
+        (do
+              S.yield 'a'
+              emptyWithPrint "e1"
+              S.yield ' '
+              emptyWithPrint "e2"
+              S.yield ' '
+              S.yield ' '
+              S.yield ' '
+              emptyWithPrint "e3"
+              S.yield ' '
+              emptyWithPrint "e4"
+              S.yield 'a'
+            & S.breaks (== ' ')
+            & mapped S.toList
+          )`testWithCapture` ("e1e2e3e4", ["a", "", "", "a"])
+
+      it "[group]" $ do
+        (l :> _) <-
+          each "baaaaad"
+            & S.group
+            & mapped S.toList
+            & S.toList
+        l `shouldBe` ["b", "aaaaa", "d"]
+
+      it "[groupBy]" $ do
+        (l :> _) <-
+          each [1, 2, 3, 3, 4, 3, 2, 1, 4, 5, 6, 7, 6, 5 :: Int]
+            & S.groupBy (>=)
+            & mapped S.toList
+            & S.toList
+        l
+          `shouldBe` [ [1],
+                       [2],
+                       [3, 3],
+                       [4, 3, 2, 1, 4],
+                       [5],
+                       [6],
+                       [7, 6, 5]
+                     ]
 
 extraSpec :: SpecWith ()
 extraSpec = describe "extraSpec" $ do
