@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Use =<<" #-}
+{-# HLINT ignore "Use catMaybes" #-}
 
 {- ORMOLU_DISABLE -}
 module SimpleStream.Prelude (
@@ -42,10 +43,20 @@ module SimpleStream.Prelude (
   store,
   chain,
   sequence,
+  nubOrd,
+  nubOrdOn,
+  mapMaybeM,
   filter,
   filterM,
+  delay,
   take,
+  takeWhile,
+  takeWhileM,
+  dropWhile,
+  dropWhileM,
   concat,
+  scan,
+  scanM,
   read,
   show,
 
@@ -88,10 +99,13 @@ module SimpleStream.Prelude (
 {- ORMOLU_ENABLE -}
 
 import Control.Applicative as M
+import Control.Concurrent (threadDelay)
 import Control.Monad (join, (>=>))
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Class
 import Data.Functor.Identity
+import Data.Maybe
+import Data.Set qualified as D
 import Data.Tuple (swap)
 import SimpleStream.Of as X
 import SimpleStream.Stream as X
@@ -101,6 +115,7 @@ import Prelude hiding
     break,
     concat,
     cycle,
+    dropWhile,
     elem,
     filter,
     head,
@@ -120,6 +135,7 @@ import Prelude hiding
     span,
     sum,
     take,
+    takeWhile,
   )
 import Prelude qualified
 
@@ -260,27 +276,72 @@ sequence =
     (\(mx :> rest) -> Effect $ Step . (:> rest) <$> mx)
     Effect
 
+nubOrd :: (Monad m, Ord a) => StreamOf a m r -> StreamOf a m r
+nubOrd = nubOrd' D.empty id
+
+nubOrdOn :: (Monad m, Ord b) => (a -> b) -> StreamOf a m r -> StreamOf a m r
+nubOrdOn = nubOrd' D.empty
+
+nubOrd' :: (Monad m, Ord b) => D.Set b -> (a -> b) -> StreamOf a m r -> StreamOf a m r
+nubOrd' _ _ str@(Return _) = str
+nubOrd' seen pick (Effect e) = Effect $ nubOrd' seen pick <$> e
+nubOrd' seen pick (Step (a :> as)) =
+  if b `D.member` seen
+    then nubOrd' seen pick as
+    else Step (a :> nubOrd' (b `D.insert` seen) pick as)
+  where
+    b = pick a
+
 filter :: Monad m => (a -> Bool) -> StreamOf a m r -> StreamOf a m r
-filter fn = filterM (pure . fn)
+filter predicate = filterM (pure . predicate)
 
 filterM :: Monad m => (a -> m Bool) -> StreamOf a m r -> StreamOf a m r
-filterM fn =
+filterM predicate =
   streamFold
     Return
     ( \(a :> as) -> Effect $ do
-        x <- fn a
+        x <- predicate a
         if x
           then return (Step $ a :> as)
           else return as
     )
     Effect
 
--- delay :: MonadIO m => Int -> StreamOf a m r -> StreamOf a m r
--- delay n = undefined
---
+mapMaybeM :: Monad m => (a -> m (Maybe b)) -> StreamOf a m r -> StreamOf b m r
+mapMaybeM fn = map fromJust . filter isJust . mapM fn
+
+delay :: forall m a r. MonadIO m => Double -> StreamOf a m r -> StreamOf a m r
+delay _ str@(Return _) = str
+delay n (Effect e) = Effect $ delay n <$> e
+delay n (Step (a :> as)) = Effect $ either Return delayIfNext <$> next as
+  where
+    p = round $ n * 1000 * 1000
+    delayIfNext :: (a, StreamOf a m r) -> StreamOf a m r
+    delayIfNext (b, bs) = do
+      yield a
+      liftIO $ threadDelay p
+      delay n $ Step (b :> bs)
 
 take :: Monad m => Int -> StreamOf a m r -> StreamOf a m ()
 take = takes
+
+takeWhile :: Monad m => (a -> Bool) -> StreamOf a m r -> StreamOf a m ()
+takeWhile predicate = takeWhileM (pure . predicate)
+
+takeWhileM :: Monad m => (a -> m Bool) -> StreamOf a m r -> StreamOf a m ()
+takeWhileM predicate = breakM ((not <$>) . predicate) >=> return (Return ())
+
+dropWhile :: Monad m => (a -> Bool) -> StreamOf a m r -> StreamOf a m r
+dropWhile predicate = dropWhileM (pure . predicate)
+
+dropWhileM :: Monad m => (a -> m Bool) -> StreamOf a m r -> StreamOf a m r
+dropWhileM predicate = loop
+  where
+    loop (Return r) = Return r
+    loop (Effect e) = Effect $ loop <$> e
+    loop (Step (a :> as)) = Effect $ do
+      v <- predicate a
+      return $ if v then loop as else Step (a :> as)
 
 concat :: (Foldable f, Monad m) => StreamOf (f a) m r -> StreamOf a m r
 concat =
@@ -290,6 +351,20 @@ concat =
     Effect
   where
     createStep x xs = Step (x :> xs)
+
+scan :: Monad m => (x -> a -> x) -> x -> (x -> b) -> StreamOf a m r -> StreamOf b m r
+scan nextValue v0 finalize = scanM nextValue v0 (pure . finalize)
+
+scanM :: Monad m => (x -> a -> x) -> x -> (x -> m b) -> StreamOf a m r -> StreamOf b m r
+scanM nextValue v0 finalize = loop v0
+  where
+    loop _ (Return r) = Return r
+    loop v (Effect e) = Effect $ loop v <$> e
+    loop v (Step (a :> as)) = Effect $ do
+      b <- finalize v'
+      return $ Step (b :> loop v' as)
+      where
+        v' = nextValue v a
 
 read :: (Monad m, Read a) => StreamOf String m r -> StreamOf a m r
 read = map Prelude.read
@@ -371,19 +446,27 @@ breaks' predicate = loop
         else Step $ loop <$> s
 
 breakWhen :: Monad m => (x -> a -> x) -> x -> (x -> b) -> (b -> Bool) -> StreamOf a m r -> StreamOf a m (StreamOf a m r)
-breakWhen redc v0 extract predicate = loop v0
+breakWhen redc v0 extract predicate = breakWhenM redc v0 extract (pure . predicate)
+
+breakWhenM :: Monad m => (x -> a -> x) -> x -> (x -> b) -> (b -> m Bool) -> StreamOf a m r -> StreamOf a m (StreamOf a m r)
+breakWhenM redc v0 extract predicate = loop v0
   where
     loop _ (Return r) = Return $ Return r
     loop accum (Effect e) = Effect $ loop accum <$> e
-    loop accum (Step s) =
-      if predicate (extract accum')
-        then Return (Step s)
-        else Step $ loop accum' <$> s
+    loop accum (Step s) = Effect $ do
+      p <- predicate (extract accum')
+      return $
+        if p
+          then Return (Step s)
+          else Step $ loop accum' <$> s
       where
         accum' = redc accum (fst' s)
 
 break :: Monad m => (a -> Bool) -> StreamOf a m r -> StreamOf a m (StreamOf a m r)
 break predicate = breakWhen (\_ a -> predicate a) False id id
+
+breakM :: Monad m => (a -> m Bool) -> StreamOf a m r -> StreamOf a m (StreamOf a m r)
+breakM predicate = breakWhenM (\_ a -> predicate a) (pure False) id id
 
 split :: forall m a r. (Monad m, Eq a) => a -> StreamOf a m r -> Stream (StreamOf a m) m r
 split a = breaks (== a)

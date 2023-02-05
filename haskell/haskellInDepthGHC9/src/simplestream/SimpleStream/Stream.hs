@@ -218,10 +218,11 @@ untilJust m = loop
     loop :: Stream f m r
     loop = Effect $ m >>= return . maybe (Step $ pure loop) Return
 
-delays :: (MonadIO m, Applicative f) => Int -> Stream f m r
+delays :: (MonadIO m, Applicative f) => Double -> Stream f m r
 delays n = loop
   where
-    loop = Effect $ liftIO (threadDelay n) >> return (Step $ pure loop)
+    p = round $ n * 1000 * 1000
+    loop = Effect $ liftIO (threadDelay p) >> return (Step $ pure loop)
 
 streamBuild :: (forall b. (r -> b) -> (f b -> b) -> (m b -> b) -> b) -> Stream f m r
 streamBuild builder = builder Return Step Effect
@@ -318,12 +319,20 @@ concats =
     joins
     Effect
 
+-- note: analogue of intercalates :: [a] -> [[a]] -> [a]
+-- i.e. string join if a string
+--    intercalates :: String -> [String] -> String
 intercalates :: (Monad m, MonadTrans t, Monad (t m)) => t m x -> Stream (t m) m r -> t m r
-intercalates v =
-  streamFold
-    return
-    ((v >>) =<<)
-    (join . lift)
+intercalates v = loop
+  where
+    loop (Return r) = pure r
+    loop (Effect e) = join $ lift $ loop <$> e
+    loop (Step s) = s >>= loopStep
+
+    -- note: intercalate only if there is another step after this
+    loopStep (Return r) = pure r 
+    loopStep (Effect e) = join $ lift $ loopStep <$> e
+    loopStep str@(Step _) = v >> loop str
 
 cutoff :: (Monad m, Functor f) => Int -> Stream f m r -> Stream f m ()
 cutoff n str

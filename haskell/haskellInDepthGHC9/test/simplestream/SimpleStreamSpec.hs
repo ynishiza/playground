@@ -7,6 +7,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TupleSections #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
 {-# HLINT ignore "Use void" #-}
 
 module SimpleStreamSpec
@@ -16,7 +17,6 @@ where
 
 import Control.Applicative
 import Control.Arrow ((>>>))
-import Control.Concurrent (threadDelay)
 import Control.Exception
 import Control.Monad (replicateM)
 import Control.Monad.IO.Class
@@ -51,9 +51,6 @@ emptyInt = empty_
 
 emptyEffect :: (Monad m, Functor f) => Stream f m ()
 emptyEffect = Effect $ return $ pure ()
-
-oneSecond :: Int
-oneSecond = 1 * 1000 * 1000
 
 withTrivialEffect :: (Monad m, Functor f) => Stream f m r -> Stream f m r
 withTrivialEffect = mapped pure
@@ -115,7 +112,6 @@ baseSpec = describe "Stream" $ do
       let s = do
             yield 1
             Effect $ do
-              threadDelay oneSecond
               eachForTest <$> replicateM 2 getTimestamp
             Effect $ do
               eachForTest <$> replicateM 3 getTimestamp
@@ -190,8 +186,7 @@ baseSpec = describe "Stream" $ do
       length elems `shouldBe` length logData
 
     it "[delays]" $ do
-      let t = round @Double $ fromIntegral oneSecond / 2
-
+      let t = 0.5
       startTime <- getTimestamp
       x <-
         eachForTest [1 .. 5 :: Int]
@@ -358,7 +353,7 @@ baseSpec = describe "Stream" $ do
       ( chunks 3 s
           & intercalates delim
         )
-        `testStreamWithBase_'` "abc_#_def_#_ghi_#_jkl_#_m_#_"
+        `testStreamWithBase_'` "abc_#_def_#_ghi_#_jkl_#_m"
 
   describe "zipping" $ do
     it "[separate]" $ do
@@ -587,6 +582,18 @@ preludeSpec = describe "Prelude" $ do
       captured `shouldBe` "value: 1\neven: False\nvalue: 2\neven: True\nvalue: 3\neven: False\n"
       x `shouldBe` [1, 2, 3]
 
+    it "[nubOrd]" $ do
+      ( eachForTest [1, 1, 2, 3, 1, 2, 4, 8, 6, 5, 4, 7, 3, -1 :: Int]
+          & S.nubOrd
+        )
+        `testStreamWithBase_'` [1, 2, 3, 4, 8, 6, 5, 7, -1]
+
+    it "[nubOrd] keeps the first observed" $ do
+      ( eachForTest [1, 2, 3, 7, 8, 9, 8, 7, 6, 5, 4, 3, 2, 1 :: Int]
+          & S.nubOrd
+        )
+        `testStreamWithBase_'` [1, 2, 3, 7, 8, 9, 6, 5, 4]
+
     it "[filter]" $ do
       ( eachForTest [1 .. 10 :: Int]
           & S.filter even
@@ -598,12 +605,35 @@ preludeSpec = describe "Prelude" $ do
         )
         `testStreamWithBase_'` [1, 3, 5, 7, 9]
 
+    it "[takeWhile]" $ do
+      ( eachForTest [1 .. 10 :: Int]
+          & S.takeWhile (< 5)
+        )
+        `testStreamWithBase_'` [1 .. 4]
+
+    it "[dropWhile]" $ do
+      ( eachForTest [1 .. 10 :: Int]
+          & S.dropWhile (< 5)
+        )
+        `testStreamWithBase_'` [5 .. 10]
+
     it "[concat]" $ do
       ( eachForTest [1 .. 4 :: Int]
           & S.map (\x -> [1 .. x])
           & S.concat
         )
         `testStreamWithBase_'` [1, 1, 2, 1, 2, 3, 1, 2, 3, 4]
+
+    it "[scan,scanM]" $ do
+      ( eachForTest [1 .. 5 :: Int]
+          & S.scan (flip (:)) [] id
+        )
+        `testStreamWithBase_'` [ [1],
+                                 [2, 1],
+                                 [3, 2, 1],
+                                 [4, 3, 2, 1],
+                                 [5, 4, 3, 2, 1]
+                               ]
 
   describe "Folding" $ do
     it "[fold] folds with effects" $ do
@@ -684,7 +714,7 @@ preludeSpec = describe "Prelude" $ do
       let l = eachForTest [1 .. 10 :: Int]
       S.next emptyInt >>= (`shouldBe` Left ()) . (fst <$>)
       S.next l >>= (`shouldBe` Right 1) . (fst <$>)
-    
+
     describe "break group" $ do
       let testWithCapture :: (Eq a, Show a) => StreamOf a IO () -> (String, [a]) -> IO ()
           testWithCapture str expected = do
@@ -743,39 +773,41 @@ preludeSpec = describe "Prelude" $ do
 
       it "[breaks] may have empty breaks" $ do
         (l :> ()) <-
-            each "     aaa   b   "
-              & S.breaks (== ' ')
-              & mapped toListAndPrint
-              & S.toList
+          each "     aaa   b   "
+            & S.breaks (== ' ')
+            & mapped toListAndPrint
+            & S.toList
         l `shouldBe` ["aaa", "b"]
 
       it "[breaks] preserves effect" $ do
-        (do
-              S.yield 'a'
-              emptyWithPrint "e1"
-              S.yield ' '
-              emptyWithPrint "e2"
-              S.yield 'a'
+        ( do
+            S.yield 'a'
+            emptyWithPrint "e1"
+            S.yield ' '
+            emptyWithPrint "e2"
+            S.yield 'a'
             & S.breaks (== ' ')
             & mapped S.toList
-          )`testWithCapture` ("e1e2", ["a", "a"])
+          )
+          `testWithCapture` ("e1e2", ["a", "a"])
 
       it "[breaks] preserves effect between empty breaks" $ do
-        (do
-              S.yield 'a'
-              emptyWithPrint "e1"
-              S.yield ' '
-              emptyWithPrint "e2"
-              S.yield ' '
-              S.yield ' '
-              S.yield ' '
-              emptyWithPrint "e3"
-              S.yield ' '
-              emptyWithPrint "e4"
-              S.yield 'a'
+        ( do
+            S.yield 'a'
+            emptyWithPrint "e1"
+            S.yield ' '
+            emptyWithPrint "e2"
+            S.yield ' '
+            S.yield ' '
+            S.yield ' '
+            emptyWithPrint "e3"
+            S.yield ' '
+            emptyWithPrint "e4"
+            S.yield 'a'
             & S.breaks (== ' ')
             & mapped S.toList
-          )`testWithCapture` ("e1e2e3e4", ["a", "", "", "a"])
+          )
+          `testWithCapture` ("e1e2e3e4", ["a", "", "", "a"])
 
       it "[group]" $ do
         (l :> _) <-

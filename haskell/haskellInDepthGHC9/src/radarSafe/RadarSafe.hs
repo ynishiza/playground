@@ -20,7 +20,7 @@ module RadarSafe
   ( 
     SDirection (..),
     Direction (..),
-    TurnDirection(..),
+    SafeTurn(..),
 
     SafeRadar (..),
     SomeSafeRadar,
@@ -93,12 +93,15 @@ type SafeRadar :: Direction -> Type
 data SafeRadar d where
   MkSafeRadar :: SingI d => SafeRadar d
 
-type TurnDirection :: Direction -> Direction -> Type
-data TurnDirection d e where
-  TurnClockwise :: Clockwise d ~ e => TurnDirection d e
-  TurnAntiClockwise :: AntiClockwise d ~ e => TurnDirection d e
-  TurnAround :: Clockwise (Clockwise d) ~ e => TurnDirection d e
-  TurnNone :: TurnDirection d d
+-- note: like the original Turn, but annotated by Direction
+-- In particular, needed for rotation proofs 
+-- e.g. for proving/disproving (Clockwise d :~: d')
+type SafeTurn :: Direction -> Direction -> Type
+data SafeTurn d e where
+  TurnClockwise :: Clockwise d ~ e => SafeTurn d e
+  TurnAntiClockwise :: AntiClockwise d ~ e => SafeTurn d e
+  TurnAround :: Clockwise (Clockwise d) ~ e => SafeTurn d e
+  TurnNone :: SafeTurn d d
 
 deriving instance Typeable (SafeRadar d)
 
@@ -159,23 +162,23 @@ toAntiClockwise SEast = SNorth
 toAntiClockwise SSouth = SEast
 toAntiClockwise SWest = SSouth
 
-getTurnDirection :: forall d e. SDirection d -> SDirection e -> TurnDirection d e
-getTurnDirection SNorth SNorth = TurnNone
-getTurnDirection SNorth SEast = TurnClockwise
-getTurnDirection SNorth SSouth = TurnAround
-getTurnDirection SNorth SWest = TurnAntiClockwise
-getTurnDirection SEast SEast = TurnNone
-getTurnDirection SEast SSouth = TurnClockwise
-getTurnDirection SEast SWest = TurnAround
-getTurnDirection SEast SNorth = TurnAntiClockwise
-getTurnDirection SSouth SSouth = TurnNone
-getTurnDirection SSouth SWest = TurnClockwise
-getTurnDirection SSouth SNorth = TurnAround
-getTurnDirection SSouth SEast = TurnAntiClockwise
-getTurnDirection SWest SWest = TurnNone
-getTurnDirection SWest SNorth = TurnClockwise
-getTurnDirection SWest SEast = TurnAround
-getTurnDirection SWest SSouth = TurnAntiClockwise
+getSafeTurn :: forall d e. SDirection d -> SDirection e -> SafeTurn d e
+getSafeTurn SNorth SNorth = TurnNone
+getSafeTurn SNorth SEast = TurnClockwise
+getSafeTurn SNorth SSouth = TurnAround
+getSafeTurn SNorth SWest = TurnAntiClockwise
+getSafeTurn SEast SEast = TurnNone
+getSafeTurn SEast SSouth = TurnClockwise
+getSafeTurn SEast SWest = TurnAround
+getSafeTurn SEast SNorth = TurnAntiClockwise
+getSafeTurn SSouth SSouth = TurnNone
+getSafeTurn SSouth SWest = TurnClockwise
+getSafeTurn SSouth SNorth = TurnAround
+getSafeTurn SSouth SEast = TurnAntiClockwise
+getSafeTurn SWest SWest = TurnNone
+getSafeTurn SWest SNorth = TurnClockwise
+getSafeTurn SWest SEast = TurnAround
+getSafeTurn SWest SSouth = TurnAntiClockwise
 
 rotateClockwise :: forall d e. (e ~ Clockwise d) => SafeRadar d -> SafeRadar e
 rotateClockwise MkSafeRadar = withSingI (toClockWise (sing @d)) MkSafeRadar
@@ -187,7 +190,7 @@ rotateAround :: forall d e. (e ~ Around d) => SafeRadar d -> SafeRadar e
 rotateAround = rotateClockwise . rotateClockwise
 
 rotateToIO :: forall m d e. MonadIO m => SafeRadar d -> SDirection e -> m (SafeRadar e)
-rotateToIO r@MkSafeRadar e = case getTurnDirection (sing @d) e of
+rotateToIO r@MkSafeRadar e = case getSafeTurn (sing @d) e of
   TurnNone -> pure r
   TurnClockwise -> rotateClockwiseIO r
   TurnAntiClockwise -> rotateAntiClockwiseIO r
@@ -215,7 +218,7 @@ rotateLog MkSafeRadar MkSafeRadar = fmt $ d1 ||+ "\t->\t" +|| d2 ||+ ""
     d2 = withSingI d1 $ sing @e
 
 rotateUnit :: forall (d :: Direction) (e :: Direction) m. (MonadIO m, MonadThrow m) => SafeRadar d -> SDirection e -> m (SafeRadar e)
-rotateUnit r@MkSafeRadar e = case getTurnDirection (sing @d) e of
+rotateUnit r@MkSafeRadar e = case getSafeTurn (sing @d) e of
   TurnClockwise -> rotateClockwiseIO r
   TurnAntiClockwise -> rotateAntiClockwiseIO r
   _ -> throwM $ userError $ "Can only turn clockwise to " +|| getDirection c ||+ " or anti-clockwise to " +|| getDirection ac ||+ ""
@@ -267,6 +270,12 @@ canRotateAntiClockwiseTo MkSafeRadar e = case (sing @d, e) of
   (SSouth, SEast) -> Yes Refl
   (SWest, SSouth) -> Yes Refl
   _ -> No $ \case {}
+
+-- NOTE: is it possible to prove this with SafeTurn?
+-- canRotateAntiClockwiseTo MkSafeRadar e = case getSafeTurn (sing @d) e of
+--                                            TurnAntiClockwise -> Yes Refl
+--                                            _ -> No $ \case 
+--                                             x -> ?
 
 canRotateOne :: forall d (e :: Direction). SafeRadar d -> SDirection e -> Dec (CanRotateOne d e)
 canRotateOne d e = case canRotateClockwiseTo d e of

@@ -134,6 +134,7 @@ executables:
     - singletons-base >= 3 && < 4
     - fin > 0.2 && < 0.3
     - dec > 0.0.4 && < 1
+    - free > 5.1 && < 6
     - tasty >= 0.11 && < 1.6
     - tasty-hspec >= 1.1 && < 1.3
     - hspec >= 0.1 && <= 3
@@ -215,6 +216,7 @@ executables:
     dependencies: 
     - haskellInDepthGHC9
     - free > 5.1 && < 6
+    - containers >= 0.6 && < 0.7
     - optparse-applicative >= 0.17 && < 0.20
     ghc-options: []
 
@@ -316,6 +318,7 @@ tests:
     - hspec >= 0.1 && <= 3
     - hedgehog >= 0.5 && < 1.2
     - random
+    - containers >= 0.6 && < 0.7
 
     ghc-options: []
 
