@@ -220,6 +220,15 @@ executables:
     - optparse-applicative >= 0.17 && < 0.20
     ghc-options: []
 
+  freemonad:
+    main:               main.hs
+    source-dirs:        ./src/freemonad
+    dependencies: 
+    - haskellInDepthGHC9
+    - free > 5.1 && < 6
+    - optparse-applicative >= 0.17 && < 0.20
+    ghc-options: []
+
 internal-libraries: {}
 
 tests:
@@ -303,8 +312,8 @@ tests:
     - tasty >= 0.11 && < 1.6
     - tasty-hspec >= 1.1 && < 1.3
     - tasty-hedgehog >= 0.1 && <= 1.4
-    - hspec >= 0.1 && <= 3
     - hedgehog >= 0.5 && < 1.2
+    - hspec >= 0.1 && <= 3
 
   simplestream-test:
     main:               main.hs
@@ -314,12 +323,21 @@ tests:
     - free > 5.1 && < 6
     - tasty >= 0.11 && < 1.6
     - tasty-hspec >= 1.1 && < 1.3
-    - tasty-hedgehog >= 0.1 && <= 1.4
     - hspec >= 0.1 && <= 3
-    - hedgehog >= 0.5 && < 1.2
     - random
     - containers >= 0.6 && < 0.7
+    ghc-options: []
 
+  freemonad-test:
+    main:               main.hs
+    source-dirs:        ./test/freemonad
+    dependencies: 
+    - haskellInDepthGHC9
+    - free > 5.1 && < 6
+    - tasty >= 0.11 && < 1.6
+    - tasty-hspec >= 1.1 && < 1.3
+    - hspec >= 0.1 && <= 3
+    - optparse-applicative >= 0.17 && < 0.20
     ghc-options: []
 
 benchmarks: {}

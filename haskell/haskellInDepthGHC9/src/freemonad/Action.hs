@@ -1,6 +1,17 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 
+module Action
+  ( Action (..),
+    putStrLnF,
+    getLineF,
+    tellF,
+    getF,
+    putF,
+    test,
+  )
+where
+
 import Control.Monad.Free
 import Control.Monad.IO.Class
 import Control.Monad.RWS.Class
@@ -72,10 +83,12 @@ test = do
 
         putStrLnF "=== State === "
         getF >>= (putStrLnF . ("current state:" <>)) . show
+        getF >>= (tellF . ("\ncurrent state:" <>)) . show
         getF >>= putF . (+ 100)
+        getF >>= (tellF . ("\ncurrent state:" <>)) . show
         getF >>= (putStrLnF . ("updated state:" <>)) . show
 
-        tellF "END: Start"
+        tellF "\nEND: Start"
         pure ()
 
   putStrLn "========== foldIO =========="
@@ -86,14 +99,14 @@ test = do
 
   putStrLn "========== foldRWS =========="
   let r = foldRWS c :: RWST () String Int IO ()
-  (_, finalState, finalLog) <- runRWST r () 0
+  ((), finalState, finalLog) <- runRWST r () 0
   putStrLn $ "log:" <> finalLog
   putStrLn $ "state:" <> show finalState
 
   pure ()
 
-type MaybeF = Free Maybe
+-- type MaybeF = Free Maybe
 
-runMaybe :: Free Maybe a -> Maybe a
-runMaybe (Pure a) = Just a
-runMaybe (Free x) = x >>= runMaybe
+-- runMaybe :: Free Maybe a -> Maybe a
+-- runMaybe (Pure a) = Just a
+-- runMaybe (Free x) = x >>= runMaybe

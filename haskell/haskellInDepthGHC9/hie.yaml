@@ -32,3 +32,7 @@ cradle:
       component: haskellInDepthGHC9:exe:simplestream
     - path: "./test/simplestream"
       component: haskellInDepthGHC9:test:simplestream-test
+    - path: "./src/freemonad"
+      component: haskellInDepthGHC9:exe:freemonad
+    - path: "./test/freemonad"
+      component: haskellInDepthGHC9:test:freemonad-test
