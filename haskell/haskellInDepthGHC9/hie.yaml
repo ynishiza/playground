@@ -36,3 +36,5 @@ cradle:
       component: haskellInDepthGHC9:exe:freemonad
     - path: "./test/freemonad"
       component: haskellInDepthGHC9:test:freemonad-test
+    - path: "./test/delimitedContinuation"
+      component: haskellInDepthGHC9:test:delimitedContinuation-test

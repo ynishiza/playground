@@ -92,13 +92,13 @@ toListAndPrint s = do
   liftIO $ fmt $ "[" +| v |+ "]"
   return (v :> r)
 
-spec :: SpecWith ()
+spec :: Spec
 spec = describe "Simple Stream" $ do
   baseSpec
   preludeSpec
   extraSpec
 
-baseSpec :: SpecWith ()
+baseSpec :: Spec
 baseSpec = describe "Stream" $ do
   describe "Basics" $ do
     it "creates a stream with steps" $ do
@@ -476,7 +476,7 @@ baseSpec = describe "Stream" $ do
                                  "c3" :: String
                                ]
 
-preludeSpec :: SpecWith ()
+preludeSpec :: Spec
 preludeSpec = describe "Prelude" $ do
   it "[iterate]" $ do
     ( S.iterate (* 2) 1
@@ -833,7 +833,7 @@ preludeSpec = describe "Prelude" $ do
                        [7, 6, 5]
                      ]
 
-extraSpec :: SpecWith ()
+extraSpec :: Spec
 extraSpec = describe "extraSpec" $ do
   it "[zipPair]" $ do
     let s1 = eachForTest [1 .. 10]
