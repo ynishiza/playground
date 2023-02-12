@@ -5,6 +5,7 @@ where
 
 import Data.Foldable
 import Free
+import List
 import Test.Hspec
 
 spec :: SpecWith ()

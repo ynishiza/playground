@@ -4,12 +4,13 @@ module SimpleStream.CPrelude (
   each, 
   yield,
   toList,
+  toList_,
   module X,
   ) where
 {- ORMOLU_ENABLE -}
 
 import Control.Monad
-import SimpleStream.CStream
+import SimpleStream.CStream as X
 import SimpleStream.Of as X
 
 type CStreamOf a = CStream (Of a)
@@ -26,3 +27,6 @@ toList (CStream c) =
     (pure . ([] :>))
     (\(a :> m) -> mapOf (a :) <$> m)
     join
+
+toList_ :: Monad m => CStream (Of a) m r -> m [a]
+toList_ = (fst' <$>) . toList

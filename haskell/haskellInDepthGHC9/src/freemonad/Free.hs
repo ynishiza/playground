@@ -3,7 +3,6 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
-{-# LANGUAGE TupleSections #-}
 {-# HLINT ignore "Redundant pure" #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
@@ -16,25 +15,20 @@ module Free
     iter,
     iterM,
     retract,
-    test,
     foldF,
     hoistF,
     MonadFree (..),
     Free (..),
     cutoff,
-    List (..),
-    ListF,
-    liftNil,
-    liftCons,
-    liftList,
-    execListF,
+    cutoff',
+    cutoff0,
+    toF,
+    fromF,
   )
 where
 
 import Control.Monad
 import Control.Monad.Free (Free (..), MonadFree (..))
-import Data.Foldable
-import Data.Function
 import Data.Kind
 
 type F :: (Type -> Type) -> Type -> Type
@@ -91,7 +85,8 @@ cutoff :: forall f a. Functor f => Int -> F f a -> F f (Maybe a)
 cutoff n (F f) = f (cutoffAtN . liftPure . Just) step 0
   where
     step :: f (Int -> F f (Maybe a)) -> Int -> F f (Maybe a)
-    step v m = cutoffAtN (wrap $ ((m + 1) &) <$> v) m
+    step value m = cutoffAtN resolved m
+      where resolved = wrap $ ($ (m + 1)) <$> value
     cutoffAtN :: F f (Maybe a) -> Int -> F f (Maybe a)
     cutoffAtN g m = if m < n then g else liftPure Nothing
 
@@ -105,77 +100,3 @@ cutoffBase :: Functor f => Int -> Free f a -> Free f (Maybe a)
 cutoffBase 0 _ = Pure Nothing
 cutoffBase _ (Pure a) = Pure (Just a)
 cutoffBase n (Free f) = Free $ cutoffBase (n - 1) <$> f
-
-type List :: Type -> Type -> Type
-data List t a where
-  Nil :: a -> List t a
-  Cons :: t -> a -> List t a
-  deriving (Functor)
-
-type ListF t = F (List t)
-
-liftNil :: ListF t ()
-liftNil = liftF $ Nil ()
-
-liftCons :: t -> ListF t ()
-liftCons t = liftF $ Cons t ()
-
-liftList :: [t] -> ListF t ()
-liftList = foldr (\t r -> liftCons t >> r) liftNil
-
-execListF :: ListF t a -> ([t], a)
-execListF (F f) = f ([],) m
-  where
-    m :: List t ([t], r) -> ([t], r)
-    m (Nil (_, r)) = ([], r)
-    m (Cons t (ts, a)) = (t : ts, a)
-
-test :: IO ()
-test = do
-  let p0 :: ListF Int Int
-      p0 = liftPure 100
-
-      l0 :: ListF Int ()
-      l0 = liftNil
-
-      l1 :: ListF Int ()
-      l1 = do
-        liftCons 1
-        liftCons 2
-        liftCons 3
-
-      l2 :: ListF Int ()
-      l2 = do
-        liftCons 1
-        liftNil
-        liftNil
-        liftCons 2
-
-      l3 :: ListF Int ()
-      l3 = do
-        liftCons 1
-        liftList [100 .. 105]
-
-  putStrLn $ "p0:" <> show (execListF p0)
-  putStrLn $ "l0:" <> show (execListF l0)
-  putStrLn $ "l1:" <> show (execListF l1)
-  putStrLn $ "l2:" <> show (execListF l2)
-  putStrLn $ "l3:" <> show (execListF l3)
-
-  putStrLn "==================== cutoff ===================="
-  traverse_
-    ( \n ->
-        putStrLn ("cutoff l3 " <> show n <> ":" <> show (execListF $ cutoff' n l3))
-    )
-    [1 .. 10]
-  traverse_
-    ( \n ->
-        putStrLn ("cutoff l3 " <> show n <> ":" <> show (execListF $ cutoff n l3))
-    )
-    [1 .. 10]
-
-  putStrLn $ "cutoff1 p0" <> show (execListF $ cutoff0 p0)
-  putStrLn $ "cutoff1 l0" <> show (execListF $ cutoff0 l0)
-  putStrLn $ "cutoff1 l1" <> show (execListF $ cutoff0 l1)
-
-  pure ()

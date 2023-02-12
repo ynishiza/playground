@@ -1,3 +1,4 @@
+{-# LANGUAGE TupleSections #-}
 module SimpleCStreamSpec
   ( spec,
     preludeSpec,
@@ -28,6 +29,25 @@ spec = describe "CStream" $ do
     takec 2 s `test'` [1, 2]
     takec 5 s `test'` [1 .. 5]
     takec 100 s `test'` [1 .. 10]
+
+  it "[splitAt]" $ do
+    let toListAll :: Monad m => CStreamOf a m (CStreamOf a m r) -> m ([a],[a])
+        toListAll c = do
+          (l :> rest) <- C.toList c
+          (l,) <$> C.toList_ rest
+
+        s = C.each [1..10 :: Int]
+
+    (splitAtc 0 s
+      & toListAll) >>= (`shouldBe` ([], [1..10]))
+    (splitAtc 1 s
+      & toListAll) >>= (`shouldBe` ([1], [2..10]))
+    (splitAtc 2 s
+      & toListAll) >>= (`shouldBe` ([1, 2], [3..10]))
+    (splitAtc 10 s
+      & toListAll) >>= (`shouldBe` ([1..10], []))
+    (splitAtc 20 s
+      & toListAll) >>= (`shouldBe` ([1..10], []))
 
 preludeSpec :: Spec
 preludeSpec = describe "Prelude" $ do
