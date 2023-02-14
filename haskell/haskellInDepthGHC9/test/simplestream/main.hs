@@ -1,14 +1,14 @@
-import SimpleStreamSpec qualified
 import Control.Exception
 import Control.Monad
-import SimpleCStreamSpec qualified
-import SimpleCStreamProperties qualified
-import Test.Hspec
 import Hedgehog
+import SimpleCStreamProperties qualified
+import SimpleCStreamSpec qualified
+import SimpleStreamSpec qualified
+import Test.Hspec
 
 main :: IO ()
 main = do
-  hspec $ describe "main" $ do 
+  hspec $ describe "main" $ do
     SimpleStreamSpec.spec
     SimpleCStreamSpec.spec
     SimpleCStreamSpec.preludeSpec

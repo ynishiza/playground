@@ -1,6 +1,6 @@
 {-# LANGUAGE GADTs #-}
 
-module TreeWalk
+module Free.TreeWalk
   ( Tree (..),
     walkTree,
     tree0,
@@ -14,7 +14,7 @@ module TreeWalk
   )
 where
 
-import Ct
+import Free.Ct
 import Data.Foldable
 
 data Tree a where

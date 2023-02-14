@@ -1,57 +1,50 @@
+{-# LANGUAGE FlexibleInstances #-}
+
 module Ct
   ( Ct (..),
-    Ctf,
-    evalCtfWith,
-    evalCtf,
-    liftCt,
-    liftct,
-    pureCtf,
-    resetCtf,
-    resetCtfWith,
-    mapOCtf,
+    ret,
+    exit,
+    (#>>=),
+    eval,
+    reset,
+    shift,
   )
 where
-
-import Control.Monad.Free.Church
 
 -- Ct r o a
 --
 -- Generalized continuation
 --
---   a = result of computation
---   o = result of consumer
+--   a = output of computation
+--   a -> o = consumer
 --   r = final output of function
 --
 newtype Ct r o a = Ct {runCt :: (a -> o) -> r}
 
 instance Functor (Ct r o) where
-  fmap f c = Ct $ \k -> runCt c (k . f)
+  fmap f (Ct c) = Ct $ \k -> c (k . f)
 
-type Ctf r o = F (Ct r o)
+instance Applicative (Ct r r) where
+  pure = ret
+  (Ct cf) <*> (Ct c) = Ct $ \k -> cf (\f -> c (k . f))
 
-evalCtfWith :: (a -> r) -> (r -> o) -> Ctf r o a -> r
-evalCtfWith r f (F m) = m r (($ f) . runCt)
+instance Monad (Ct r r) where
+  (Ct c) >>= f = Ct $ \k -> c (($ k) . runCt . f)
 
-evalCtf :: Ctf r r r -> r
-evalCtf = evalCtfWith id id
+ret :: a -> Ct r r a
+ret a = Ct ($ a)
 
-liftCt :: Ct r o a -> Ctf r o a
-liftCt = liftF
+exit :: a -> Ct a o b
+exit = Ct . const
 
-liftct :: ((a -> o) -> r) -> Ctf r o a
-liftct = liftCt . Ct
+(#>>=) :: Ct r o a -> (a -> Ct o o' b) -> Ct r o' b
+(Ct c) #>>= f = Ct $ \k -> c (\a -> runCt (f a) k)
 
-pureCtf :: a -> Ctf r r a
-pureCtf a = liftct ($ a)
+eval :: Ct r a a -> r
+eval = ($ id) . runCt
 
-resetCtf :: Ctf a a a -> Ctf r r a
-resetCtf = pureCtf . evalCtf
+reset :: Ct r a a -> Ct r' r' r
+reset c = Ct $ \k -> k (eval c)
 
-resetCtfWith :: (a' -> a) -> (a -> o) -> Ctf a o a' -> Ctf r r a
-resetCtfWith f g = pureCtf . evalCtfWith f g
-
-mapO :: (o' -> o) -> Ct r o a -> Ct r o' a
-mapO mp (Ct c) = Ct $ \k -> c (mp . k)
-
-mapOCtf :: (o' -> o) -> Ctf r o a -> Ctf r o' a
-mapOCtf mp = hoistF (mapO mp)
+shift :: ((a -> o) -> Ct r b b) -> Ct r o a
+shift f = Ct $ \k -> eval (f k)

@@ -1,169 +1,178 @@
-{-# LANGUAGE FlexibleInstances #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
+{-# LANGUAGE DerivingVia #-}
 
 module Spec
   ( spec,
   )
 where
 
-import Control.Monad.Trans.Cont
 import Ct
+import Data.Coerce
 import Data.Foldable
 import Data.Function
+import Data.Monoid
 import System.IO.Extra
 import Test.Hspec
-import TreeWalk
+import Tree
 
-testCont :: (Show r, Eq r) => Cont r r -> r -> IO ()
-testCont c expected = evalCont c `shouldBe` expected
+i :: Int -> Int
+i = id
 
--- extract the capture (a -> b)
-extractCapture :: a -> Ctf (a -> r) r r -> a -> r
-extractCapture a = evalCtfWith const ($ a)
+infixr 4 +#, -#, ++#
+
+infixr 5 *#
+
+infixl 4 #+, #-, #++
+
+infixl 5 #*
+
+(+#) :: Num a => a -> Ct r o a -> Ct r o a
+x +# c = (x +) <$> c
+
+(-#) :: Num a => a -> Ct r o a -> Ct r o a
+x -# c = (`subtract` x) <$> c
+
+(*#) :: Num a => a -> Ct r o a -> Ct r o a
+x *# c = (x *) <$> c
+
+(#+) :: Num a => Ct r o a -> a -> Ct r o a
+c #+ x = (+ x) <$> c
+
+(#-) :: Num a => Ct r o a -> a -> Ct r o a
+c #- x = (x `subtract`) <$> c
+
+(#*) :: Num a => Ct r o a -> a -> Ct r o a
+c #* x = (* x) <$> c
+
+(++#) :: [a] -> Ct r o [a] -> Ct r o [a]
+x ++# c = (x ++) <$> c
+
+(#++) :: Ct r o [a] -> [a] -> Ct r o [a]
+c #++ x = (++ x) <$> c
+
+(.#) :: (a -> b) -> Ct r o a -> Ct r o b
+(.#) = (<$>)
+
+(#.) :: Ct r o a -> (a -> b) -> Ct r o b
+(#.) = flip (<$>)
+
+infixr 4 .#
+
+infixl 4 #.
+
+(===) :: (Show a, Eq a) => a -> a -> IO ()
+x === y = shouldBe x y
+
+(.==) :: (Show a, Eq a) => Ct a o o -> a -> IO ()
+x .== y = shouldBe (eval x) y
+
+infix 1 ===, .==
+
+ifelse :: a -> a -> Bool -> a
+ifelse x y c = if c then x else y
 
 spec :: Spec
-spec = describe "Delimited continuations tutorial\nhttp://pllab.is.ocha.ac.jp/~asai/cw2011tutorial/main-e.pdf" $ do
-  it "Suspended" $ do
-    let x :: Ctf (Int -> Int) (Int -> Int) (Int -> Int)
-        x = resetCtfWith const ($ 1) $ do
-          y <- liftct id
-          return $ 10 * y
-        r = evalCtf x
-    r 1 `shouldBe` 10
-    r 2 `shouldBe` 20
+spec = describe "" $ do
+  it "computes" $ do
+    let x =
+          ( (4 *# (3 +# 2 -# ret @Int 1))
+              #- 2
+              #+ 3
+          )
+            #* 4
+        y = ("hello" ++) .# (ret "World" #. (++ "!"))
+    x .== 68
+    y .== "helloWorld!"
 
-    let x' :: Ctf (Int -> Int) (Int -> Int) (Int -> Int)
-        x' = resetCtf $ do
-          y <- liftct $ \k -> ($ 1) . k
-          return $ const $ 10 * y
-        r' = evalCtf x'
-    r' 2 `shouldBe` 20
+  it "loops" $ do
+    let x = 4 *# (3 +# 2 -# shift (\k -> ret (k (k $ i 1))))
+    eval x === (-44)
 
-  describe "2.5" $ do
-    it "Exercise 3: discard continuation" $ do
-      ( do
-          y <-
-            reset
-              ( do
-                  x <- shift $ \_ -> return (-1)
-                  return $ x + 3 * 4
-              )
-          return $ y * 5
+  it "resets" $ do
+    let x = reset $ 4 *# (3 +# 2 -# shift exit)
+        captured = eval @(Int -> Int) x
+
+    captured 1 === 16
+    captured 2 === 12
+
+  describe "2.3" $ do
+    it "Exercise 2" $ do
+      5
+        *# reset (ret (2 * 3) #+ 3 * 4)
+        .== i 90
+
+      reset
+        ( ret (i 2 == 3)
+            #. ifelse "hello" "hi"
         )
-        `testCont` (-5 :: Int)
+        #++ "world"
+        .== "hiworld"
 
-      ( do
-          y <-
-            reset
-              ( do
-                  x <- shift $ \_ -> return "OOPS"
-                  return $ if x == 2 then "Hello" else "hi"
-              )
-          return $ y ++ "World"
-        )
-        `testCont` "OOPSWorld"
+      fst
+        .# reset (ret (1 + 2) #. (\x -> (x, x)))
+        .== i 3
 
-      ( do
-          y <-
-            reset
-              ( do
-                  x <- shift $ \_ -> return ""
-                  return $ "x" ++ x
-              )
-          return $ length y
-        )
-        `testCont` 0
+      length
+        .# reset ("x" ++# show .# ret (3 + i 1))
+        .== 2
+
+  describe "2.6" $ do
+    it "Exercise 5" $ do
+      let k1 =
+            reset (5 *# (shift exit #+ 3 * 4))
+              & eval
+          k2 =
+            reset (shift exit #. ifelse "hello" "hi" #++ "!")
+              & eval
+          k3 = reset (fst .# (shift exit #. (\x -> (x, x)))) & eval
+
+      k1 1 === i 65
+      k2 True === "hello!"
+      k2 False === "hi!"
+      k3 1 === i 1
 
   describe "2.7" $ do
-    it "Excercise 5: extract continuation" $ do
-      let f1 =
-            ( do
-                x <- liftct id
-                return $ 5 * (x + 12)
-            )
-              & extractCapture 1
-      f1 1 `shouldBe` 65
+    it "walks" $ do
+      let t0 = Empty @Int
+          t1 = Node @Int Empty 1 Empty
+          t2 = Node (Node (Node Empty 1 Empty) 2 Empty) 3 Empty
+          t3 = Node t1 10 t2
 
-      let f2 =
-            ( do
-                x <- liftct id
-                let prefix = if x then "hello" else "hi"
-                return $ prefix ++ "World"
-            )
-              & extractCapture True
-      f2 True `shouldBe` "helloWorld"
-      f2 False `shouldBe` "hiWorld"
+      captureOutput (gprint $ walkTree t0) >>= (=== "Done\n") . fst
+      captureOutput (gprint $ walkTree t2) >>= (=== "value:1\nvalue:2\nvalue:3\nDone\n") . fst
+      captureOutput (gprint $ walkTree t3) >>= (=== "value:1\nvalue:10\nvalue:1\nvalue:2\nvalue:3\nDone\n") . fst
+      coerce @(Sum Int) @Int (foldMap Sum (walkTree t0)) === 0
+      coerce @(Sum Int) @Int (foldMap Sum (walkTree t1)) === 1
+      coerce @(Sum Int) @Int (foldMap Sum (walkTree t2)) === 6
+      coerce @(Sum Int) @Int (foldMap Sum (walkTree t3)) === 17
 
-      let f3 =
-            ( do
-                x <- liftct id
-                return (x, x)
-            )
-              & extractCapture 0
-      f3 1 `shouldBe` (1, 1)
-      f3 2 `shouldBe` (2, 2)
+    it "Exercise 7" $ do
+      let t1 = Node @Int (Node (Node Empty 1 Empty) 2 Empty) 3 Empty
+          t2 = Node Empty 1 (Node (Node Empty 2 Empty) 3 Empty)
+          t3 = Node Empty 1 (Node Empty 2 (Node Empty 3 Empty))
+          s0 = Empty
+          s1 = Node @Int (Node (Node Empty 2 Empty) 3 Empty) 1 Empty
+          s2 = Node @Int (Node (Node Empty 1 Empty) 2 Empty) 1 Empty
+          s3 = Node Empty 0 t1
+          s4 = Node t1 0 Empty
 
-    it "Exercise 6: extract continuation" $ do
-      let idCtf :: [Int] -> Ctf ([Int] -> [Int]) [Int] [Int]
-          idCtf [] = liftct id
-          idCtf (x : xs) = do
-            xs' <- idCtf xs
-            return $ (2 * x) : xs'
-          id' = extractCapture [] . idCtf
+      sameFringeG t1 t1 === True
+      sameFringeG t1 t2 === True
+      sameFringeG t1 t3 === True
 
-      id' [1, 2, 3] [4, 5] `shouldBe` [2, 4, 6, 4, 5]
-      id' [1, 2, 3] [] `shouldBe` [2, 4, 6]
-      id' [] [4, 5] `shouldBe` [4, 5]
+      traverse_
+        ((=== False) . sameFringeG t1)
+        [ s0,
+          s1,
+          s2,
+          s3,
+          s4
+        ]
 
-  describe "2.7" $ do
-    it "walks a tree" $ do
-      let gen = walkTree tree4
-      (s, ()) <- captureOutput $ printGen gen
-      s `shouldBe` "value:1\nvalue:4\nvalue:2\nvalue:5\nvalue:3\nvalue:6\nvalue:1\n"
-      sum gen `shouldBe` 22
-      collectGen gen `shouldBe` [1,4,2,5,3,6,1]
-
-    it "Exercise 7" $ do 
-      let s0 = Node (Node (Node Empty 1 Empty) 2 Empty) 3 Empty
-          s1 = Node Empty 1 (Node Empty 2 (Node Empty 3 Empty))
-          s2 = Node Empty 1 (Node (Node Empty 2 Empty) 3 Empty)
-          s3 = Node Empty 1 s0
-
-      sameFringe s0 s0 `shouldBe` True
-      sameFringe s0 s1 `shouldBe` True
-      sameFringe s1 s0 `shouldBe` True
-      sameFringe s1 s2 `shouldBe` True
-      sameFringe s2 s1 `shouldBe` True
-
-      sameFringe s0 s3 `shouldBe` False
-      sameFringe s3 s0 `shouldBe` False
-      sameFringe s0 Empty `shouldBe` False
-      sameFringe Empty s0 `shouldBe` False
-
-  describe "2.8" $ do
     it "Exercise 8" $ do
-      let f :: Ctf (String -> String) String String
-          f = do
-              x <- liftct $ \k -> k . ("Hello" <>)
-              return $ x <> "!"
-          printMessage = extractCapture "" f
-      printMessage "WORLD" `shouldBe` "HelloWORLD!"
-      printMessage " WORLD " `shouldBe` "Hello WORLD !"
+      let x :: String -> String
+          x =
+            eval $
+              ("hello " ++# shift exit)
+                #++ "!"
 
-  it "Duplication" $ do
-    let either' :: Monad m => a -> a -> Cont (m r) a
-        either' x y = shift $ \k -> return $ k x >> k y
-
-    (msg, ()) <- captureOutput $ evalCont $ reset $ do
-      x <- either' 1 2
-      return $ putStrLn $ "value:" <> show x
-    msg `shouldBe` "value:1\nvalue:2\n"
-
-  it "Exercise 12: choice" $ do
-    let choice :: Monad m => [a] -> Cont (m ()) a
-        choice l = shift $ \k -> return $ traverse_ k l
-
-    (msg, ()) <- captureOutput $ evalCont $ reset $ do
-      x <- choice [1 .. 5]
-      return $ putStrLn $ "value:" <> show x
-    msg `shouldBe` "value:1\nvalue:2\nvalue:3\nvalue:4\nvalue:5\n"
+      x "world" === "hello world!"
