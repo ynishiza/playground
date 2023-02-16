@@ -5,11 +5,15 @@ module Spec
   )
 where
 
+import ContState qualified as CS
+import Control.Monad
+import Control.Monad.IO.Class
 import Ct
 import Data.Coerce
 import Data.Foldable
 import Data.Function
 import Data.Monoid
+import State
 import System.IO.Extra
 import Test.Hspec
 import Tree
@@ -69,6 +73,9 @@ infix 1 ===, .==
 
 ifelse :: a -> a -> Bool -> a
 ifelse x y c = if c then x else y
+
+ioEqual :: IO () -> String -> IO ()
+ioEqual io expected = captureOutput io >>= (=== expected) . fst
 
 spec :: Spec
 spec = describe "" $ do
@@ -137,9 +144,9 @@ spec = describe "" $ do
           t2 = Node (Node (Node Empty 1 Empty) 2 Empty) 3 Empty
           t3 = Node t1 10 t2
 
-      captureOutput (gprint $ walkTree t0) >>= (=== "Done\n") . fst
-      captureOutput (gprint $ walkTree t2) >>= (=== "value:1\nvalue:2\nvalue:3\nDone\n") . fst
-      captureOutput (gprint $ walkTree t3) >>= (=== "value:1\nvalue:10\nvalue:1\nvalue:2\nvalue:3\nDone\n") . fst
+      gprint (walkTree t0) `ioEqual` "Done\n"
+      gprint (walkTree t2) `ioEqual` "value:1\nvalue:2\nvalue:3\nDone\n"
+      gprint (walkTree t3) `ioEqual` "value:1\nvalue:10\nvalue:1\nvalue:2\nvalue:3\nDone\n"
       coerce @(Sum Int) @Int (foldMap Sum (walkTree t0)) === 0
       coerce @(Sum Int) @Int (foldMap Sum (walkTree t1)) === 1
       coerce @(Sum Int) @Int (foldMap Sum (walkTree t2)) === 6
@@ -168,11 +175,138 @@ spec = describe "" $ do
           s4
         ]
 
+  describe "2.8" $ do
     it "Exercise 8" $ do
-      let x :: String -> String
-          x =
+      let printMsg :: String -> String
+          printMsg =
             eval $
               ("hello " ++# shift exit)
                 #++ "!"
+          prinTValue :: Show a => a -> String
+          prinTValue =
+            eval $
+              ("value: " ++# (show .# shift exit)) #++ " !"
 
-      x "world" === "hello world!"
+      printMsg "world" === "hello world!"
+      prinTValue @Int 10 === "value: 10 !"
+
+  it "test" $ do
+    let proc :: Ct (Int -> () -> String) (String -> String) Int
+        proc =
+          ret 2
+            #>>= ( \x ->
+                     shift exit
+                       #>>= ( \y ->
+                                ret (x * y)
+                                  #>>= ( \z ->
+                                           shift (\k -> exit (\() -> k (z + 1) "hello"))
+                                             #>>= ( \u -> ret $ z * u
+                                                  )
+                                       )
+                            )
+                 )
+        kproc = runCt proc (\x msg -> msg <> "\nvalue:" <> show x)
+
+    kproc 1 () === "hello\nvalue:6" -- (2 * 1 + 1) * (2 * 1)
+    kproc 10 () === "hello\nvalue:420" -- (2 * 10 + 1) * (2 * 10)
+
+  describe "2.10: State" $ do
+    let runIntState :: CtState Int Int -> Int
+        runIntState (Ct c) = c const 0
+
+    it "state" $ do
+      let k1 = do
+            tick
+            tick
+            tick
+            get
+          k2 = do
+            a <- k1
+            tick
+            tick
+            (a *) <$> get
+          k4 = k2 >> k2
+
+      runIntState k1 === 3
+      runIntState k2 === 15
+      runIntState k4 === 80
+
+    it "state with cont" $ do
+      let run :: Monad m => CS.ContState Int m Int -> m Int
+          run c = do
+            f <- CS.runContT c $ \a -> return (const $ return a)
+            f 0
+
+      run
+        ( do
+            CS.tick
+            CS.tick
+            CS.tick
+            CS.get
+        )
+        >>= (=== 3)
+      run
+        ( do
+            CS.put 1
+            CS.modify (* 10)
+            CS.get
+        )
+        >>= (=== 10)
+
+    it "Exercise 12" $ do
+      let t = do
+            tick
+            a <- get
+            tick
+            (`subtract` a) <$> get
+
+      runIntState t === (-1)
+
+    it "Exercise 13" $ do
+      runIntState
+        ( do
+            put 2
+            modify (* 10)
+            get
+        )
+        === 20
+
+  describe "2.12" $ do
+    let eitherCt :: (Semigroup m) => (a, a) -> Ct m m a
+        eitherCt (a, b) = Ct $ \k -> k a <> k b
+
+        choiceCt :: (Monoid m) => [a] -> Ct m m a
+        choiceCt l = Ct $ \k -> foldMap k l
+
+    it "either" $ do
+      let printPair :: (MonadIO m, Semigroup (m ()), Show a) => (a, a) -> Ct (m ()) (m ()) (m ())
+          printPair p = do
+            x <- eitherCt p
+            return $ liftIO $ putStrLn $ "value:" <> show x
+
+      eval (printPair (1 :: Int, 2)) `ioEqual` "value:1\nvalue:2\n"
+      eval (printPair (3 :: Int, 4)) `ioEqual` "value:3\nvalue:4\n"
+
+      eval
+        ( do
+            x <- eitherCt (True, False)
+            y <- eitherCt (True, False)
+            return $
+              liftIO $
+                when ((x || y) && (x || not y) && (not x || not y)) $
+                  putStrLn $
+                    show x <> "," <> show y
+        )
+        `ioEqual` "True,False\n"
+
+    it "Exercise 13" $ do
+      eval 
+        ( do
+            x <- choiceCt [1 .. 5 :: Int]
+            y <- choiceCt [1 .. 5]
+            z <- choiceCt [1 .. 5]
+            if x * x + y * y == z * z
+              then return [(x, y, z)]
+              else return []
+        )
+        === [(3, 4, 5), (4, 3, 5)]
