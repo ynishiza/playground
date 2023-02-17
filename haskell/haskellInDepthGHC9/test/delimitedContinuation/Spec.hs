@@ -1,19 +1,24 @@
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE TupleSections #-}
 
 module Spec
   ( spec,
   )
 where
 
+import System.Directory
+import System.FilePath
+import System.PosixCompat
 import ContState qualified as CS
 import Control.Monad
 import Control.Monad.IO.Class
-import Ct
+import CtT
 import Data.Coerce
 import Data.Foldable
 import Data.Function
 import Data.Monoid
 import State
+import System.IO
 import System.IO.Extra
 import Test.Hspec
 import Tree
@@ -77,25 +82,32 @@ ifelse x y c = if c then x else y
 ioEqual :: IO () -> String -> IO ()
 ioEqual io expected = captureOutput io >>= (=== expected) . fst
 
+listRegularFiles :: FilePath -> IO [FilePath]
+listRegularFiles f = x f
+    where x = listDirectory 
+              >=> traverse (\p -> (f </> p,) <$> getFileStatus (f </> p))
+              >=> return . (fst <$>) . filter (isRegularFile . snd)
+
+
 spec :: Spec
 spec = describe "" $ do
   it "computes" $ do
     let x =
-          ( (4 *# (3 +# 2 -# ret @Int 1))
+          ( (4 *# (3 +# 2 -# retT @Int 1))
               #- 2
               #+ 3
           )
             #* 4
-        y = ("hello" ++) .# (ret "World" #. (++ "!"))
+        y = ("hello" ++) .# (retT "World" #. (++ "!"))
     x .== 68
     y .== "helloWorld!"
 
   it "loops" $ do
-    let x = 4 *# (3 +# 2 -# shift (\k -> ret (k (k $ i 1))))
+    let x = 4 *# (3 +# 2 -# shift (\k -> retT (k (k $ i 1))))
     eval x === (-44)
 
   it "resets" $ do
-    let x = reset $ 4 *# (3 +# 2 -# shift exit)
+    let x = resetT $ 4 *# (3 +# 2 -# shift exitT)
         captured = eval @(Int -> Int) x
 
     captured 1 === 16
@@ -104,33 +116,33 @@ spec = describe "" $ do
   describe "2.3" $ do
     it "Exercise 2" $ do
       5
-        *# reset (ret (2 * 3) #+ 3 * 4)
+        *# resetT (retT (2 * 3) #+ 3 * 4)
         .== i 90
 
-      reset
-        ( ret (i 2 == 3)
+      resetT
+        ( retT (i 2 == 3)
             #. ifelse "hello" "hi"
         )
         #++ "world"
         .== "hiworld"
 
       fst
-        .# reset (ret (1 + 2) #. (\x -> (x, x)))
+        .# resetT (retT (1 + 2) #. (\x -> (x, x)))
         .== i 3
 
       length
-        .# reset ("x" ++# show .# ret (3 + i 1))
+        .# resetT ("x" ++# show .# retT (3 + i 1))
         .== 2
 
   describe "2.6" $ do
     it "Exercise 5" $ do
       let k1 =
-            reset (5 *# (shift exit #+ 3 * 4))
+            resetT (5 *# (shift exitT #+ 3 * 4))
               & eval
           k2 =
-            reset (shift exit #. ifelse "hello" "hi" #++ "!")
+            resetT (shift exitT #. ifelse "hello" "hi" #++ "!")
               & eval
-          k3 = reset (fst .# (shift exit #. (\x -> (x, x)))) & eval
+          k3 = resetT (fst .# (shift exitT #. (\x -> (x, x)))) & eval
 
       k1 1 === i 65
       k2 True === "hello!"
@@ -180,12 +192,12 @@ spec = describe "" $ do
       let printMsg :: String -> String
           printMsg =
             eval $
-              ("hello " ++# shift exit)
+              ("hello " ++# shift exitT)
                 #++ "!"
           prinTValue :: Show a => a -> String
           prinTValue =
             eval $
-              ("value: " ++# (show .# shift exit)) #++ " !"
+              ("value: " ++# (show .# shift exitT)) #++ " !"
 
       printMsg "world" === "hello world!"
       prinTValue @Int 10 === "value: 10 !"
@@ -193,14 +205,14 @@ spec = describe "" $ do
   it "test" $ do
     let proc :: Ct (Int -> () -> String) (String -> String) Int
         proc =
-          ret 2
+          retT 2
             #>>= ( \x ->
-                     shift exit
+                     shift exitT
                        #>>= ( \y ->
-                                ret (x * y)
+                                retT (x * y)
                                   #>>= ( \z ->
-                                           shift (\k -> exit (\() -> k (z + 1) "hello"))
-                                             #>>= ( \u -> ret $ z * u
+                                           shift (\k -> exitT (\() -> k (z + 1) "hello"))
+                                             #>>= ( \u -> retT $ z * u
                                                   )
                                        )
                             )
@@ -209,10 +221,9 @@ spec = describe "" $ do
 
     kproc 1 () === "hello\nvalue:6" -- (2 * 1 + 1) * (2 * 1)
     kproc 10 () === "hello\nvalue:420" -- (2 * 10 + 1) * (2 * 10)
-
   describe "2.10: State" $ do
     let runIntState :: CtState Int Int -> Int
-        runIntState (Ct c) = c const 0
+        runIntState c = runCt c const 0
 
     it "state" $ do
       let k1 = do
@@ -231,29 +242,7 @@ spec = describe "" $ do
       runIntState k2 === 15
       runIntState k4 === 80
 
-    it "state with cont" $ do
-      let run :: Monad m => CS.ContState Int m Int -> m Int
-          run c = do
-            f <- CS.runContT c $ \a -> return (const $ return a)
-            f 0
-
-      run
-        ( do
-            CS.tick
-            CS.tick
-            CS.tick
-            CS.get
-        )
-        >>= (=== 3)
-      run
-        ( do
-            CS.put 1
-            CS.modify (* 10)
-            CS.get
-        )
-        >>= (=== 10)
-
-    it "Exercise 12" $ do
+    it "Exercise 9" $ do
       let t = do
             tick
             a <- get
@@ -262,7 +251,7 @@ spec = describe "" $ do
 
       runIntState t === (-1)
 
-    it "Exercise 13" $ do
+    it "Exercise 10" $ do
       runIntState
         ( do
             put 2
@@ -273,10 +262,10 @@ spec = describe "" $ do
 
   describe "2.12" $ do
     let eitherCt :: (Semigroup m) => (a, a) -> Ct m m a
-        eitherCt (a, b) = Ct $ \k -> k a <> k b
+        eitherCt (a, b) = ct $ \k -> k a <> k b
 
         choiceCt :: (Monoid m) => [a] -> Ct m m a
-        choiceCt l = Ct $ \k -> foldMap k l
+        choiceCt l = ct $ \k -> foldMap k l
 
     it "either" $ do
       let printPair :: (MonadIO m, Semigroup (m ()), Show a) => (a, a) -> Ct (m ()) (m ()) (m ())
@@ -300,7 +289,7 @@ spec = describe "" $ do
         `ioEqual` "True,False\n"
 
     it "Exercise 13" $ do
-      eval 
+      eval
         ( do
             x <- choiceCt [1 .. 5 :: Int]
             y <- choiceCt [1 .. 5]
@@ -310,3 +299,62 @@ spec = describe "" $ do
               else return []
         )
         === [(3, 4, 5), (4, 3, 5)]
+
+  describe "Cont monad" $ do
+    it "state with cont" $ do
+      let run :: Monad m => CS.ContState Int m Int -> m Int
+          run c = do
+            f <- CS.runContT c $ \a -> return (const $ return a)
+            f 0
+
+      run
+        ( do
+            CS.tick
+            CS.tick
+            CS.tick
+            CS.get
+        )
+        >>= (=== 3)
+      run
+        ( do
+            CS.put 1
+            CS.modify (* 10)
+            CS.get
+        )
+        >>= (=== 10)
+
+    it "writer with Cont" $ do
+      let run :: (Monoid w, Monad m) => CS.ContWrite w m () -> m w
+          run c = CS.runContT c (const (return mempty))
+
+      run
+        ( do
+            CS.tell "Hello"
+            CS.tell " "
+            CS.tell "World"
+        )
+        >>= (=== "Hello World")
+      run
+        ( do
+            CS.tell [1, 2, 3 :: Int]
+            CS.tell [4, 5, 6]
+        )
+        >>= (=== [1, 2, 3, 4, 5, 6])
+
+  describe "Misc" $ do
+    let
+
+    it "reads multiple files" $ do
+      -- From "Why would you use ContT": https://ro-che.info/articles/2019-06-07-why-use-contt
+      let
+          t :: CtT () () IO ()
+          t = do
+            f <- liftIO $ listRegularFiles "./test/delimitedContinuation/"
+            handles <- traverse (\p -> CtT $ withFile p ReadMode) f
+            liftIO $ readFirstLine handles
+
+          readFirstLine :: [Handle] -> IO ()
+          readFirstLine = traverse_ (hGetLine >=> putStrLn)
+
+      evalT t
+      evalT t `ioEqual` "{-# LANGUAGE FlexibleInstances #-}\nimport Test.Hspec\n{-# LANGUAGE GADTs #-}\n{-# LANGUAGE DerivingVia #-}\n{-# LANGUAGE FlexibleInstances #-}\nmodule ContState\n{-# LANGUAGE FlexibleInstances #-}\n"

@@ -2,6 +2,7 @@
 
 module Ct
   ( Ct (..),
+    withCt,
     ret,
     exit,
     (#>>=),
@@ -23,7 +24,7 @@ where
 newtype Ct r i a = Ct {runCt :: (a -> i) -> r}
 
 instance Functor (Ct r i) where
-  fmap f (Ct c) = Ct $ \k -> c (k . f)
+  fmap f = withCt $ \k -> k . f
 
 instance Applicative (Ct r r) where
   pure = ret
@@ -31,6 +32,9 @@ instance Applicative (Ct r r) where
 
 instance Monad (Ct r r) where
   (Ct c) >>= f = Ct $ \k -> c (($ k) . runCt . f)
+
+withCt :: ((b -> j) -> a -> i) -> Ct r i a -> Ct r j b
+withCt f (Ct c) = Ct $ \k -> c (f k)
 
 ret :: a -> Ct r r a
 ret a = Ct ($ a)
@@ -54,4 +58,4 @@ reset :: Ct a b b -> Ct r r a
 reset = ret . eval
 
 shift :: ((a -> i) -> Ct r b b) -> Ct r i a
-shift f = Ct $ \k -> eval (f k)
+shift f = Ct $ eval . f

@@ -4,13 +4,15 @@ module ContState
     modify,
     tick,
     ContState,
+    ContWrite,
+    tell,
     module X,
   )
 where
 
 import Control.Monad.Trans.Cont as X
 
-type ContState s m a = ContT (s -> m s) m a
+type ContState s m  = ContT (s -> m s) m
 
 get :: Monad m => ContState s m s
 get = ContT $ \k -> return $ \state -> do
@@ -27,3 +29,11 @@ put = modify . const
 
 tick :: Monad m => ContState Int m ()
 tick = modify (+ 1)
+
+type ContWrite w m a = ContT w m a
+
+tell :: (Semigroup w, Monad m) => w -> ContWrite w m ()
+tell msg = ContT $ \k -> do
+  m <- k ()
+  return $ msg <> m
+
