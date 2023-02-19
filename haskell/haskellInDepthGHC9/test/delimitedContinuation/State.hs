@@ -7,7 +7,7 @@
 module State
   ( 
     tick,
-    CtState,
+    CtTState,
     module X,
   )
 where
@@ -23,13 +23,10 @@ import CtT
 --      continuation k = a -> state -> state        a = result of current
 --                                                  first state = current state
 --                                                  second state = new state
-type CtState state = Ct (state -> state) (state -> state)
 
-instance MonadState state (CtState state) where
-  get = ct $ \k -> (\state -> k state state)
-  put s = ct $ \k -> (\_ -> k () s)
+type CtTState state m = CtT (state -> m state) (state -> m state) m
 
-instance Monad m => MonadState s (CtT (s -> m s) (s -> m s) m) where
+instance Monad m => MonadState s (CtTState s m) where
   get = CtT $ \k -> return $ \s -> k s >>= ($ s)
   put s = CtT $ \k -> return $ \_ -> k () >>= ($ s)
 
@@ -42,6 +39,5 @@ instance Monad m => MonadReader e (CtT (e -> m e) (e -> m e) m) where
   ask = CtT $ \k -> return $ \e -> k e >>= ($ e)
   local fn (CtT c) = CtT $ c >=> \f -> return (f . fn)
 
-
-tick :: CtState Int ()
-tick = ct $ \k -> (\state -> k () (state + 1))
+tick :: Monad m => CtTState Int m ()
+tick = modify (+1)

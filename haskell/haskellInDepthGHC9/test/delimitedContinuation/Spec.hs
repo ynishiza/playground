@@ -222,8 +222,8 @@ spec = describe "" $ do
     kproc 1 () === "hello\nvalue:6" -- (2 * 1 + 1) * (2 * 1)
     kproc 10 () === "hello\nvalue:420" -- (2 * 10 + 1) * (2 * 10)
   describe "2.10: State" $ do
-    let runIntState :: CtState Int Int -> Int
-        runIntState c = runCt c const 0
+    let runIntState :: MonadIO m => CtTState Int m Int-> m Int
+        runIntState (CtT c) = c (return . (const . return)) >>= ($ 0)
 
     it "state" $ do
       let k1 = do
@@ -238,9 +238,9 @@ spec = describe "" $ do
             (a *) <$> get
           k4 = k2 >> k2
 
-      runIntState k1 === 3
-      runIntState k2 === 15
-      runIntState k4 === 80
+      runIntState k1 >>= (=== 3)
+      runIntState k2 >>= (=== 15)
+      runIntState k4 >>= (=== 80)
 
     it "Exercise 9" $ do
       let t = do
@@ -249,7 +249,7 @@ spec = describe "" $ do
             tick
             (`subtract` a) <$> get
 
-      runIntState t === (-1)
+      runIntState t >>= (=== (-1))
 
     it "Exercise 10" $ do
       runIntState
@@ -258,7 +258,7 @@ spec = describe "" $ do
             modify (* 10)
             get
         )
-        === 20
+        >>= (=== 20)
 
   describe "2.12" $ do
     let eitherCt :: (Semigroup m) => (a, a) -> Ct m m a
