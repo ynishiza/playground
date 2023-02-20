@@ -15,11 +15,17 @@ where
 
 import Base.Parse (Parse (..))
 import Base.Parse qualified as PB
-import Control.Applicative ((<|>), Alternative(..))
+import Control.Applicative (Alternative (..), (<|>))
 import Control.Monad
 
 type P = ParseBuilder
 
+-- ParseBuilder: Parse in CPS style
+--
+--   a -> Parse b       extend each leaf node of parse tree
+--   a                  leaf value
+--   Parse b            extension
+--
 newtype ParseBuilder a = ParseBuilder {runParseBuilder :: forall b. (a -> Parse b) -> Parse b}
 
 instance Functor ParseBuilder where
@@ -39,7 +45,7 @@ instance Alternative ParseBuilder where
 instance MonadFail ParseBuilder where
   fail _ = stop
 
-instance MonadPlus ParseBuilder where
+instance MonadPlus ParseBuilder
 
 parserToP :: Parse a -> P a
 parserToP p = ParseBuilder $ \k -> p >>= k

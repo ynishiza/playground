@@ -1,4 +1,5 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE RankNTypes #-}
 
 {- ORMOLU_DISABLE -}
 module Base.Parse
@@ -54,16 +55,13 @@ instance Alternative Parse where
   p <|> Stop = p
   (Result a p) <|> q = Result a (p <|> q)
   p <|> (Result a q) = Result a (p <|> q)
-
   (Get g) <|> (Get g') = Get $ \c -> g c <|> g' c
   (Get g) <|> p = Get $ (<|> p) . g
   (Look l) <|> (Look l') = Look $ \str -> l str <|> l' str
   p <|> (Look l) = Look $ (<|> p) . l
   (Look l) <|> p = Look $ (<|> p) . l
-
   (Final l) <|> (Final m) = Final $ l <> m
   p@(Final _) <|> _ = p
-
 
 parse :: Parse a -> String -> [(a, String)]
 parse (Get f) (c : rest) = parse (f c) rest
@@ -82,3 +80,15 @@ final :: [(a, String)] -> Parse a
 final [] = Stop
 final (x : xs) = Final $ x :| xs
 
+data MyType x y f = A | B x | C x y | D (f x) | E x (MyType x y f)
+
+data M x y f = M (forall r. r -> (x -> r) -> (x -> y -> r) -> (f x -> r) -> (x -> r -> r) -> r)
+
+runM (M f) = f
+
+from :: MyType x y f -> M x y f
+from A = M $ \r _ _ _ _ -> r
+from (B b) = M $ \_ kb _ _ _ -> kb b
+from (C x y) = M $ \_ _ kc _ _ -> kc x y
+from (D f) = M $ \_ _ _ kd _ -> kd f
+from (E x m) = M $ \r kb kc kd ke -> ke x (runM (from m) r kb kc kd ke)

@@ -17,7 +17,7 @@ char = Get pure
 look :: Parse String
 look = Look pure
 
-digit :: Parse Int
+digit :: Integral n => Parse n
 digit =
   char >>= \case
     '1' -> pure 1

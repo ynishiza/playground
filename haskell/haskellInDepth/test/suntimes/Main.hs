@@ -136,4 +136,4 @@ specs = describe "Suntimes" $ do
       testError
         (defaultWauth {email = "", agent = ""})
         "kobe"
-        "Error while communicating with external services: Failed to lookup coordinates. Are email and agent set in your config?\nStatus {statusCode = 404, statusMessage = \"Not Found\"}"
+        "Error while communicating with external services: Failed to lookup coordinates. Are email and agent set in your config?\nStatus {statusCode = 403, statusMessage = \"Forbidden\"}"

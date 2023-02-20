@@ -4,7 +4,7 @@ module Spec
 where
 
 import Combinators
-import ParseNumber
+import qualified ParseBasic as P
 import Test.Hspec
 import Text.ParserCombinators.ReadP qualified as R
 
@@ -17,5 +17,5 @@ spec = describe "read" $ do
     let x = R.many (R.char '1')
     print $ R.readP_to_S x "1112"
 
-    parse int "123" === [(1, "23"), (12, "3"), (123, "")]
-    parse int "abc" === []
+    parse (P.integral @Int) "123" === [(1, "23"), (12, "3"), (123, "")]
+    parse (P.integral @Int) "abc" === []

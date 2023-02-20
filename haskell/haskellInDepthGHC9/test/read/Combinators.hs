@@ -27,6 +27,15 @@ module Combinators
     many1,
     skipMany,
     skipMany1,
+    sepBy,
+    sepBy1,
+    endBy,
+    endBy1,
+    chainr,
+    chainr1,
+    chainl,
+    chainl1,
+    manyTill,
 
     module X,
   )
@@ -43,17 +52,17 @@ import P as X
 (+++) = (<|>)
 
 (<++) :: P a -> P a -> P a
-(ParseBuilder p) <++ (ParseBuilder q) = ParseBuilder $ \k ->
-  let left = p k
+(ParseBuilder pa) <++ (ParseBuilder q) = ParseBuilder $ \k ->
+  let left = pa k
    in case left of
         (PB.Result _ _) -> left
         (PB.Final _) -> left
         _ -> q k
 
 gather :: forall a. P a -> P (String, a)
-gather p = do
+gather pa = do
   str <- look
-  let res = parse p str
+  let res = parse pa str
       mp :: (a, String) -> ((String, a), String)
       mp (a, s) = ((take (length str - length s) str, a), s)
   parserToP $ PB.final $ mp <$> res
@@ -96,35 +105,35 @@ choice :: [P a] -> P a
 choice = msum
 
 count :: Int -> P a -> P [a]
-count n p
-  | n > 0 = (:) <$> p <*> count (n - 1) p
+count n pa
+  | n > 0 = (:) <$> pa <*> count (n - 1) pa
   | n == 0 = return []
   | otherwise = pfail
 
 between :: P start -> P end -> P a -> P a
-between start end p = do
+between start end pa = do
   _ <- start
-  res <- p
+  res <- pa
   _ <- end
   return res
 
 option :: a -> P a -> P a
-option a p = p <|> return a
+option a pa = pa <|> return a
 
 optional :: P a -> P ()
-optional p = void p <|> return ()
+optional pa = void pa <|> return ()
 
 many :: P a -> P [a]
-many p = return [] <|> many1 p
+many pa = return [] <|> many1 pa
 
 many1 :: P a -> P [a]
-many1 p = (:) <$> p <*> many p
+many1 pa = (:) <$> pa <*> many pa
 
 skipMany :: P a -> P ()
-skipMany p = void $ many p
+skipMany pa = void $ many pa
 
 skipMany1 :: P a -> P ()
-skipMany1 p = p >> skipMany p
+skipMany1 pa = pa >> skipMany pa
 
 skipManyWhile :: (Char -> Bool) -> P ()
 skipManyWhile predicate = do
@@ -133,3 +142,68 @@ skipManyWhile predicate = do
   where
     loop (c : cs) = when (predicate c) $ get >> loop cs
     loop _ = pure ()
+
+sepBy :: P a -> P sep -> P [a]
+sepBy pa psep = return [] <|> sepBy1 pa psep
+
+sepBy1 :: forall a sep. P a -> P sep -> P [a]
+sepBy1 pa psep = do
+  v <- pa
+  return [v] <|> ((v :) <$> loop)
+  where
+    loop :: P [a]
+    loop = do
+      _ <- psep
+      v <- pa
+      return [v] <|> ((v :) <$> loop)
+
+endBy :: P a -> P sep -> P [a]
+endBy pa sep = return [] <|> endBy1 pa sep
+
+endBy1 :: forall a sep. P a -> P sep -> P [a]
+endBy1 pa psep = do
+  v <- pa
+  _ <- psep
+  return [v] <|> ((v :) <$> loop)
+  where
+    loop :: P [a]
+    loop = do
+      v <- pa
+      _ <- psep
+      return [v] <|> ((v :) <$> loop)
+
+chainr :: P a -> P (a -> a -> a) -> a -> P a
+chainr pa pop a = return a <|> chainr1 pa pop 
+
+chainr1 :: P a -> P (a -> a -> a) -> P a
+chainr1 pa pop = do
+  v <- pa
+  return v <|> chainr1With v pa pop
+
+chainr1With :: a -> P a -> P (a -> a -> a) -> P a
+chainr1With u pa pop = do
+  op <- pop
+  v <- pa
+  return (op u v) <|> (op u <$> chainr1With v pa pop)
+
+chainl :: P a -> P (a -> a -> a) -> a -> P a
+chainl pa pop a = return a <|> chainl1 pa pop 
+
+chainl1 :: P a -> P (a -> a -> a) -> P a
+chainl1 pa pop = do
+  v <- pa
+  return v <|> chainl1With v pa pop
+
+chainl1With :: a -> P a -> P (a -> a -> a) -> P a
+chainl1With u pa pop = do
+  op <- pop
+  v <- pa
+  return (op u v) <|> chainl1With (op u v) pa pop
+
+manyTill :: P a -> P a -> P [a]
+manyTill pa pend = ended <|> loop
+  where
+    ended = pend >> return []
+    loop = do
+      v <- pa
+      (v:) <$> (ended <|> loop)

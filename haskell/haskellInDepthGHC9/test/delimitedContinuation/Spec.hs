@@ -6,9 +6,6 @@ module Spec
   )
 where
 
-import System.Directory
-import System.FilePath
-import System.PosixCompat
 import ContState qualified as CS
 import Control.Monad
 import Control.Monad.IO.Class
@@ -16,10 +13,14 @@ import CtT
 import Data.Coerce
 import Data.Foldable
 import Data.Function
+import Data.List (sort)
 import Data.Monoid
 import State
+import System.Directory
+import System.FilePath
 import System.IO
 import System.IO.Extra
+import System.PosixCompat
 import Test.Hspec
 import Tree
 
@@ -84,10 +85,12 @@ ioEqual io expected = captureOutput io >>= (=== expected) . fst
 
 listRegularFiles :: FilePath -> IO [FilePath]
 listRegularFiles f = x f
-    where x = listDirectory 
-              >=> traverse (\p -> (f </> p,) <$> getFileStatus (f </> p))
-              >=> return . (fst <$>) . filter (isRegularFile . snd)
-
+  where
+    x =
+      listDirectory
+        >=> traverse (\p -> (f </> p,) <$> getFileStatus (f </> p))
+        >=> return . (fst <$>) . filter (isRegularFile . snd)
+        >=> (return . sort)
 
 spec :: Spec
 spec = describe "" $ do
@@ -222,7 +225,7 @@ spec = describe "" $ do
     kproc 1 () === "hello\nvalue:6" -- (2 * 1 + 1) * (2 * 1)
     kproc 10 () === "hello\nvalue:420" -- (2 * 10 + 1) * (2 * 10)
   describe "2.10: State" $ do
-    let runIntState :: MonadIO m => CtTState Int m Int-> m Int
+    let runIntState :: MonadIO m => CtTState Int m Int -> m Int
         runIntState (CtT c) = c (return . (const . return)) >>= ($ 0)
 
     it "state" $ do
@@ -342,12 +345,10 @@ spec = describe "" $ do
         >>= (=== [1, 2, 3, 4, 5, 6])
 
   describe "Misc" $ do
-    let
+    let -- From "Why would you use ContT": https://ro-che.info/articles/2019-06-07-why-use-contt
 
     it "reads multiple files" $ do
-      -- From "Why would you use ContT": https://ro-che.info/articles/2019-06-07-why-use-contt
-      let
-          t :: CtT () () IO ()
+      let t :: CtT () () IO ()
           t = do
             f <- liftIO $ listRegularFiles "./test/delimitedContinuation/"
             handles <- traverse (\p -> CtT $ withFile p ReadMode) f
@@ -357,4 +358,4 @@ spec = describe "" $ do
           readFirstLine = traverse_ (hGetLine >=> putStrLn)
 
       evalT t
-      evalT t `ioEqual` "{-# LANGUAGE FlexibleInstances #-}\nimport Test.Hspec\n{-# LANGUAGE GADTs #-}\n{-# LANGUAGE DerivingVia #-}\n{-# LANGUAGE FlexibleInstances #-}\nmodule ContState\n{-# LANGUAGE FlexibleInstances #-}\n"
+      evalT t `ioEqual` "module ContState\n{-# LANGUAGE FlexibleInstances #-}\n{-# LANGUAGE FlexibleInstances #-}\n{-# LANGUAGE DerivingVia #-}\n{-# LANGUAGE FlexibleInstances #-}\n{-# LANGUAGE GADTs #-}\nimport Test.Hspec\n"
