@@ -38,5 +38,11 @@ cradle:
       component: haskellInDepthGHC9:test:freemonad-test
     - path: "./test/delimitedContinuation"
       component: haskellInDepthGHC9:test:delimitedContinuation-test
+    - path: "./src/read"
+      component: haskellInDepthGHC9:exe:readp
     - path: "./test/read"
-      component: haskellInDepthGHC9:test:read-test
+      component: haskellInDepthGHC9:test:readp-test
+    - path: "./src/cps"
+      component: haskellInDepthGHC9:exe:cps
+    - path: "./test/cps"
+      component: haskellInDepthGHC9:test:cps-test

@@ -187,7 +187,7 @@ readPEquivalence =
       --
       testCase "[munch,munch1]" $ do
         rest <- forAll genLargeAlphaNum0
-        (pattern, n, str) <-
+        (pattern, _, str) <-
           forAll $
             genReplicate
               (genIntInRange 0 10)
