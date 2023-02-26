@@ -307,13 +307,13 @@ readPEquivalence =
         runTest1 toParse,
       --
       testCase "[sepBy, sepBy1]" $ do
-        rest <- forAll genMediumAlphaNum0
+        rest <- forAll genRest
         (pattern, n, sepc, str) <-
           forAll $
             genReplicateWithSeparator
               (genIntInRange 0 10)
               genSmallAlphaNum
-              (H.element ["|", "$", "#", ";"])
+              (H.element ["|", "_", ":", ";"])
         let toParse = str <> rest
             runTest =
               readpEqualN

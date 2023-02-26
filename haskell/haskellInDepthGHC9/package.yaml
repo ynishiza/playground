@@ -21,6 +21,7 @@ description:         Please see the README on GitHub at <https://github.com/gith
 
 dependencies:
 - base >= 4.14 && < 5
+- containers >= 0.6 && < 0.7
 - ghc-prim >= 0.6.0
 - fmt
 - mtl >= 2.0 && < 2.3
@@ -88,22 +89,28 @@ executables:
     - aeson >= 2 && <3
     - criterion >= 1.5.12 && < 2
     - timeit >= 2.0 && < 3
+    - optparse-applicative >= 0.17 && < 0.20
+    # Chapter 12.3
     - template-haskell >=2.18 && <2.19
+    # Chapter 13.2
+    - fin > 0.2 && < 0.3
+    - dec > 0.0.4 && < 1
     - singletons > 3 && < 4
     - singletons-th > 3 && < 4
     - singletons-base >= 3 && < 4
-    - fin > 0.2 && < 0.3
-    - dec > 0.0.4 && < 1
+    # Chapter 14.1
+    - free > 5.1 && < 6
+    - attoparsec > 0.10 && < 0.20
+    - resourcet > 1.2.0 && < 1.3.0
     - streaming > 0.2 && <0.3
     - streaming-utils > 0.2 && < 0.3
     - streaming-bytestring > 0.2 && < 0.3
-    - resourcet
-    - free > 5.1 && < 6
-    - optparse-applicative >= 0.17 && < 0.20
+
     ghc-options: []
     # - -ddump-to-file
     # - -ddump-file-prefix=mydump
     # - -ddump-deriv
+
   radarSafe:
     main:               main.hs
     source-dirs:        ./src/radarSafe
@@ -132,6 +139,11 @@ executables:
     - singletons > 3 && < 4
     - singletons-th > 3 && < 4
     - singletons-base >= 3 && < 4
+    - http-client > 0.7
+    - servant-server > 0.19 && < 0.30
+    - servant-client > 0.18 && < 0.30
+    - servant-blaze > 0.9 && < 0.12
+    - warp > 3.3 && < 4
     - fin > 0.2 && < 0.3
     - dec > 0.0.4 && < 1
     - free > 5.1 && < 6
@@ -241,6 +253,20 @@ executables:
     dependencies:
     - free > 5.1 && < 6
 
+  covid:
+    main:               main.hs
+    source-dirs:        ./src/covid
+    dependencies:
+    - haskellInDepthGHC9
+    - attoparsec > 0.10 && < 0.20
+    - resourcet > 1.2.0 && < 1.3.0
+    - streaming > 0.2 && <0.3
+    - streaming-utils > 0.2 && < 0.3
+    - streaming-bytestring > 0.2 && < 0.3
+    - lens > 4.15
+
+
+
 internal-libraries: {}
 
 tests:
@@ -249,24 +275,36 @@ tests:
     source-dirs:      ./test/main
     dependencies: 
     - haskellInDepthGHC9
-    - random
-    - aeson >= 2 && <3
-    - singletons > 3 && < 4
-    - singletons-th > 3 && < 4
-    - singletons-base >= 3 && < 4
-    - fin > 0.2 && < 0.3
-    - dec > 0.0.4 && < 1
-    - streaming > 0.2 && <0.3
-    - streaming-utils > 0.2 && < 0.3
-    - streaming-bytestring > 0.2 && < 0.3
-    - resourcet > 1 && < 2
-    - free > 5.1 && < 6
+    # testing
     - tasty >= 0.11 && < 1.6
     - tasty-hspec >= 1.1 && < 1.3
     - tasty-hedgehog >= 0.1 && <= 1.4
     - hspec >= 0.1 && <= 3
     - hedgehog >= 0.5 && < 1.2
+    - random
+    - criterion >= 1.5.12 && < 2
+    - timeit >= 2.0 && < 3
+
+    # common
+    - aeson >= 2 && <3
+    - optparse-applicative >= 0.17 && < 0.20
+    # Chapter 12.3
     - template-haskell >=2.18 && <2.19
+    # Chapter 13.2
+    - fin > 0.2 && < 0.3
+    - dec > 0.0.4 && < 1
+    - singletons > 3 && < 4
+    - singletons-th > 3 && < 4
+    - singletons-base >= 3 && < 4
+    # Chapter 14.1
+    - free > 5.1 && < 6
+    - attoparsec > 0.10 && < 0.20
+    - resourcet > 1.2.0 && < 1.3.0
+    - streaming > 0.2 && <0.3
+    - streaming-utils > 0.2 && < 0.3
+    - streaming-bytestring > 0.2 && < 0.3
+    - lens > 4.15
+
 
   rpc-test:
     main:               Main.hs
@@ -380,5 +418,45 @@ tests:
     dependencies:
     - free > 5.1 && < 6
     - hspec >= 0.1 && <= 3
+
+  covid-test:
+    main:               main.hs
+    source-dirs:        ./test/covid
+    dependencies:
+    - haskellInDepthGHC9
+    - attoparsec > 0.10 && < 0.20
+    - resourcet > 1.2.0 && < 1.3.0
+    - streaming > 0.2 && <0.3
+    - streaming-utils > 0.2 && < 0.3
+    - streaming-bytestring > 0.2 && < 0.3
+    - hspec >= 0.1 && <= 3
+    - lens > 4.15
+
+    # testing
+    - tasty >= 0.11 && < 1.6
+    - tasty-hspec >= 1.1 && < 1.3
+    - tasty-hedgehog >= 0.1 && <= 1.4
+    - hspec >= 0.1 && <= 3
+    - hedgehog >= 0.5 && < 1.2
+
+  servant-test:
+    main:               main.hs
+    source-dirs:        ./test/servant
+    dependencies: 
+    - haskellInDepthGHC9
+    - random
+    - aeson >= 2 && <3
+    - http-client > 0.7
+    - servant-server > 0.19 && < 0.30
+    - servant > 0.17 && < 0.30
+    - servant-client > 0.18 && < 0.30
+    - servant-blaze > 0.9 && < 0.12
+    - req > 3.10 && < 3.20
+    - warp > 3.3 && < 4
+    - wai-extra > 3.1 && < 4
+    - tasty >= 0.11 && < 1.6
+    - tasty-hspec >= 1.1 && < 1.3
+    - hspec >= 0.1 && <= 3
+
 
 benchmarks: {}

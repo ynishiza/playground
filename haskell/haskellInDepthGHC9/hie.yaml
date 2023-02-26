@@ -46,3 +46,9 @@ cradle:
       component: haskellInDepthGHC9:exe:cps
     - path: "./test/cps"
       component: haskellInDepthGHC9:test:cps-test
+    - path: "./src/covid"
+      component: haskellInDepthGHC9:exe:covid
+    - path: "./test/covid"
+      component: haskellInDepthGHC9:test:covid-test
+    - path: "./test/servant"
+      component: haskellInDepthGHC9:test:servant-test

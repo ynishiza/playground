@@ -13,14 +13,14 @@ module Chapter14.StreamPlay
     logCharRawAndCodeWith,
     logCharRawAndCodeWithRef,
     logCharCodeAndRawWriter,
-
     -- Byte
-    copyFile, 
+    copyFile,
     module X,
     T.Text,
   )
 where
 
+import Control.Arrow ((>>>))
 import Control.Monad.Trans.Resource
 import Control.Monad.Writer
 import Data.Char
@@ -29,9 +29,8 @@ import Data.Text qualified as T
 import Data.Text.IO qualified as T
 import Fmt as X
 import Streaming as X
-import qualified Streaming.ByteString as SB
+import Streaming.ByteString qualified as SB
 import Streaming.Prelude qualified as S
-import Control.Arrow ((>>>))
 
 withTab :: Show a => a -> T.Text
 withTab x = x ||+ "\t"
@@ -100,7 +99,8 @@ copyFile :: FilePath -> FilePath -> IO Int
 copyFile src dst = runResourceT (f src)
   where
     f :: FilePath -> ResourceT IO Int
-    f = SB.readFile 
-      >>> SB.copy
-      >>> SB.length_
-      >>> SB.writeFile dst
+    f =
+      SB.readFile
+        >>> SB.copy
+        >>> SB.length_
+        >>> SB.writeFile dst

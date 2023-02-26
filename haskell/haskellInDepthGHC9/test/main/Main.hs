@@ -1,4 +1,5 @@
 import Chapter14.StreamPlaySpec qualified
+import Chapter14.CsvSpec qualified
 import Chapter12_GenericsSQL qualified
 import Chapter12_Template qualified
 import Chapter2_1 qualified
@@ -19,3 +20,4 @@ main = do
       Chapter12_GenericsSQL.specs
       Chapter12_Template.specs
       Chapter14.StreamPlaySpec.spec
+      Chapter14.CsvSpec.spec

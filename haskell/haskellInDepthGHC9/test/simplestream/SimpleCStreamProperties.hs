@@ -93,7 +93,7 @@ properties =
       ),
       ( "[chunk]",
         property $ do
-          list <- forAll $ genNumberList 0 1000
+          list <- forAll $ genNumberList 1 1000
           n <- forAll $ genIntRange 1 (length list)
           ( testList list
               & C.chunkc n
