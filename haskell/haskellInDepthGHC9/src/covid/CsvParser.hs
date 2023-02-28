@@ -4,6 +4,7 @@ module CsvParser
     countryStat,
     dateField,
     countryData,
+    maybeCountryData,
   )
 where
 
@@ -14,6 +15,7 @@ import Data.Attoparsec.ByteString (Parser, (<?>))
 import Data.Attoparsec.ByteString.Char8 qualified as P
 import Data.ByteString.Char8 (ByteString)
 import Data.ByteString.Char8 qualified as B
+import Data.Functor
 import Data.Text (Text)
 import Data.Text.Encoding
 import Data.Time
@@ -70,6 +72,15 @@ dayInfo =
         <*> intField
         <?> "DayDeaths"
 
+pany :: Parser Char
+pany = P.satisfy (const True)
+
+skipUntilEnd :: Parser ()
+skipUntilEnd = void $ P.manyTill pany pend
+
+pend :: Parser ()
+pend = P.endOfLine <|> P.endOfInput
+
 countryData :: Parser CountryData
 countryData =
   CountryData
@@ -84,6 +95,10 @@ countryData =
     <*> (singleinfo <$> dateField <* skipField <*> dayInfo <* skipField)
     <* P.count 14 skipField
     <*> countryStat
+    <* skipUntilEnd
     <?> "CountryData"
   where
     singleinfo x y = [(x, y)]
+
+maybeCountryData :: Parser (Maybe CountryData)
+maybeCountryData = Just <$> countryData <|> skipUntilEnd $> Nothing

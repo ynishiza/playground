@@ -358,4 +358,10 @@ spec = describe "" $ do
           readFirstLine = traverse_ (hGetLine >=> putStrLn)
 
       evalT t
-      evalT t `ioEqual` "module ContState\n{-# LANGUAGE FlexibleInstances #-}\n{-# LANGUAGE FlexibleInstances #-}\n{-# LANGUAGE DerivingVia #-}\n{-# LANGUAGE FlexibleInstances #-}\n{-# LANGUAGE GADTs #-}\nimport Test.Hspec\n"
+      evalT t `ioEqual` "module ContState\n\
+        \{-# LANGUAGE FlexibleInstances #-}\n\
+        \{-# LANGUAGE FlexibleInstances #-}\n\
+        \{-# LANGUAGE DerivingVia #-}\n\
+        \{-# LANGUAGE FlexibleInstances #-}\n\
+        \{-# LANGUAGE GADTs #-}\n\
+        \import Test.Hspec\n"

@@ -18,10 +18,14 @@ import Data.Text qualified as T
 import Servant
 
 type MainAPI =
-  "user" 
-  :> Description "User API"
-  :> Summary "Users"
-  :> (UsersAPI :<|> SingleUserAPI)
+  "user"
+    :> Summary "Users API"
+    :> Description
+         "This is an API for managing user data\
+         \Two types of API \
+         \    /user/*       Base user API\
+         \    /user/:uid    Specific user API"
+    :> (UsersAPI :<|> SingleUserAPI)
 
 type UsersAPI =
   Get '[JSON] [User]
@@ -29,10 +33,16 @@ type UsersAPI =
 
 type SingleUserAPI =
   Capture "id" Text
-  :> Description "Single User API"
-  :> Summary "Single User"
-    :> ( Get '[JSON] User
-           :<|> ReqBody '[JSON] User :> PutAccepted '[JSON] ()
+    :> Summary "Single User API"
+    :> ( Description
+           "GET /user/:uid\
+           \  gets specified user"
+           :> Get '[JSON] User
+           :<|> Description
+                  " PUT /user:uid\
+                  \  updates specified user"
+             :> ReqBody '[JSON] User
+             :> PutAccepted '[JSON] ()
        )
 
 mainHandler :: ServerHandler t Handler => ServerT MainAPI (t Handler)
@@ -58,6 +68,8 @@ singleUserHandler :: ServerHandler t Handler => ServerT SingleUserAPI (t Handler
 singleUserHandler uid =
   (getUserDB >>= flip getUser uid)
     :<|> ( \u -> do
+             _ <- getUserDB >>= flip getUser uid
              logDebugN $ "PUT user:" <> toText u
+             modifyUserDB (insert uid (u {userId = uid}))
              pure ()
          )

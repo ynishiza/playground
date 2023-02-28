@@ -28,6 +28,8 @@ module CovidData (
   CountryStat(..),
   population,
   population_density,
+  withDaysAndTotals,
+  accumulatedStatsFor,
   ) where
 {- ORMOLU_ENABLE -}
 
@@ -48,7 +50,7 @@ data CountryData where
       _stat :: CountryStat
     } ->
     CountryData
-    deriving (Show, Eq)
+  deriving (Show, Eq)
 
 data DayInfo where
   DayInfo ::
@@ -56,7 +58,7 @@ data DayInfo where
       _deaths :: DayDeaths
     } ->
     DayInfo
-    deriving (Show, Eq)
+  deriving (Show, Eq)
 
 data DayCases where
   DayCases ::
@@ -64,7 +66,7 @@ data DayCases where
       _new_cases :: Int
     } ->
     DayCases
-    deriving (Show, Eq)
+  deriving (Show, Eq)
 
 data DayDeaths where
   DayDeaths ::
@@ -72,7 +74,7 @@ data DayDeaths where
       _new_deaths :: Int
     } ->
     DayDeaths
-    deriving (Show, Eq)
+  deriving (Show, Eq)
 
 data CountryStat where
   CountryStat ::
@@ -80,7 +82,16 @@ data CountryStat where
       _population_density :: Maybe Double
     } ->
     CountryStat
-    deriving (Show, Eq)
+  deriving (Show, Eq)
+
+data AccumulatedStats where
+  AccumulatedStats ::
+    { _accumulated_population :: Int,
+      _accumulated_cases :: Int,
+      _accumulated_deaths :: Int
+    } ->
+    AccumulatedStats
+  deriving (Show, Eq)
 
 makeLenses ''CountryData
 makeLenses ''DayInfo
@@ -98,3 +109,20 @@ instance TextShow CountryData where
       <> (x & view (current_total_cases . to showb))
       <> " "
       <> (x & view (current_total_deaths . to showb))
+
+withDaysAndTotals :: CountryData -> [(Day, DayInfo)] -> CountryData
+withDaysAndTotals countryData dayInfo =
+  countryData'
+    & set current_total_cases maxCases
+    & set current_total_deaths maxDeaths
+  where
+    countryData' = countryData & over days (++ dayInfo)
+    maxCases = maximum1Of (days . folded . _2 . cases . total_cases) countryData'
+    maxDeaths = maximum1Of (days . folded . _2 . deaths . total_deaths) countryData'
+
+accumulatedStatsFor :: CountryData -> AccumulatedStats
+accumulatedStatsFor countryData =
+  AccumulatedStats
+    (countryData & view (stat . population))
+    (countryData & view current_total_cases)
+    (countryData & view current_total_deaths)

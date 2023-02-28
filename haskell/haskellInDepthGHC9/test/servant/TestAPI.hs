@@ -23,10 +23,10 @@ data SomeComplexData = SomeComplexData {value :: String, key :: Int}
 type API =
   "test"
     :> ( ( "response"
-             :> (Get '[JSON] Int
-             :<|> "multitype" :> Get '[JSON, PlainText] String
-             :<|> "header" :> Get '[JSON, PlainText] (Headers '[Header "A" Int, Header "B" Bool] String)
-             )
+             :> ( Get '[JSON] Int
+                    :<|> "multitype" :> Get '[JSON, PlainText] String
+                    :<|> "header" :> Get '[JSON, PlainText] (Headers '[Header "A" Int, Header "B" Bool] String)
+                )
          )
            :<|> "queryparam"
              :> ( QueryParam "value" String

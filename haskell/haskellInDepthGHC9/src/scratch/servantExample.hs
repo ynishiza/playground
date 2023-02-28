@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE TypeOperators #-}
+{-# OPTIONS_GHC -Wno-missing-export-lists #-}
 
 import Control.Monad.IO.Class
 import Data.Aeson
@@ -22,19 +23,26 @@ api = Proxy
 -- Interfaces
 type API =
   "api"
-    :> Description "API"
+    :> Summary "Main API"
+    :> Description
+         "This is a sample API\
+         \5 endpoints \
+         \ GET      /api/user \
+         \ POST     /api/user \
+         \ GET      /api/user/:uid \
+         \ POST     /api/user/:uid \
+         \ DELETE   /api/user/:uid "
     :> ( BaseAPI
            :<|> UserAPI
        )
 
 type BaseAPI =
-  "api"
-    :> Description "Base API"
+  Summary "Base API"
     :> Get '[JSON] String
 
 type UserAPI =
   "user"
-    :> Description "User API"
+    :> Summary "User API"
     :> ( Get '[JSON] [User]
            :<|> ReqBody '[JSON] User :> Post '[JSON] ()
            :<|> TargetUserAPI

@@ -82,6 +82,13 @@ userAPISpecs = describe "User API" $ do
   it "GET /user/:uid" $ \ctx -> do
     getJSON @User ctx (id /# "api" /# "user" /# userId defaultUser) mempty
       `expectResponse` defaultUser
+
+  it "PUT /user/:uid" $ \ctx -> do
+    _ <- call ctx PUT (id /# "api" /# "user" /# userId defaultUser) (ReqBodyJson $ User "" "Some Person") ignoreResponse mempty
+    getJSON @User ctx (id /# "api" /# "user" /# userId defaultUser) mempty
+      `expectResponse` User (userId defaultUser) "Some Person"
+
+  it "GET /user/:uid error if user does not exist" $ \ctx -> do
     getJSON @User ctx (id /# "api" /# "user" /# "-1") mempty
       `shouldThrow` vanillaHttpExceptionSelector
 
@@ -111,7 +118,7 @@ testSpecs = describe "" $ do
   describe "QueryParam" $ do
     it "basic" $ \ctx -> do
       -- case: with parameter
-      getJSON @String ctx (urlBuilder /# "queryparam") (queryParam "value" (Just @String "hello"))
+      getJSON @String ctx (urlBuilder /# "queryparam") ("value" =: ("hello" :: String))
         `expectResponse` "param:hello"
 
       -- case: without parameter
@@ -122,8 +129,8 @@ testSpecs = describe "" $ do
       getJSON @String
         ctx
         (urlBuilder /# "queryparam" /# "list")
-        ( queryParam "value" (Just @String "ab")
-            <> queryParam "value" (Just @String "cd")
+        ( "value" =: ("ab" :: String)
+            <> "value" =: ("cd" :: String)
         )
         `expectResponse` "ab,cd"
 
@@ -132,15 +139,15 @@ testSpecs = describe "" $ do
       getJSON @(String, String)
         ctx
         (urlBuilder /# "queryparam" /# "modifier")
-        (queryParam "v1" (Just @String "hello"))
+        ("v1" =: ("hello" :: String))
         `expectResponse` ("hello", "NA")
 
       -- case: with optional
       getJSON @(String, String)
         ctx
         (urlBuilder /# "queryparam" /# "modifier")
-        ( queryParam "v1" (Just @String "hello")
-            <> queryParam "v2" (Just @String "world")
+        ( "v1" =: ("hello" :: String)
+            <> "v2" =: ("world" :: String)
         )
         `expectResponse` ("hello", "world")
 
@@ -153,11 +160,11 @@ testSpecs = describe "" $ do
       getJSON @(String, String, [Int], Bool)
         ctx
         (urlBuilder /# "queryparam" /# "combined")
-        ( queryParam "v1" (Just @String "hello")
-            <> queryParam "v2" (Just @String "world")
-            <> queryParam "list" (Just @Int 1)
-            <> queryParam "list" (Just @Int 2)
-            <> queryParam "flag" (Just True)
+        ( "v1" =: ("hello" :: String)
+            <> "v2" =: ("world" :: String)
+            <> "list" =: (1 :: Int)
+            <> "list" =: (2 :: Int)
+            <> "flag" =: True
         )
         `expectResponse` ("hello", "world", [1, 2], True)
 

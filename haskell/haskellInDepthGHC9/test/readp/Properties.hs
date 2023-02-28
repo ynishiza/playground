@@ -405,6 +405,4 @@ readPEquivalence =
                 (manyTill (string value) (string end))
                 (R.manyTill (R.string value) (R.string end))
         runTest toParse
-        -- printDebug $ show $
-        --         parse (manyTill (string value) (string end)) toParse
     ]
