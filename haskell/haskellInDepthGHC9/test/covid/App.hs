@@ -1,0 +1,1 @@
+../../src/covid/App.hs

@@ -88,9 +88,7 @@ listUsers :: Monad m => UserDB -> m [User]
 listUsers = return . (snd <$>) . toList
 
 getUser :: MonadError ServerError m => UserDB -> Text -> m User
-getUser db uid = case lookup uid db of
-  (Just u) -> return u
-  _ -> throwError err404
+getUser db uid = maybe (throwError err404) return $ lookup uid db
 
 createUser :: (MonadIO m) => UserDB -> User -> m (UserDB, User)
 createUser db u = do

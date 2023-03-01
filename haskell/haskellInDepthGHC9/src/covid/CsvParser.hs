@@ -75,8 +75,8 @@ dayInfo =
 pany :: Parser Char
 pany = P.satisfy (const True)
 
-skipUntilEnd :: Parser ()
-skipUntilEnd = void $ P.manyTill pany pend
+skipRestOfLine :: Parser ()
+skipRestOfLine = void $ P.manyTill pany pend
 
 pend :: Parser ()
 pend = P.endOfLine <|> P.endOfInput
@@ -95,10 +95,10 @@ countryData =
     <*> (singleinfo <$> dateField <* skipField <*> dayInfo <* skipField)
     <* P.count 14 skipField
     <*> countryStat
-    <* skipUntilEnd
+    <* skipRestOfLine
     <?> "CountryData"
   where
     singleinfo x y = [(x, y)]
 
 maybeCountryData :: Parser (Maybe CountryData)
-maybeCountryData = Just <$> countryData <|> skipUntilEnd $> Nothing
+maybeCountryData = Just <$> countryData <|> skipRestOfLine $> Nothing

@@ -29,7 +29,6 @@ module CovidData (
   population,
   population_density,
   withDaysAndTotals,
-  accumulatedStatsFor,
   ) where
 {- ORMOLU_ENABLE -}
 
@@ -84,15 +83,6 @@ data CountryStat where
     CountryStat
   deriving (Show, Eq)
 
-data AccumulatedStats where
-  AccumulatedStats ::
-    { _accumulated_population :: Int,
-      _accumulated_cases :: Int,
-      _accumulated_deaths :: Int
-    } ->
-    AccumulatedStats
-  deriving (Show, Eq)
-
 makeLenses ''CountryData
 makeLenses ''DayInfo
 makeLenses ''DayCases
@@ -119,10 +109,3 @@ withDaysAndTotals countryData dayInfo =
     countryData' = countryData & over days (++ dayInfo)
     maxCases = maximum1Of (days . folded . _2 . cases . total_cases) countryData'
     maxDeaths = maximum1Of (days . folded . _2 . deaths . total_deaths) countryData'
-
-accumulatedStatsFor :: CountryData -> AccumulatedStats
-accumulatedStatsFor countryData =
-  AccumulatedStats
-    (countryData & view (stat . population))
-    (countryData & view current_total_cases)
-    (countryData & view current_total_deaths)
