@@ -50,5 +50,7 @@ cradle:
       component: haskellInDepthGHC9:exe:covid
     - path: "./test/covid"
       component: haskellInDepthGHC9:test:covid-test
+    - path: "./benchmark/covid"
+      component: haskellInDepthGHC9:bench:covid-bench
     - path: "./test/servant"
       component: haskellInDepthGHC9:test:servant-test

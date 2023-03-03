@@ -23,9 +23,9 @@ import Streaming.Prelude qualified as S
 import Streaming.Zip qualified as S
 
 parseGroup :: Monad m => Stream (Of CountryData) m a -> m (Of (Maybe CountryData) a)
-parseGroup = S.next >=> either (pure . (Nothing :>)) fn
+parseGroup = S.next >=> either (pure . (Nothing :>)) doParse
   where
-    fn (cdat, rest) =
+    doParse (cdat, rest) =
       rest
         & S.map _days
         & S.foldMap id
@@ -37,14 +37,14 @@ parseZipppedCsv =
     >>> S.gunzip
     >>> parseByteStream
 
-parseByteStream :: forall m a. (MonadIO m, MonadThrow m) => ByteStream m a -> m ContinentStats
+parseByteStream :: forall m. (MonadIO m, MonadThrow m) => ByteStream m () -> m ContinentStats
 parseByteStream str = do
-  (cstats :> ps) <- fn
+  (cstats :> ps) <- doParse
   case ps of
-    (Right _) -> return cstats
+    (Right ()) -> return cstats
     (Left ((s, e), _)) -> throwM $ userError $ intercalate "," s <> e
   where
-    fn =
+    doParse =
       str
         & AB.parsed maybeCountryData
         & S.catMaybes

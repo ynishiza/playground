@@ -59,6 +59,7 @@ run:  ## Run test
 	@make run-singletons
 	@make run-scratch
 	@make test
+	@make benchmark
 
 run-singletons: ## Singletons tutorial https://blog.jle.im/entries/series/+introduction-to-singletons.html
 	@echo "Singletons tutorial https://blog.jle.im/entries/series/+introduction-to-singletons.html"

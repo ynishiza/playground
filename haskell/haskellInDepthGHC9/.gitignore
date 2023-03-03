@@ -4,5 +4,5 @@
 
 # Profiler
 *.prof
-bench*
+bench.*.html
 *.dyn*

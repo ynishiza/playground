@@ -79,7 +79,7 @@ skipRestOfLine :: Parser ()
 skipRestOfLine = void $ P.manyTill pany pend
 
 pend :: Parser ()
-pend = P.endOfLine <|> P.endOfInput
+pend = void (P.many1 P.endOfLine) <|> P.endOfInput
 
 countryData :: Parser CountryData
 countryData =
@@ -101,4 +101,4 @@ countryData =
     singleinfo x y = [(x, y)]
 
 maybeCountryData :: Parser (Maybe CountryData)
-maybeCountryData = Just <$> countryData <|> skipRestOfLine $> Nothing
+maybeCountryData = Just <$> countryData <|> (skipField >> skipRestOfLine) $> Nothing

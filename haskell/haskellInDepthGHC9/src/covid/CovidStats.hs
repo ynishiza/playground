@@ -1,17 +1,29 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-module CovidStats (
-  AccumulatedStats(..),
-  ContinentStats,
-  forCountry,
-  byContinent,
-  worldStats,
-  ) where
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StrictData #-}
+{-# LANGUAGE TemplateHaskell #-}
 
-import CovidData
+module CovidStats
+  ( AccumulatedStats (..),
+    ContinentStats,
+    forCountry,
+    byContinent,
+    worldStats,
+    initContinentStats,
+  )
+where
+
+import Control.DeepSeq
 import Control.Lens
+import CovidData
 import Data.Map (Map)
-import Data.Text (Text)
 import Data.Map qualified as M
+import Data.Text (Text)
+import GHC.Generics (Generic)
+import TextShow
 
 type ContinentStats = Map Text AccumulatedStats
 
@@ -22,7 +34,25 @@ data AccumulatedStats where
       _accumulated_deaths :: Int
     } ->
     AccumulatedStats
-  deriving (Show, Eq)
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (NFData)
+
+makeLenses ''AccumulatedStats
+
+instance TextShow AccumulatedStats where
+  showb s =
+    ""
+      <> showb (s & view accumulated_population)
+      <> " "
+      <> showb (s & view accumulated_cases)
+      <> " "
+      <> showb (s & view accumulated_deaths)
+
+instance TextShow ContinentStats where
+  showb =
+    M.foldlWithKey
+      (\bd key stats -> bd <> fromText key <> " " <> showb stats <> "\n")
+      ""
 
 forCountry :: CountryData -> AccumulatedStats
 forCountry countryData =
@@ -30,6 +60,9 @@ forCountry countryData =
     (countryData & view (stat . population))
     (countryData & view current_total_cases)
     (countryData & view current_total_deaths)
+
+initContinentStats :: ContinentStats
+initContinentStats = M.empty
 
 byContinent :: ContinentStats -> CountryData -> ContinentStats
 byContinent db countryData = M.insertWith (<>) (_continent countryData) (forCountry countryData) db

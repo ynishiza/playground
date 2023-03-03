@@ -6,6 +6,7 @@ module Spec
 where
 
 import App
+import Control.Exception
 import Control.Monad
 import Control.Monad.Trans.Resource
 import CovidData
@@ -14,11 +15,13 @@ import CsvParser
 import Data.Attoparsec.ByteString.Char8 (Parser)
 import Data.Attoparsec.ByteString.Char8 qualified as C
 import Data.ByteString.Char8 qualified as B
-import Data.List (intercalate)
+import Data.Function ((&))
+import Data.List (intercalate, isInfixOf)
 import Data.Map qualified as M
 import Data.Time.Calendar.OrdinalDate
 import Streaming.ByteString.Char8 qualified as SB
 import Test.Hspec
+import TextShow (TextShow (..))
 
 expectParseResult :: (Show a, Eq a) => (String, Parser a) -> a -> Expectation
 expectParseResult (input, p) expected = C.parseOnly p (B.pack input) `shouldBe` Right expected
@@ -38,11 +41,26 @@ country1 =
     "CAN"
     "North America"
     "Canada"
-    0
-    0
+    119451
+    8981
     [ (fromOrdinalDate 2020 223, DayInfo (DayCases 119451 245) (DayDeaths 8981 5))
     ]
     (CountryStat 37742157 (Just 4.037))
+
+country2 :: CountryData
+country2 =
+  CountryData
+    "JPN"
+    "Asia"
+    "Japan"
+    14281
+    432
+    [ (fromOrdinalDate 2020 122, DayInfo (DayCases 14281 193) (DayDeaths 432 17))
+    ]
+    (CountryStat 126476458 (Just 347.778))
+
+country1Parsed :: CountryData
+country1Parsed = country1 {_current_total_cases = 0, _current_total_deaths = 0}
 
 spec :: Spec
 spec = describe "COVID data" $ do
@@ -52,8 +70,20 @@ spec = describe "COVID data" $ do
 
 dataSpec :: Spec
 dataSpec = describe "CovidData" $ do
+  it "TextShow CountryData, AccumulatedStats" $ do
+    showt country1 `shouldBe` "CAN Canada 119451 8981"
+    showt (forCountry country1) `shouldBe` "37742157 119451 8981"
+    showt initContinentStats `shouldBe` ""
+    showt
+      ( initContinentStats
+          & flip byContinent country1
+          & flip byContinent country2
+      )
+      `shouldBe` "Asia 126476458 14281 432\n\
+                 \North America 37742157 119451 8981\n"
+
   it "[withDaysAndTotals]" $ do
-    withDaysAndTotals country1 [] `shouldBe` country1 {_current_total_cases = 119451, _current_total_deaths = 8981}
+    withDaysAndTotals country1 [] `shouldBe` country1
     withDaysAndTotals
       country1
       [ (fromOrdinalDate 2020 1, DayInfo (DayCases 200000 456) (DayDeaths 1111 2)),
@@ -106,27 +136,36 @@ streamSpec = describe "stream" $ do
             "JPN,Asia,Japan,2020-05-05,15231.0,174.0,521.0,11.0,120.426,1.376,4.119,0.087,,,,,7437.0,0.059,31.456,0.032,tests performed,47.22,126476458.0,347.778,48.2,27.049,18.493,39002.223,,79.37,5.72,11.2,33.7,,13.05,84.63"
           ]
 
+  it "parses an empty stream" $ do
+    parseByteStream (SB.string "") >>= (`shouldBe` M.empty)
+
+  it "error on invalid input" $ do
+    parseByteStream (SB.string "###@@")
+      `shouldThrow` (\(e :: IOException) -> "not enough input" `isInfixOf` show e)
+
   it "parses a byte stream" $ do
-    parsed <- parseByteStream $ SB.string dat
-    parsed
-      `shouldBe` M.fromList
-        [ ("Africa", AccumulatedStats {_accumulated_population = 102334403, _accumulated_cases = 6813, _accumulated_deaths = 436}),
-          ("Asia", AccumulatedStats {_accumulated_population = 177745641, _accumulated_cases = 26035, _accumulated_deaths = 775}),
-          ("Europe", AccumulatedStats {_accumulated_population = 5540718, _accumulated_cases = 5327, _accumulated_deaths = 240}),
-          ("North America", AccumulatedStats {_accumulated_population = 37742157, _accumulated_cases = 60772, _accumulated_deaths = 3854})
-        ]
+    parseByteStream (SB.string dat)
+      >>= ( `shouldBe`
+              M.fromList
+                [ ("Africa", AccumulatedStats {_accumulated_population = 102334403, _accumulated_cases = 6813, _accumulated_deaths = 436}),
+                  ("Asia", AccumulatedStats {_accumulated_population = 177745641, _accumulated_cases = 26035, _accumulated_deaths = 775}),
+                  ("Europe", AccumulatedStats {_accumulated_population = 5540718, _accumulated_cases = 5327, _accumulated_deaths = 240}),
+                  ("North America", AccumulatedStats {_accumulated_population = 37742157, _accumulated_cases = 60772, _accumulated_deaths = 3854})
+                ]
+          )
 
   it "parses csv" $ do
-    parsed <- runResourceT $ parseZipppedCsv "./src/data/owid-covid-data.csv.gz"
-    parsed
-      `shouldBe` M.fromList
-        [ ("Africa", AccumulatedStats {_accumulated_population = 1339423921, _accumulated_cases = 1085589, _accumulated_deaths = 24680}),
-          ("Asia", AccumulatedStats {_accumulated_population = 4599891093, _accumulated_cases = 5399479, _accumulated_deaths = 115546}),
-          ("Europe", AccumulatedStats {_accumulated_population = 748506210, _accumulated_cases = 3098486, _accumulated_deaths = 207749}),
-          ("North America", AccumulatedStats {_accumulated_population = 591242473, _accumulated_cases = 6239663, _accumulated_deaths = 240036}),
-          ("Oceania", AccumulatedStats {_accumulated_population = 40958320, _accumulated_cases = 24606, _accumulated_deaths = 394}),
-          ("South America", AccumulatedStats {_accumulated_population = 430461090, _accumulated_cases = 5052258, _accumulated_deaths = 171093})
-        ]
+    runResourceT (parseZipppedCsv "./src/data/owid-covid-data.csv.gz")
+      >>= ( `shouldBe`
+              M.fromList
+                [ ("Africa", AccumulatedStats {_accumulated_population = 1339423921, _accumulated_cases = 1085589, _accumulated_deaths = 24680}),
+                  ("Asia", AccumulatedStats {_accumulated_population = 4599891093, _accumulated_cases = 5399479, _accumulated_deaths = 115546}),
+                  ("Europe", AccumulatedStats {_accumulated_population = 748506210, _accumulated_cases = 3098486, _accumulated_deaths = 207749}),
+                  ("North America", AccumulatedStats {_accumulated_population = 591242473, _accumulated_cases = 6239663, _accumulated_deaths = 240036}),
+                  ("Oceania", AccumulatedStats {_accumulated_population = 40958320, _accumulated_cases = 24606, _accumulated_deaths = 394}),
+                  ("South America", AccumulatedStats {_accumulated_population = 430461090, _accumulated_cases = 5052258, _accumulated_deaths = 171093})
+                ]
+          )
 
 parserSpec :: Spec
 parserSpec = describe "Parser" $ do
@@ -154,7 +193,7 @@ parserSpec = describe "Parser" $ do
       ( country1Line,
         countryData
         )
-        `expectParseResult` country1
+        `expectParseResult` country1Parsed
       ( "AFG,Asia,Afghanistan,2019-12-31,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,,,,,,,,,,,38928341.0,54.422,18.6,2.581,1.337,1803.987,,597.029,9.59,,,37.746,0.5,64.83",
         countryData
         )
@@ -185,17 +224,21 @@ parserSpec = describe "Parser" $ do
     it "[maybeCountryData] parse country or skip" $ do
       let parseMany = replicateM 3 maybeCountryData
       (country1Line <> "\n" <> country1Line <> "\n" <> country1Line, parseMany)
-        `expectParseResult` [Just country1, Just country1, Just country1]
+        `expectParseResult` [Just country1Parsed, Just country1Parsed, Just country1Parsed]
       (country1Line <> "\n,,\n" <> country1Line, parseMany)
-        `expectParseResult` [Just country1, Nothing, Just country1]
+        `expectParseResult` [Just country1Parsed, Nothing, Just country1Parsed]
       (country1Line <> "\n" <> country1Line <> "\n,", parseMany)
-        `expectParseResult` [Just country1, Just country1, Nothing]
+        `expectParseResult` [Just country1Parsed, Just country1Parsed, Nothing]
 
     it "[maybeCountryData] may end with end or without new line" $ do
       let parseMany = replicateM 3 maybeCountryData
-      (country1Line <> ",,\n,,\n", parseMany)
-        `expectParseResult` [Just country1, Nothing, Nothing]
-      (country1Line <> ",,\n,,\n", parseMany)
-        `expectParseResult` [Just country1, Nothing, Nothing]
-      (",,\n" <> country1Line <> ",,\n", parseMany)
-        `expectParseResult` [Nothing, Just country1, Nothing]
+      (country1Line <> "\n,,\n,,", parseMany)
+        `expectParseResult` [Just country1Parsed, Nothing, Nothing]
+      (country1Line <> "\n,,\n,,\n", parseMany)
+        `expectParseResult` [Just country1Parsed, Nothing, Nothing]
+      (",,\n" <> country1Line <> "\n,,\n", parseMany)
+        `expectParseResult` [Nothing, Just country1Parsed, Nothing]
+
+    it "[maybeCountryData] error on invalid input" $ do
+      ("ab#", maybeCountryData)
+        `expectFailure` (`shouldContain` "not enough input")

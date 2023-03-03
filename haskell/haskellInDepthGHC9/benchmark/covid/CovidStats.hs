@@ -1,0 +1,1 @@
+../../test/covid/CovidStats.hs

@@ -1,5 +1,9 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PartialTypeSignatures #-}
+{-# LANGUAGE StrictData #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 {- ORMOLU_DISABLE -}
@@ -32,10 +36,13 @@ module CovidData (
   ) where
 {- ORMOLU_ENABLE -}
 
+import Control.DeepSeq
 import Control.Lens
 import Data.ByteString (ByteString)
+import Data.ByteString.Char8 qualified as B
 import Data.Text (Text)
 import Data.Time (Day)
+import GHC.Generics (Generic)
 import TextShow
 
 data CountryData where
@@ -49,7 +56,8 @@ data CountryData where
       _stat :: CountryStat
     } ->
     CountryData
-  deriving (Show, Eq)
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (NFData)
 
 data DayInfo where
   DayInfo ::
@@ -57,7 +65,8 @@ data DayInfo where
       _deaths :: DayDeaths
     } ->
     DayInfo
-  deriving (Show, Eq)
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (NFData)
 
 data DayCases where
   DayCases ::
@@ -65,7 +74,8 @@ data DayCases where
       _new_cases :: Int
     } ->
     DayCases
-  deriving (Show, Eq)
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (NFData)
 
 data DayDeaths where
   DayDeaths ::
@@ -73,7 +83,8 @@ data DayDeaths where
       _new_deaths :: Int
     } ->
     DayDeaths
-  deriving (Show, Eq)
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (NFData)
 
 data CountryStat where
   CountryStat ::
@@ -81,7 +92,8 @@ data CountryStat where
       _population_density :: Maybe Double
     } ->
     CountryStat
-  deriving (Show, Eq)
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (NFData)
 
 makeLenses ''CountryData
 makeLenses ''DayInfo
@@ -89,12 +101,18 @@ makeLenses ''DayCases
 makeLenses ''DayDeaths
 makeLenses ''CountryStat
 
+instance Semigroup CountryData where
+  c1 <> c2 =
+    if _iso_code c1 == _iso_code c2
+      then withDaysAndTotals c1 (_days c2)
+      else error $ "country mismatch:" <> show c1 <> " <> " <> show c2
+
 instance TextShow CountryData where
   showb x =
-    fromText ""
-      <> (x & view (iso_code . to showb))
+    ""
+      <> (x & view (iso_code . to (fromString . B.unpack)))
       <> " "
-      <> (x & view (name . to showb))
+      <> (x & view (name . to fromText))
       <> " "
       <> (x & view (current_total_cases . to showb))
       <> " "
