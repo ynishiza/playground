@@ -1,6 +1,5 @@
 module App
   ( parseByteStream,
-    parseGroup,
     parseZipppedCsv,
   )
 where
