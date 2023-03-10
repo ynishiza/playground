@@ -53,7 +53,7 @@ anyOf :: Getting Any s Bool -> s -> Bool
 anyOf = runGet Any getAny
 
 elemOf :: Eq a => Getting Any s a -> a -> s -> Bool
-elemOf getA a = anyOf (getA . mkGetter (== a))
+elemOf getA a = anyOf (getA . to (== a))
 
 lengthOf :: Getting (Sum Int) s a -> s -> Int
 lengthOf = runGet (const (Sum 1)) getSum

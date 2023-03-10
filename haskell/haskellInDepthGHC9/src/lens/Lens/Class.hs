@@ -3,6 +3,8 @@
 module Lens.Class
   ( Profunctor (..),
     Indexable (..),
+    Optic,
+    Optic',
   )
 where
 
@@ -21,3 +23,6 @@ instance Profunctor (->) where
 
 instance Indexable i (->) where
   indexed p _ = p
+
+type Optic p f s t a b = p a (f b) -> p s (f t)
+type Optic' p f s a = Optic p f s s a a
