@@ -54,3 +54,7 @@ cradle:
       component: haskellInDepthGHC9:bench:covid-bench
     - path: "./test/servant"
       component: haskellInDepthGHC9:test:servant-test
+    - path: "./src/lens"
+      component: haskellInDepthGHC9:exe:lens
+    - path: "./test/lens"
+      component: haskellInDepthGHC9:test:lens-test
