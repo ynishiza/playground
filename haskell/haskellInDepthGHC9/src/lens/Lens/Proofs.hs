@@ -1,16 +1,17 @@
 {-# LANGUAGE RankNTypes #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use camelCase" #-}
 
-module Lens.Proofs where
-
+module Lens.Proofs () where
 import Lens.Fold
 import Lens.Get
 
-isGetterGetting :: Getter s s a a -> Getting r s a
-isGetterGetting = id
+isGetter_Getting :: Getter s s a a -> Getting r s a
+isGetter_Getting = id
 
-isGettingFold :: Monoid r => Fold s a -> Getting r s a
-isGettingFold = id
+isFold_Getting :: Monoid r => Fold s a -> Getting r s a
+isFold_Getting = id
 
-isIndexedFold :: IndexedFold i s a -> Fold s a
-isIndexedFold = id
+isIndexedFold_Fold :: IndexedFold i s a -> Fold s a
+isIndexedFold_Fold = id

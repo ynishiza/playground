@@ -188,6 +188,8 @@ spec = describe "Lens" $ do
       A & toListOf (unfolded (\x -> if x > D then Nothing else Just (x, succ x))) & expects [A, B, C, D]
       (A, B) & toListOf (iterated (second succ) . _2) & take 3 & expects [B, C, D]
       [A .. D] & toListOf (folded . filtered (> B)) & expects [C, D]
+      (A, B, 'a') & view (_1 . filtered (> A)) & expects NA
+      (A, B, 'a') & view (_2 . filtered (> A)) & expects B
       [A .. D] & toListOf (backwards folded) & expects [D, C, B, A]
 
       (A, B) & toListOf (repeated . _2) & take 3 & expects [B, B, B]
@@ -451,6 +453,8 @@ spec = describe "Lens" $ do
       & expects NA
 
     Nothing & has _Nothing & expects True
+    [A,B,C] & has (folded ) & expects True
+    [] & has (folded ) & expects False
 
     A & foldOf id & expects A
 
