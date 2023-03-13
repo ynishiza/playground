@@ -109,12 +109,14 @@ spec = describe "" $ do
       -- taking/dropping
       (A, B) & preview (taking (_1 . replicated 10) 3) & expects $ Just A
       (A, B) & toListOf (taking (_1 . replicated 10) 3) & expects [A, A, A]
+      ([A .. E], B) & toListOf (droppingWhile (_1 . folded) (< C)) & expects [C, D, E]
       -- infinite lists
       (A, B) & preview (_1 . repeated) & expects $ Just A
       (A, B) & toListOf (taking (_1 . repeated) 3) & expects [A, A, A]
       (A, B) & toListOf (taking (_1 . repeated) 5) & expects [A, A, A, A, A]
-      (A, B) & toListOf (takingWhile (_1 . iterated succ) (< E)) & expects [A, B, C, D]
-      (A, B) & toListOf (takingWhile (_1 . iterated succ) (< E)) & expects [A, B, C, D]
+      (A, B) & toListOf (takingWhile (_1 . iterated (succ.succ)) (< E)) & expects [A,C]
+      (A, B) & toListOf (takingWhile (_2 . iterated (succ.succ)) (< E)) & expects [B,D]
+      (A, B) & toListOf (droppingWhile (_1 . iterated (succ. succ)) (< C)) & take 3 & expects [C, E, G]
 
       let text =
             "hello world\n\

@@ -13,6 +13,7 @@ module Lens.Fold
     iterated,
     taking,
     takingWhile,
+    droppingWhile,
     filtered,
     backwards,
     lined,
@@ -87,11 +88,14 @@ backwards ref get = a
   where
     a = rmap forwards $ ref $ rmap Backwards get
 
-taking :: forall s a. Fold s a -> Int -> Fold s a
+taking :: Fold s a -> Int -> Fold s a
 taking fld n = takingWhileBase fld $ \i _ -> i < n
 
-takingWhile :: forall s a. Fold s a -> (a -> Bool) -> Fold s a
+takingWhile :: Fold s a -> (a -> Bool) -> Fold s a
 takingWhile fld predicate = takingWhileBase fld (const predicate)
+
+droppingWhile :: Fold s a -> (a -> Bool) -> Fold s a
+droppingWhile fld predicate = droppingWhileBase fld (const predicate)
 
 takingWhileBase :: forall s a. Fold s a -> (Int -> a -> Bool) -> Fold s a
 takingWhileBase fld predicate getA =
@@ -107,6 +111,18 @@ takingWhileBase fld predicate getA =
       if predicate i a
         then Just (Ap $ get a)
         else Nothing
+
+droppingWhileBase :: forall s a. Fold s a -> (Int -> a -> Bool) -> Fold s a
+droppingWhileBase fld predicate getA =
+  fld (Const . createDrop (phantom . getA))
+    >>> getConst
+    >>> run
+    >>> phantom
+  where
+    run :: Applicative f => DroppingWhileR (Ap f ()) -> f ()
+    run r = getAp $ fst $ runDroppingWhileR r (0, True)
+    createDrop :: (a -> f ()) -> a -> DroppingWhileR (Ap f ())
+    createDrop get a = DroppingWhileR $ \(i, _) -> (Ap $ get a, predicate i a)
 
 lined :: Fold String String
 lined = folding lines

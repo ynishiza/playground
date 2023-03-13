@@ -8,11 +8,11 @@ module Lens.Monoids
     XFirst (..),
     getXFirst,
     TakeWhileR (..),
-    -- withTk,
+    DroppingWhileR (..),
   )
 where
 
-import Control.Arrow (second)
+import Control.Arrow (Arrow (first), second)
 
 -- note: Indexing monoid
 newtype Indexing f a where
@@ -61,3 +61,18 @@ instance Semigroup a => Semigroup (TakeWhileR a) where
 
 instance Semigroup a => Monoid (TakeWhileR a) where
   mempty = TakeWhileR $ const Nothing
+
+data DroppingWhileR a where
+  DroppingWhileR :: {runDroppingWhileR :: (Int, Bool) -> (a, Bool)} -> DroppingWhileR a
+
+instance Semigroup a => Semigroup (DroppingWhileR a) where
+  d1 <> d2 = DroppingWhileR $ \(i, isDropping) ->
+    let (x1, dropX1) = runDroppingWhileR d1 (i, isDropping)
+     in case (isDropping, dropX1) of
+          -- case: drop x1
+          (True, True) -> runDroppingWhileR d2 (i + 1, True)
+          -- case: take x1
+          _ -> first (x1 <>) $ runDroppingWhileR d2 (i + 1, False)
+
+instance Monoid a => Monoid (DroppingWhileR a) where
+  mempty = DroppingWhileR $ const (mempty, True)
