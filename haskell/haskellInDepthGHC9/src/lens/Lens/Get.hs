@@ -4,6 +4,7 @@ module Lens.Get
   ( Getter,
     Getting,
     Getting',
+    IndexedGetting,
     view,
     views,
     use,
@@ -20,13 +21,15 @@ import Control.Monad.State
 import Control.Monad.Writer
 import Data.Functor.Const
 import Data.Functor.Contravariant
-import Lens.Class
+import Lens.Lens
 
 type Getter s t a b = forall f. (Contravariant f, Functor f) => (a -> f b) -> s -> f t
 
 type Getting r s a = (a -> Const r a) -> s -> Const r s
 
 type Getting' s a = Getting a s a
+
+type IndexedGetting i r s a = Indexed i a (Const r a) -> s -> Const r s
 
 view :: MonadReader s m => Getting' s a -> m a
 view getter = views getter id

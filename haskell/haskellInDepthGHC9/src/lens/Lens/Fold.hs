@@ -1,6 +1,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Collapse lambdas" #-}
 
 {- ORMOLU_DISABLE -}
 module Lens.Fold
@@ -8,6 +10,7 @@ module Lens.Fold
     IndexedFold,
 
     folded,
+    ifoldr,
     repeated,
     replicated,
     iterated,
@@ -15,6 +18,7 @@ module Lens.Fold
     takingWhile,
     droppingWhile,
     filtered,
+    filtered',
     backwards,
     lined,
     worded,
@@ -38,6 +42,15 @@ module Lens.Fold
     maxOf',
     firstOf,
     lastOf,
+    findOf,
+
+    -- Indexed
+    asIndexed,
+    elemIndexOf,
+    elemIndicesOf,
+
+    -- OLD
+    takingWhileSimple,
   )
 where
 {- ORMOLU_ENABLE -}
@@ -50,79 +63,100 @@ import Data.Functor.Contravariant
 import Data.List.NonEmpty qualified as N
 import Data.Monoid
 import Data.Semigroup (Max (..))
-import Lens.Class
 import Lens.Get
+import Lens.Lens
 
 type Fold s a = forall f. (Contravariant f, Applicative f) => (a -> f a) -> s -> f s
 
 type IndexedFold i s a = forall f p. (Indexable i p, Contravariant f, Applicative f) => p a (f a) -> s -> f s
 
+asIndexed :: Monoid r => IndexedFold i s a -> IndexedGetting i r s a
+asIndexed = id
+
 -- ========== Combinators ==========
 
 folded :: Foldable t => IndexedFold Int (t a) a
-folded getA = phantom . snd . foldr foldA (1 :: Int, pure ())
-  where
-    foldA a (i, ys) = (i + 1, phantom $ const <$> y <*> ys)
-      where
-        y = indexed getA i a
+folded useA = phantom . ifoldr (\i a r -> indexed useA i a *> r) (pure ())
 
 folding :: Foldable t => (s -> t a) -> Fold s a
-folding f getA = phantom . traverse_ getA . f
+folding f useA = phantom . traverse_ useA . f
 
-repeated :: Fold a a
+ifoldr :: Foldable t => (Int -> a -> r -> r) -> r -> t a -> r
+ifoldr combine r0 t = foldr (\a next -> \i -> combine i a (next $ i + 1)) (const r0) t 0
+
+repeated :: Applicative f => LensLike' f a a
 repeated = iterated id
 
-iterated :: (a -> a) -> Fold a a
-iterated next getA = go
+iterated :: Applicative f => (a -> a) -> LensLike' f a a
+iterated next useA = go
   where
-    go v = getA v *> go (next v)
+    go v = useA v *> go (next v)
 
 replicated :: Int -> Fold a a
 replicated n = folding (replicate n)
 
-filtered :: (a -> Bool) -> Fold a a
-filtered predicate getA a = if predicate a then getA a else phantom $ pure ()
+filtered' :: (Choice p, Applicative f) => (a -> Bool) -> Optic' p f a a
+filtered' predicate =
+  dimap
+    (\a -> if predicate a then Right a else Left a)
+    (either pure id)
+    . right'
+
+filtered :: Applicative f => (a -> Bool) -> LensLike' f a a
+filtered predicate useA a = if predicate a then useA a else pure a
 
 backwards :: Profunctor p => Optic p (Backwards f) s t a b -> Optic p f s t a b
 backwards ref get = a
   where
     a = rmap forwards $ ref $ rmap Backwards get
 
-taking :: Fold s a -> Int -> Fold s a
-taking fld n = takingWhileBase fld $ \i _ -> i < n
-
-takingWhile :: Fold s a -> (a -> Bool) -> Fold s a
-takingWhile fld predicate = takingWhileBase fld (const predicate)
-
-droppingWhile :: Fold s a -> (a -> Bool) -> Fold s a
+droppingWhile :: (Contravariant f, Applicative f) => LensLike (Const (DroppingWhileR (Ap f a))) s t a a -> (a -> Bool) -> LensLike f s t a a
 droppingWhile fld predicate = droppingWhileBase fld (const predicate)
 
-takingWhileBase :: forall s a. Fold s a -> (Int -> a -> Bool) -> Fold s a
-takingWhileBase fld predicate getA =
-  fld (Const . createTakeWhile (phantom . getA))
-    >>> getConst
-    >>> run
-    >>> phantom
-  where
-    run :: Applicative f => TakeWhileR (Ap f ()) -> f ()
-    run r = maybe (pure ()) getAp $ runTakeWhileR r 0
-    createTakeWhile :: (a -> f ()) -> a -> TakeWhileR (Ap f ())
-    createTakeWhile get a = TakeWhileR $ \i ->
-      if predicate i a
-        then Just (Ap $ get a)
-        else Nothing
+taking :: (Contravariant f, Applicative f) => LensLike (Const (TakeWhileApplicative f a)) s t a a -> Int -> LensLike f s t a a
+taking fld n = takingWhileBase fld (\i _ -> i < n)
 
-droppingWhileBase :: forall s a. Fold s a -> (Int -> a -> Bool) -> Fold s a
-droppingWhileBase fld predicate getA =
-  fld (Const . createDrop (phantom . getA))
+takingWhile :: (Contravariant f, Applicative f) => LensLike (Const (TakeWhileApplicative f a)) s t a a -> (a -> Bool) -> LensLike f s t a a
+takingWhile fld predicate = takingWhileBase fld (const predicate)
+
+takingWhileBase :: forall f s t a. (Contravariant f, Applicative f) => LensLike (Const (TakeWhileApplicative f a)) s t a a -> (Int -> a -> Bool) -> LensLike f s t a a
+takingWhileBase fld predicate useA =
+  fld (Const . createTakeWhile useA)
+    >>> getConst
+    >>> flip run noEffect
+    >>> phantom
+  where
+    run :: TakeWhileApplicative f a -> f a -> f a
+    run r b = runTakeWhileApplicative r 0 (const b)
+    createTakeWhile :: (a -> f a) -> a -> TakeWhileApplicative f a
+    createTakeWhile get a = TakeWhileApplicative (\i k -> if predicate i a then get a *> k (i + 1) else pure a)
+
+noEffect :: (Contravariant f, Applicative f) => f a
+noEffect = phantom $ pure ()
+
+droppingWhileBase :: forall f s t a. (Contravariant f, Applicative f) => LensLike (Const (DroppingWhileR (Ap f a))) s t a a -> (Int -> a -> Bool) -> LensLike f s t a a
+droppingWhileBase fld predicate useA =
+  fld (Const . createDrop useA)
     >>> getConst
     >>> run
     >>> phantom
   where
-    run :: Applicative f => DroppingWhileR (Ap f ()) -> f ()
+    run :: Applicative f => DroppingWhileR (Ap f a) -> f a
     run r = getAp $ fst $ runDroppingWhileR r (0, True)
-    createDrop :: (a -> f ()) -> a -> DroppingWhileR (Ap f ())
+    createDrop :: (a -> f a) -> a -> DroppingWhileR (Ap f a)
     createDrop get a = DroppingWhileR $ \(i, _) -> (Ap $ get a, predicate i a)
+
+droppingWhileBase2 :: forall f s t a. (Contravariant f, Applicative f) => LensLike (Const (DroppingWhileApplicative f a)) s t a a -> (Int -> a -> Bool) -> LensLike f s t a a
+droppingWhileBase2 fld predicate useA =
+  fld (Const . createDrop useA)
+    >>> getConst
+    >>> run
+    >>> phantom
+  where
+    run :: Applicative f => DroppingWhileApplicative f a -> f a
+    run r = runDroppingWhileApplicative r 0 noEffect
+    createDrop :: (a -> f a) -> a -> DroppingWhileApplicative f a
+    createDrop get a = DroppingWhileApplicative $ \i v -> if predicate i a then get a else pure a
 
 lined :: Fold String String
 lined = folding lines
@@ -136,16 +170,16 @@ has :: Getting Any s a -> s -> Bool
 has = notNullOf
 
 runGet :: (a -> r) -> (r -> b) -> Getting r s a -> s -> b
-runGet wrapper unwrapper getA = unwrapper . getConst . getA (Const . wrapper)
+runGet wrapper unwrapper useA = unwrapper . getConst . useA (Const . wrapper)
 
 preview :: Getting (XFirst a) s a -> s -> Maybe a
 preview = runGet (XFirst . Just) getXFirst
 
 foldOf :: Getting a s a -> s -> a
-foldOf getA = getConst . getA Const
+foldOf useA = getConst . useA Const
 
 foldMapOf :: Getting a s a -> (a -> r) -> s -> r
-foldMapOf getA f = f . foldOf getA
+foldMapOf useA f = f . foldOf useA
 
 foldrOf :: Getting (Endo r) s a -> (a -> r -> r) -> r -> s -> r
 foldrOf getFold f r0 = runGet (Endo . f) (($ r0) . appEndo) getFold
@@ -171,13 +205,13 @@ anyOf :: Getting Any s Bool -> s -> Bool
 anyOf = runGet Any getAny
 
 elemOf :: Eq a => Getting Any s a -> a -> s -> Bool
-elemOf getAny a = anyOf (getAny . to (== a))
+elemOf asAny a = anyOf (asAny . to (== a))
 
 lengthOf :: Getting (Sum Int) s a -> s -> Int
 lengthOf = runGet (const (Sum 1)) getSum
 
 nullOf :: Getting Any s a -> s -> Bool
-nullOf getA = not . notNullOf getA
+nullOf useA = not . notNullOf useA
 
 notNullOf :: Getting Any s a -> s -> Bool
 notNullOf = runGet (const (Any True)) getAny
@@ -196,3 +230,36 @@ maxOf' = runGet (Endo . mx) (($ Nothing) . appEndo)
   where
     mx v (Just w) = Just (max v w)
     mx v Nothing = Just v
+
+findOf :: Getting (Maybe a) s a -> (a -> Bool) -> s -> Maybe a
+findOf useA predicate = runGet (\a -> if predicate a then Just a else Nothing) id useA
+
+elemIndexOf :: Eq a => IndexedGetting i (XFirst i) s a -> a -> s -> Maybe i
+elemIndexOf getIndex a0 =
+  getIndex (Indexed $ \i a -> Const $ XFirst $ if a == a0 then Just i else Nothing)
+    >>> getConst
+    >>> getXFirst
+
+elemIndicesOf :: Eq a => IndexedGetting i (Endo [i]) s a -> a -> s -> [i]
+elemIndicesOf getIndex a0 =
+  getIndex (Indexed $ \i a -> Const $ Endo ( \r -> if a == a0 then i:r else r))
+    >>> getConst
+    >>> appEndo
+    >>> ($ [])
+
+-- ==================== OLD ====================
+
+takingWhileSimple :: forall f s t a. (Contravariant f, Applicative f) => LensLike (Const (TakeWhile1 (Ap f a))) s t a a -> (Int -> a -> Bool) -> LensLike f s t a a
+takingWhileSimple fld predicate useA =
+  fld (Const . createTakeWhile useA)
+    >>> getConst
+    >>> run
+    >>> phantom
+  where
+    run :: Applicative f => TakeWhile1 (Ap f a) -> f a
+    run r = maybe noEffect getAp $ runTakeWhile1 r 0
+    createTakeWhile :: (a -> f a) -> a -> TakeWhile1 (Ap f a)
+    createTakeWhile get a = TakeWhile1 $ \i ->
+      if predicate i a
+        then Just (Ap $ get a)
+        else Nothing

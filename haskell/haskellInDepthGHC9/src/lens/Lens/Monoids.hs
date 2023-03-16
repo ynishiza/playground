@@ -7,12 +7,14 @@ module Lens.Monoids
   ( Indexing (..),
     XFirst (..),
     getXFirst,
-    TakeWhileR (..),
+    TakeWhile1 (..),
+    TakeWhileApplicative (..),
     DroppingWhileR (..),
+    DroppingWhileApplicative (..),
   )
 where
 
-import Control.Arrow (Arrow (first), second)
+import Control.Arrow (first, second)
 
 -- note: Indexing monoid
 newtype Indexing f a where
@@ -46,21 +48,32 @@ instance Semigroup (XFirst a) where
 instance Monoid (XFirst a) where
   mempty = XFirst Nothing
 
-data TakeWhileR a where
-  TakeWhileR :: {runTakeWhileR :: Int -> Maybe a} -> TakeWhileR a
+data TW f a where
+  TW :: {runTW :: Int -> (Bool, f a)} -> TW f a
 
-instance Semigroup a => Semigroup (TakeWhileR a) where
-  -- IMPORTANT: don't pattern match TakeWhileR to allow lazy evaluation of <>
-  -- i.e. don't do
-  --      (TakeWhileR t1) <> (TakeWhileR t2)
-  t1 <> t2 = TakeWhileR $ \i -> case runTakeWhileR t1 i of
-    (Just x) -> case runTakeWhileR t2 (i + 1) of
-      (Just y) -> Just $ x <> y
-      _ -> Just x
-    Nothing -> Nothing
+instance Functor f => Functor (TW f) where
+  fmap f (TW x) = TW $ second (f <$>) . x
 
-instance Semigroup a => Monoid (TakeWhileR a) where
-  mempty = TakeWhileR $ const Nothing
+instance Applicative f => Applicative (TW f) where
+  pure a = TW $ const (True, pure a)
+
+data TakeWhileApplicative f a where
+  TakeWhileApplicative :: {runTakeWhileApplicative :: Int -> (Int -> f a) -> f a} -> TakeWhileApplicative f a
+
+instance Applicative f => Semigroup (TakeWhileApplicative f a) where
+  t1 <> t2 = TakeWhileApplicative $ \i k -> runTakeWhileApplicative t1 i (\j -> runTakeWhileApplicative t2 j k)
+
+instance Applicative f => Monoid (TakeWhileApplicative f a) where
+  mempty = TakeWhileApplicative $ \i k -> k i
+
+data DroppingWhileApplicative f a where
+  DroppingWhileApplicative :: {runDroppingWhileApplicative :: Int -> f a -> f a} -> DroppingWhileApplicative f a
+
+instance Applicative f => Semigroup (DroppingWhileApplicative f a) where
+  d1 <> d2 = DroppingWhileApplicative $ \i v -> runDroppingWhileApplicative d2 (i + 1) (runDroppingWhileApplicative d1 i v)
+
+instance Applicative f => Monoid (DroppingWhileApplicative f a) where
+  mempty = DroppingWhileApplicative $ \_ v -> v
 
 data DroppingWhileR a where
   DroppingWhileR :: {runDroppingWhileR :: (Int, Bool) -> (a, Bool)} -> DroppingWhileR a
@@ -76,3 +89,18 @@ instance Semigroup a => Semigroup (DroppingWhileR a) where
 
 instance Monoid a => Monoid (DroppingWhileR a) where
   mempty = DroppingWhileR $ const (mempty, True)
+
+-- ==================== OLD ====================
+--
+data TakeWhile1 a where
+  TakeWhile1 :: {runTakeWhile1 :: Int -> Maybe a} -> TakeWhile1 a
+
+instance Semigroup a => Semigroup (TakeWhile1 a) where
+  t1 <> t2 = TakeWhile1 $ \i -> case runTakeWhile1 t1 i of
+    (Just x) -> case runTakeWhile1 t2 (i + 1) of
+      (Just y) -> Just $ x <> y
+      _ -> Just x
+    Nothing -> Nothing
+
+instance Semigroup a => Monoid (TakeWhile1 a) where
+  mempty = TakeWhile1 $ const Nothing
