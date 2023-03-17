@@ -17,7 +17,9 @@ module Lens.Fold
     iterated,
     taking,
     takingWhile,
+    dropping,
     droppingWhile,
+    droppingWhileBase,
     filtered,
     filtered',
     backwards,
@@ -114,8 +116,11 @@ backwards lens get = a
   where
     a = rmap forwards $ lens $ rmap Backwards get
 
-droppingWhile :: (Contravariant f, Applicative f) => LensLike (Const (DroppingWhileR (Ap f a))) s t a a -> (a -> Bool) -> LensLike f s t a a
-droppingWhile lens predicate = droppingWhileBase lens (const predicate)
+dropping :: Applicative f => LensLike (DroppingWhileApplicative f) s t a a -> Int -> LensLike f s t a a
+dropping lens n = droppingWhileBase lens (\i _ -> i < n)
+
+droppingWhile :: Applicative f => LensLike (DroppingWhileApplicative f) s t a a -> (a -> Bool) -> LensLike f s t a a
+droppingWhile lens predicate = droppingWhileBase lens (\_ v -> predicate v)
 
 taking :: (Contravariant f, Applicative f) => LensLike (Const (TakeWhileApplicative f a)) s t a a -> Int -> LensLike f s t a a
 taking lens n = takingWhileBase lens (\i _ -> i < n)
@@ -138,29 +143,19 @@ takingWhileBase lens predicate useA =
 noEffect :: (Contravariant f, Applicative f) => f a
 noEffect = phantom $ pure ()
 
-droppingWhileBase :: forall f s t a. (Contravariant f, Applicative f) => LensLike (Const (DroppingWhileR (Ap f a))) s t a a -> (Int -> a -> Bool) -> LensLike f s t a a
+droppingWhileBase :: forall f s t a. Applicative f => LensLike (DroppingWhileApplicative f) s t a a -> (Int -> a -> Bool) -> LensLike f s t a a
 droppingWhileBase lens predicate useA =
-  lens (Const . createDrop useA)
-    >>> getConst
+  lens (createDrop useA)
     >>> run
-    >>> phantom
   where
-    run :: Applicative f => DroppingWhileR (Ap f a) -> f a
-    run r = getAp $ fst $ runDroppingWhileR r (0, True)
-    createDrop :: (a -> f a) -> a -> DroppingWhileR (Ap f a)
-    createDrop get a = DroppingWhileR $ \(i, _) -> (Ap $ get a, predicate i a)
-
-droppingWhileBase2 :: forall f s t a. (Contravariant f, Applicative f) => LensLike (Const (DroppingWhileApplicative f a)) s t a a -> (Int -> a -> Bool) -> LensLike f s t a a
-droppingWhileBase2 lens predicate useA =
-  lens (Const . createDrop useA)
-    >>> getConst
-    >>> run
-    >>> phantom
-  where
-    run :: Applicative f => DroppingWhileApplicative f a -> f a
-    run r = runDroppingWhileApplicative r 0 noEffect
+    run :: Applicative f => DroppingWhileApplicative f r -> f r
+    run r = fst $ runDroppingWhileApplicative r (0, False)
     createDrop :: (a -> f a) -> a -> DroppingWhileApplicative f a
-    createDrop get a = DroppingWhileApplicative $ \i v -> if predicate i a then get a else pure a
+    createDrop get a = DroppingWhileApplicative $ \(i, isDropping) -> case (isDropping, predicate i a) of
+      (False, False) -> (get a, False)
+      (False, True) -> (pure a, True)
+      (True, True) -> (pure a, True)
+      (True, False) -> (get a, False)
 
 lined :: Fold String String
 lined = folding lines
@@ -275,9 +270,10 @@ ianyOf :: IndexedGetting i Any s a -> (i -> a -> Bool) -> s -> Bool
 ianyOf lens predicate = runIndexedGet (\i a -> Any $ predicate i a) getAny lens
 
 itoListOf :: IndexedGetting i (Endo [(i, a)]) s a -> s -> [(i, a)]
-itoListOf = runIndexedGet 
-  (\i a -> Endo $ \l -> (i,a):l)
-  (appEndo >>> ($ []))
+itoListOf =
+  runIndexedGet
+    (\i a -> Endo $ \l -> (i, a) : l)
+    (appEndo >>> ($ []))
 
 -- ==================== OLD ====================
 

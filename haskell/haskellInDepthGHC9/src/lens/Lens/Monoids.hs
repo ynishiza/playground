@@ -15,6 +15,7 @@ module Lens.Monoids
 where
 
 import Control.Arrow (first, second)
+import Data.Functor.Contravariant
 
 -- note: Indexing monoid
 newtype Indexing f a where
@@ -48,15 +49,6 @@ instance Semigroup (XFirst a) where
 instance Monoid (XFirst a) where
   mempty = XFirst Nothing
 
-data TW f a where
-  TW :: {runTW :: Int -> (Bool, f a)} -> TW f a
-
-instance Functor f => Functor (TW f) where
-  fmap f (TW x) = TW $ second (f <$>) . x
-
-instance Applicative f => Applicative (TW f) where
-  pure a = TW $ const (True, pure a)
-
 data TakeWhileApplicative f a where
   TakeWhileApplicative :: {runTakeWhileApplicative :: Int -> (Int -> f a) -> f a} -> TakeWhileApplicative f a
 
@@ -67,13 +59,19 @@ instance Applicative f => Monoid (TakeWhileApplicative f a) where
   mempty = TakeWhileApplicative $ \i k -> k i
 
 data DroppingWhileApplicative f a where
-  DroppingWhileApplicative :: {runDroppingWhileApplicative :: Int -> f a -> f a} -> DroppingWhileApplicative f a
+  DroppingWhileApplicative :: {runDroppingWhileApplicative :: (Int, Bool) -> (f a, Bool)} -> DroppingWhileApplicative f a
 
-instance Applicative f => Semigroup (DroppingWhileApplicative f a) where
-  d1 <> d2 = DroppingWhileApplicative $ \i v -> runDroppingWhileApplicative d2 (i + 1) (runDroppingWhileApplicative d1 i v)
+instance Functor f => Functor (DroppingWhileApplicative f) where
+  fmap f (DroppingWhileApplicative dropA) = DroppingWhileApplicative $ first (f <$>) . dropA
 
-instance Applicative f => Monoid (DroppingWhileApplicative f a) where
-  mempty = DroppingWhileApplicative $ \_ v -> v
+instance Contravariant f => Contravariant (DroppingWhileApplicative f) where
+  contramap f (DroppingWhileApplicative dropA) = DroppingWhileApplicative $ first (contramap f) . dropA
+
+instance Applicative f => Applicative (DroppingWhileApplicative f) where
+  pure a = DroppingWhileApplicative $ \(_, dropping) -> (pure a, dropping)
+  dropF <*> dropA = DroppingWhileApplicative $ \(i, dropping) ->
+    let (f, d1) = runDroppingWhileApplicative dropF (i, dropping)
+     in first (f <*>) $ runDroppingWhileApplicative dropA (i + 1, d1)
 
 data DroppingWhileR a where
   DroppingWhileR :: {runDroppingWhileR :: (Int, Bool) -> (a, Bool)} -> DroppingWhileR a

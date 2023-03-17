@@ -151,13 +151,14 @@ spec = describe "" $ do
         (A, B) & preview (taking (_1 . replicated 10) 3) & expects $ Just A
         (A, B) & toListOf (taking (_1 . replicated 10) 3) & expects [A, A, A]
         ([A .. E], B) & toListOf (droppingWhile (_1 . folded) (< C)) & expects [C, D, E]
+        ([A .. E], B) & toListOf (dropping (_1 . folded) 2) & expects [C, D, E]
+
         -- case: infinite
-        (A, B) & preview (_1 . repeated) & expects $ Just A
-        (A, B) & toListOf (taking (_1 . repeated) 3) & expects [A, A, A]
-        (A, B) & toListOf (taking (_1 . repeated) 5) & expects [A, A, A, A, A]
-        (A, B) & toListOf (takingWhile (_1 . iterated (succ . succ)) (< E)) & expects [A, C]
-        (A, B) & toListOf (takingWhile (_2 . iterated (succ . succ)) (< E)) & expects [B, D]
-        (A, B) & toListOf (droppingWhile (_1 . iterated (succ . succ)) (< C)) & take 3 & expects [C, E, G]
+        A & preview repeated & expects $ Just A
+        A & toListOf (taking repeated 5) & expects [A, A, A, A, A]
+        A & toListOf (takingWhile (iterated (succ . succ)) (< E)) & expects [A, C]
+        A & toListOf (dropping (iterated (succ . succ)) 2) & take 3 & expects [E, G, I]
+        A & toListOf (droppingWhile (iterated (succ . succ)) (< S)) & take 3 & expects [S, U, W]
 
       it "[lined, worded]" $ do
         -- lined, worded
