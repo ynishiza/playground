@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TupleSections #-}
 
 module Chapter14.Lens.Spec
   ( spec,
@@ -97,6 +98,13 @@ spec = describe "Lens" $ do
     it "[to] build a getter" $ do
       1 & view (to negate) & expects @Int (-1)
       (1, 'a') & view (_1 . to negate) & expects @Int (-1)
+
+    it "[ito] build an indexed getter" $ do
+      [A .. E] & iview (folded . ito (Sum (1 :: Int),)) & expects (5, E)
+      A & iview (ito (0 :: Int,)) & expects (0, A)
+      zip [1 :: Int ..] [A .. E] & elemIndexOf (folded . ito id) A & expects $ Just 1
+      zip [1 :: Int ..] [A .. E] & elemIndexOf (folded . ito id) B & expects $ Just 2
+      zip [1 :: Int ..] [A .. E] & elemIndexOf (folded . ito id) Z & expects $ Nothing
 
     it "[like] constant getter" $ do
       () & view (like A) & expects A
@@ -261,6 +269,7 @@ spec = describe "Lens" $ do
       [1 .. 5 :: Int] & ifoldMapOf (folded . to (* 10)) (\i _ -> Sum i) & expects 10
 
       [1 .. 5 :: Int] & itoListOf (folded . to (* 2)) & expects [(0, 2), (1, 4), (2, 6), (3, 8), (4, 10)]
+      [1 .. 5 :: Int] & ianyOf folded (\i _ -> i < 10) & expects True
 
   describe "Traversal" $ do
     it "[traverseOf]" $ do
@@ -453,8 +462,8 @@ spec = describe "Lens" $ do
       & expects NA
 
     Nothing & has _Nothing & expects True
-    [A,B,C] & has (folded ) & expects True
-    [] & has (folded ) & expects False
+    [A, B, C] & has (folded) & expects True
+    [] & has (folded) & expects False
 
     A & foldOf id & expects A
 

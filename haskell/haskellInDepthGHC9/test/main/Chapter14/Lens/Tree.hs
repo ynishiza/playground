@@ -30,11 +30,12 @@ tVALUE f (Leaf v) = Leaf <$> f v
 tVALUE f (Node l r) = Node <$> tVALUE f l <*> tVALUE f r
 
 tLEFT :: Applicative f => (Tree a -> f (Tree a)) -> Tree a -> f (Tree a)
-tLEFT f (Node t _) = f t
+-- tLEFT f (Node t _) = f t
+tLEFT f (Node l r) = flip Node r <$> f l 
 tLEFT _ t = pure t
 
 tRIGHT :: Applicative f => (Tree a -> f (Tree a)) -> Tree a -> f (Tree a)
-tRIGHT f (Node _ t) = f t
+tRIGHT f (Node l r) = Node l <$> f r
 tRIGHT _ t = pure t
 
 makeLenses ''Tree
