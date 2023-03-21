@@ -8,6 +8,7 @@ module Lens.Class
     Choice (..),
     Indexable (..),
     Indexed (..),
+    ToProfunctor(..),
     module X,
   )
 where
@@ -39,6 +40,9 @@ class Profunctor p => Choice p where
 class Profunctor p => NormalProfunctor p where
   normalDimap :: (a -> b) -> (a -> c -> d) -> p b c -> p a d
 
+class Profunctor p => ToProfunctor p where
+  toProfunctor :: (a -> b) -> p a b
+
 instance Profunctor (->) where
   dimap f g fn = g . fn . f
 
@@ -50,6 +54,12 @@ instance NormalProfunctor (->) where
 
 instance NormalProfunctor (Indexed i) where
   normalDimap f g (Indexed fn) = Indexed $ \i a -> g a $ fn i $ f a
+
+instance ToProfunctor (->) where
+  toProfunctor f = f
+
+instance ToProfunctor (Indexed i) where
+  toProfunctor = Indexed . const
 
 instance Choice (->) where
   left' f (Left a) = Left $ f a

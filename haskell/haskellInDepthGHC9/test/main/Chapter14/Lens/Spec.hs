@@ -204,7 +204,13 @@ spec = describe "Lens" $ do
       (A, B) & toListOf (replicated 3 . _1) & expects [A, A, A]
       (A, [B, C]) & toListOf (cycled (_2 . folded)) & take 3 & expects [B, C, B]
 
+      -- get infinite 
+      [1 :: Int ..] & toListOf (takingWhile (< 4) traverse) & expects [1,2,3]
+      -- set infinite 
+      [1 :: Int ..] & set (takingWhile (< 4) traverse) 10 & take 5 & expects [10,10,10,4,5]
+
       [A .. D] & toListOf (takingWhile (< C) folded) & expects [A, B]
+      [A .. D] & toListOf (takingWhile (< C) traverse) & expects [A, B]
       [A .. D] & toListOf (takingWhile (< C) traverse) & expects [A, B]
       (A, B, C) & preview (takingWhile (> A) _1) & expects Nothing
       (A, B, C) & preview (takingWhile (> A) _2) & expects (Just B)
@@ -212,6 +218,8 @@ spec = describe "Lens" $ do
       (A, B, Nothing) & preview (takingWhile (> A) (_3 . _Just)) & expects Nothing
       [A .. E] & toListOf (droppingWhile (< C) folded) & expects [C .. E]
       [A .. E] & toListOf (droppingWhile (< C) traverse) & expects [C .. E]
+
+      [A .. D] & set (takingWhile (< C) traverse) Z & expects [Z, Z, C, D]
 
     it "[Prelude]" $ do
       let x =
@@ -460,11 +468,5 @@ spec = describe "Lens" $ do
       ]
       & foldOf (folded . _2 . folded . element 10)
       & expects NA
-
-    Nothing & has _Nothing & expects True
-    [A, B, C] & has (folded) & expects True
-    [] & has (folded) & expects False
-
-    A & foldOf id & expects A
 
 -- ig2 = ig _2

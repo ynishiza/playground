@@ -17,11 +17,12 @@ module Lens.Fold
     iterated,
     taking,
     takingWhile,
+    takingWhileBase,
     dropping,
     droppingWhile,
     droppingWhileBase,
     filtered,
-    filtered',
+    filteredSimple,
     backwards,
     lined,
     worded,
@@ -55,8 +56,6 @@ module Lens.Fold
     ifoldMapOf,
     itoListOf,
 
-    -- OLD
-    takingWhileSimple,
   )
 where
 {- ORMOLU_ENABLE -}
@@ -101,20 +100,18 @@ iterated next lens = go
 replicated :: Int -> Fold a a
 replicated n = folding (replicate n)
 
-filtered' :: (Choice p, Applicative f) => (a -> Bool) -> Optic' p f a a
-filtered' predicate =
+filtered :: (Choice p, Applicative f) => (a -> Bool) -> Optic' p f a a
+filtered predicate =
   dimap
     (\a -> if predicate a then Right a else Left a)
     (either pure id)
     . right'
 
-filtered :: Applicative f => (a -> Bool) -> LensLike' f a a
-filtered predicate useA a = if predicate a then useA a else pure a
+filteredSimple :: Applicative f => (a -> Bool) -> LensLike' f a a
+filteredSimple predicate useA a = if predicate a then useA a else pure a
 
 backwards :: Profunctor p => Optic p (Backwards f) s t a b -> Optic p f s t a b
-backwards lens get = a
-  where
-    a = rmap forwards $ lens $ rmap Backwards get
+backwards lens = rmap forwards . lens . rmap Backwards
 
 dropping :: Applicative f => LensLike (DroppingWhileApplicative f) s t a a -> Int -> LensLike f s t a a
 dropping lens n = droppingWhileBase lens (\i _ -> i < n)
@@ -122,26 +119,21 @@ dropping lens n = droppingWhileBase lens (\i _ -> i < n)
 droppingWhile :: Applicative f => LensLike (DroppingWhileApplicative f) s t a a -> (a -> Bool) -> LensLike f s t a a
 droppingWhile lens predicate = droppingWhileBase lens (\_ v -> predicate v)
 
-taking :: (Contravariant f, Applicative f) => LensLike (Const (TakeWhileApplicative f a)) s t a a -> Int -> LensLike f s t a a
+taking :: (Contravariant f, Applicative f) => LensLike (TakeWhileApplicative f) s t a a -> Int -> LensLike f s t a a
 taking lens n = takingWhileBase lens (\i _ -> i < n)
 
-takingWhile :: (Contravariant f, Applicative f) => LensLike (Const (TakeWhileApplicative f a)) s t a a -> (a -> Bool) -> LensLike f s t a a
+takingWhile :: (Contravariant f, Applicative f) => LensLike (TakeWhileApplicative f) s t a a -> (a -> Bool) -> LensLike f s t a a
 takingWhile lens predicate = takingWhileBase lens (const predicate)
 
-takingWhileBase :: forall f s t a. (Contravariant f, Applicative f) => LensLike (Const (TakeWhileApplicative f a)) s t a a -> (Int -> a -> Bool) -> LensLike f s t a a
+takingWhileBase :: forall f s t a. (Contravariant f, Applicative f) => LensLike (TakeWhileApplicative f) s t a a -> (Int -> a -> Bool) -> LensLike f s t a a
 takingWhileBase lens predicate useA =
-  lens (Const . createTakeWhile useA)
-    >>> getConst
-    >>> flip run noEffect
-    >>> phantom
+  lens (createTakeWhile useA)
+    >>> run
   where
-    run :: TakeWhileApplicative f a -> f a -> f a
-    run r b = runTakeWhileApplicative r 0 (const b)
+    run :: TakeWhileApplicative f x -> f x
+    run r = fst $ runTakeWhileApplicative r 0
     createTakeWhile :: (a -> f a) -> a -> TakeWhileApplicative f a
-    createTakeWhile get a = TakeWhileApplicative (\i k -> if predicate i a then get a *> k (i + 1) else pure a)
-
-noEffect :: (Contravariant f, Applicative f) => f a
-noEffect = phantom $ pure ()
+    createTakeWhile get a = TakeWhileApplicative (\i -> if predicate i a then (get a, True) else (pure a, False))
 
 droppingWhileBase :: forall f s t a. Applicative f => LensLike (DroppingWhileApplicative f) s t a a -> (Int -> a -> Bool) -> LensLike f s t a a
 droppingWhileBase lens predicate useA =
@@ -274,20 +266,3 @@ itoListOf =
   runIndexedGet
     (\i a -> Endo $ \l -> (i, a) : l)
     (appEndo >>> ($ []))
-
--- ==================== OLD ====================
-
-takingWhileSimple :: forall f s t a. (Contravariant f, Applicative f) => LensLike (Const (TakeWhile1 (Ap f a))) s t a a -> (Int -> a -> Bool) -> LensLike f s t a a
-takingWhileSimple lens predicate useA =
-  lens (Const . createTakeWhile useA)
-    >>> getConst
-    >>> run
-    >>> phantom
-  where
-    run :: Applicative f => TakeWhile1 (Ap f a) -> f a
-    run r = maybe noEffect getAp $ runTakeWhile1 r 0
-    createTakeWhile :: (a -> f a) -> a -> TakeWhile1 (Ap f a)
-    createTakeWhile get a = TakeWhile1 $ \i ->
-      if predicate i a
-        then Just (Ap $ get a)
-        else Nothing

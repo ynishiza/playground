@@ -7,7 +7,6 @@ module Lens.Monoids
   ( Indexing (..),
     XFirst (..),
     getXFirst,
-    TakeWhile1 (..),
     TakeWhileApplicative (..),
     DroppingWhileR (..),
     DroppingWhileApplicative (..),
@@ -50,13 +49,21 @@ instance Monoid (XFirst a) where
   mempty = XFirst Nothing
 
 data TakeWhileApplicative f a where
-  TakeWhileApplicative :: {runTakeWhileApplicative :: Int -> (Int -> f a) -> f a} -> TakeWhileApplicative f a
+  TakeWhileApplicative :: {runTakeWhileApplicative :: Int -> (f a, Bool)} -> TakeWhileApplicative f a
 
-instance Applicative f => Semigroup (TakeWhileApplicative f a) where
-  t1 <> t2 = TakeWhileApplicative $ \i k -> runTakeWhileApplicative t1 i (\j -> runTakeWhileApplicative t2 j k)
+instance Functor f => Functor (TakeWhileApplicative f) where
+  fmap f (TakeWhileApplicative t) = TakeWhileApplicative $ first (f <$>) . t
 
-instance Applicative f => Monoid (TakeWhileApplicative f a) where
-  mempty = TakeWhileApplicative $ \i k -> k i
+instance Contravariant f => Contravariant (TakeWhileApplicative f) where
+  contramap f (TakeWhileApplicative t) = TakeWhileApplicative $ first (contramap f) . t
+
+instance (Contravariant f, Applicative f) => Applicative (TakeWhileApplicative f) where
+  pure a = TakeWhileApplicative $ const (pure a, True)
+  t1 <*> t2 = TakeWhileApplicative $ \i ->
+    let (x1, takeX1) = runTakeWhileApplicative t1 i
+     in if takeX1
+          then first (x1 <*>) $ runTakeWhileApplicative t2 (i + 1)
+          else (phantom x1, False)
 
 data DroppingWhileApplicative f a where
   DroppingWhileApplicative :: {runDroppingWhileApplicative :: (Int, Bool) -> (f a, Bool)} -> DroppingWhileApplicative f a
@@ -90,15 +97,3 @@ instance Monoid a => Monoid (DroppingWhileR a) where
 
 -- ==================== OLD ====================
 --
-data TakeWhile1 a where
-  TakeWhile1 :: {runTakeWhile1 :: Int -> Maybe a} -> TakeWhile1 a
-
-instance Semigroup a => Semigroup (TakeWhile1 a) where
-  t1 <> t2 = TakeWhile1 $ \i -> case runTakeWhile1 t1 i of
-    (Just x) -> case runTakeWhile1 t2 (i + 1) of
-      (Just y) -> Just $ x <> y
-      _ -> Just x
-    Nothing -> Nothing
-
-instance Semigroup a => Monoid (TakeWhile1 a) where
-  mempty = TakeWhile1 $ const Nothing

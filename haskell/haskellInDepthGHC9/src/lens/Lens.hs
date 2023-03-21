@@ -13,19 +13,19 @@ where
 
 import Lens.Fold as X
 import Lens.Get as X
+import Lens.Set as X
 import Lens.Lens as X
 import Lens.Traverse as X
 
-type P s t a b = forall f p. (Functor f, NormalProfunctor p) => p a (f b) -> p s (f t)
 
 class Field1 s t a b | s -> a, t -> b, s b -> t, t a -> s where
-  _1 :: P s t a b
+  _1 :: Functor f => NormalOptic f s t a b
 
 class Field2 s t a b | s -> a, t -> b, s b -> t, t a -> s where
-  _2 :: P s t a b
+  _2 :: Functor f => NormalOptic f s t a b
 
 class Field3 s t a b | s -> a, t -> b, s b -> t, t a -> s where
-  _3 :: P s t a b
+  _3 :: Functor f => NormalOptic f s t a b
 
 instance Field1 (a, b) (a', b) a a' where
   _1 =
