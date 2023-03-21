@@ -81,7 +81,7 @@ asIndexed = id
 -- ========== Combinators ==========
 
 folded :: Foldable t => IndexedFold Int (t a) a
-folded lens = phantom . ifoldr (\i a r -> indexed lens i a *> r) (pure ())
+folded k = phantom . ifoldr (\i a r -> indexed k i a *> r) (pure ())
 
 folding :: Foldable t => (s -> t a) -> Fold s a
 folding f useA = phantom . traverse_ useA . f
@@ -93,9 +93,9 @@ repeated :: Applicative f => LensLike' f a a
 repeated = iterated id
 
 iterated :: Applicative f => (a -> a) -> LensLike' f a a
-iterated next lens = go
+iterated next k = go
   where
-    go v = lens v *> go (next v)
+    go v = k v *> go (next v)
 
 replicated :: Int -> Fold a a
 replicated n = folding (replicate n)

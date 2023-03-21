@@ -95,5 +95,3 @@ instance Semigroup a => Semigroup (DroppingWhileR a) where
 instance Monoid a => Monoid (DroppingWhileR a) where
   mempty = DroppingWhileR $ const (mempty, True)
 
--- ==================== OLD ====================
---

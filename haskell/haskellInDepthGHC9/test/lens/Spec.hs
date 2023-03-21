@@ -1,5 +1,4 @@
 {-# HLINT ignore "Take on a non-positive" #-}
-{-# LANGUAGE TupleSections #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module Spec
@@ -8,15 +7,12 @@ module Spec
 where
 
 import Control.Lens qualified as L
-import Control.Monad.Identity
 import Control.Monad.State
 import Data.Char
 import Data.Function
-import Data.Functor.Const
-import Data.Monoid
 import Data.Tuple
 import Lens
-import Lens.Scratch (takingWhileTW)
+import Lens.Scratch (takingWhileD, takingWhileTW)
 import System.IO.Extra
 import Test.Hspec
 import Tree
@@ -202,32 +198,39 @@ spec = describe "" $ do
         ([A .. E], []) & has (_1 . traverse) & expects True
         ([A .. E], []) & has (_2 . traverse) & expects False
 
-      it "[taking, dropping]" $ do
-        -- taking/dropping
-        (A, B) & preview (taking (_1 . replicated 10) 3) & expects $ Just A
-        (A, B) & toListOf (taking (_1 . replicated 10) 3) & expects [A, A, A]
-        ([A .. E], B) & toListOf (droppingWhile (_1 . traverse) (< C)) & expects [C, D, E]
-        ([A .. E], B) & toListOf (dropping (_1 . traverse) 2) & expects [C, D, E]
+      describe "[taking, dropping]" $ do
+        it "take,drop" $ do
+          let iterateSucc = iterated succ
+          -- taking/dropping
+          (A, B) & preview (takingWhileD (_1 . iterateSucc) (< D)) & expects $ Just A
+          (A, B) & toListOf (takingWhileD (_1 . iterateSucc) (< D)) & expects [A, B, C]
+          ([A .. E], B) & toListOf (droppingWhile (_1 . traverse) (< C)) & expects [C, D, E]
+          ([A .. E], B) & toListOf (dropping (_1 . traverse) 2) & expects [C, D, E]
 
-        -- case: infinite
-        (1 :: Int) & preview repeated & expects $ Just 1
-        (1 :: Int) & toListOf (taking repeated 5) & expects [1, 1, 1, 1, 1]
-        (1 :: Int) & toListOf (takingWhile (iterated (succ . succ)) (< 10)) & expects [1, 3, 5, 7, 9]
-        (1 :: Int) & toListOf (dropping (iterated (succ . succ)) 2) & take 3 & expects [5, 7, 9]
-        (1 :: Int) & toListOf (droppingWhile (iterated (succ . succ)) (< 10)) & take 3 & expects [11, 13, 15]
+          -- case: take 0
+          [1, 2 :: Int] & toListOf (takingWhileD traverse (> 100)) & expects []
+          -- case: empty
+          [] & toListOf (takingWhileD traverse (const True)) & expects ([] :: [Int])
 
-        [1 .. 100 :: Int] & toListOf (takingWhileBase traverse (\i _ -> i < 3)) & expects [1, 2, 3]
-        [1, 2 :: Int] & toListOf (takingWhileBase traverse (\i _ -> i < 3)) & expects [1, 2]
-        [1, 2 :: Int] & toListOf (takingWhileBase traverse (\i _ -> i > 100)) & expects []
-        [] & toListOf (takingWhileBase traverse (\i _ -> i > 100)) & expects ([] :: [Int])
-        (1 :: Int) & toListOf (takingWhileBase (iterated succ) (\i _ -> i < 3)) & expects [1, 2, 3]
+          -- case: non traversable
+          A & preview (takingWhileD id (< C)) & expects $ Just A
+          A & preview (takingWhileD id (== Z)) & expects $ Nothing
+          A & view (takingWhileD id (< C)) & expects A
+          A & view (takingWhileD id (== Z)) & expects mempty
 
-        A & preview (taking id 1) & expects $ Just A
-        A & preview (taking id 0) & expects $ Nothing
-        A & preview (taking id 5) & expects $ Just A
-        A & view (taking id 1) & expects A
-        A & view (taking id 5) & expects A
-        A & view (taking id 0) & expects mempty
+        it "gets infinite" $ do
+          (1 :: Int) & preview repeated & expects $ Just 1
+          (1 :: Int) & toListOf (takingWhileD (iterated (succ . succ)) (< 10)) & expects [1, 3, 5, 7, 9]
+          [1 :: Int ..] & toListOf (takingWhileD traverse (< 10)) & expects [1 .. 9]
+
+          (1 :: Int) & toListOf (dropping (iterated (succ . succ)) 2) & take 3 & expects [5, 7, 9]
+          (1 :: Int) & toListOf (droppingWhile (iterated (succ . succ)) (< 10)) & take 3 & expects [11, 13, 15]
+
+        it "sets" $ do
+          [A .. E] & set (takingWhileD traverse (< C)) Z & expects [Z, Z, C, D, E]
+          [A .. E] & over (takingWhileD traverse (< C)) (succ . succ) & expects [C, D, C, D, E]
+          [A .. E] & set (droppingWhile traverse (< C)) Z & expects [A, B, Z, Z, Z]
+          [A .. E] & over (droppingWhile traverse (< C)) (succ . succ) & expects [A, B, E, F, G]
 
       it "[lined, worded]" $ do
         -- lined, worded
@@ -399,10 +402,12 @@ spec = describe "" $ do
 
   it "scratch" $ do
     putStrLn "== preview ==="
-    [1 .. 10 :: Int] & preview (takingWhileTW traverse (< 3)) & expects (Just 1)
-    putStrLn "== take 2 ==="
-    [1 .. 10 :: Int] & toListOf (takingWhileTW traverse (< 3)) & take 2 & expects [1, 2]
-    putStrLn "== take 3 ==="
-    [1 .. 10 :: Int] & toListOf (takingWhileTW traverse (< 3)) & take 3 & expects [1, 2]
+    [1 .. 10 :: Int] & preview (takingWhileD traverse (< 5)) & expects (Just 1)
+    putStrLn "== list ==="
+    [1 .. 10 :: Int] & toListOf (takingWhileD traverse (< 5)) & expects [1, 2, 3, 4]
     putStrLn "== set ==="
-    [1 .. 10 :: Int] & set (takingWhileTW traverse (< 3)) 11 & expects [11, 11, 3, 4, 5, 6, 7, 8, 9, 10]
+    [1 .. 10 :: Int] & set (takingWhileD traverse (< 3)) 11 & expects [11, 11, 3, 4, 5, 6, 7, 8, 9, 10]
+    putStrLn "== take infinite ==="
+    [1 :: Int ..] & toListOf (takingWhileD traverse (< 5)) & expects [1, 2, 3, 4]
+    putStrLn "== take iterated ==="
+    (1 :: Int) & toListOf (takingWhileD (iterated (succ . succ)) (< 10)) & expects [1, 3, 5, 7, 9]

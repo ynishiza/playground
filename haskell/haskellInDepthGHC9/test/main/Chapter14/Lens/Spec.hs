@@ -206,6 +206,7 @@ spec = describe "Lens" $ do
 
       -- get infinite 
       [1 :: Int ..] & toListOf (takingWhile (< 4) traverse) & expects [1,2,3]
+      (1 :: Int) & toListOf (takingWhile (< 4) (iterated succ)) & expects [1,2,3]
       -- set infinite 
       [1 :: Int ..] & set (takingWhile (< 4) traverse) 10 & take 5 & expects [10,10,10,4,5]
 
