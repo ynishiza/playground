@@ -70,6 +70,7 @@ import Data.Monoid
 import Data.Semigroup (Max (..))
 import Lens.Get
 import Lens.Lens
+import Lens.TraverseMonoid
 
 type Fold s a = forall f. (Contravariant f, Applicative f) => (a -> f a) -> s -> f s
 
@@ -119,21 +120,37 @@ dropping lens n = droppingWhileBase lens (\i _ -> i < n)
 droppingWhile :: Applicative f => LensLike (DroppingWhileApplicative f) s t a a -> (a -> Bool) -> LensLike f s t a a
 droppingWhile lens predicate = droppingWhileBase lens (\_ v -> predicate v)
 
-taking :: (Contravariant f, Applicative f) => LensLike (TakeWhileApplicative f) s t a a -> Int -> LensLike f s t a a
+-- taking :: (Contravariant f, Applicative f) => LensLike (TakeWhileApplicative f) s t a a -> Int -> LensLike f s t a a
+-- taking lens n = takingWhileBase lens (\i _ -> i < n)
+
+-- takingWhile :: (Contravariant f, Applicative f) => LensLike (TakeWhileApplicative f) s t a a -> (a -> Bool) -> LensLike f s t a a
+-- takingWhile lens predicate = takingWhileBase lens (const predicate)
+
+takingWhile :: forall f a s t. Applicative f => LensLike (TakingWhileCaptured Int a a) s t a a -> (a -> Bool) -> LensLike f s t a a
+takingWhile lens predicate = takingWhileBase lens (\_ a -> predicate a)
+
+taking :: Applicative f => LensLike (TakingWhileCaptured Int a a) s t a a -> Int -> LensLike f s t a a
 taking lens n = takingWhileBase lens (\i _ -> i < n)
 
-takingWhile :: (Contravariant f, Applicative f) => LensLike (TakeWhileApplicative f) s t a a -> (a -> Bool) -> LensLike f s t a a
-takingWhile lens predicate = takingWhileBase lens (const predicate)
-
-takingWhileBase :: forall f s t a. (Contravariant f, Applicative f) => LensLike (TakeWhileApplicative f) s t a a -> (Int -> a -> Bool) -> LensLike f s t a a
-takingWhileBase lens predicate useA =
-  lens (createTakeWhile useA)
-    >>> run
+takingWhileBase :: forall f i a s t. (Enum i, Applicative f) => LensLike (TakingWhileCaptured i a a) s t a a -> (i -> a -> Bool) -> LensLike f s t a a
+takingWhileBase lens predicate ref =
+  lens create
+    >>> runTakingWhileCaptured
+    >>> traverse ref
+    >>> (runCapturedAp <$>)
   where
-    run :: TakeWhileApplicative f x -> f x
-    run r = fst $ runTakeWhileApplicative r 0
-    createTakeWhile :: (a -> f a) -> a -> TakeWhileApplicative f a
-    createTakeWhile get a = TakeWhileApplicative (\i -> if predicate i a then (get a, True) else (pure a, False))
+    create :: a -> TakingWhileCaptured i a a a
+    create a = TakingWhileCaptured a $ \(i, isTaking) -> if isTaking && predicate i a then (CResult () a, True) else (CPure a, False)
+
+-- takingWhileBase :: forall f s t a. (Contravariant f, Applicative f) => LensLike (TakeWhileApplicative f) s t a a -> (Int -> a -> Bool) -> LensLike f s t a a
+-- takingWhileBase lens predicate useA =
+--   lens (createTakeWhile useA)
+--     >>> run
+--   where
+--     run :: TakeWhileApplicative f x -> f x
+--     run r = fst $ runTakeWhileApplicative r 0
+--     createTakeWhile :: (a -> f a) -> a -> TakeWhileApplicative f a
+--     createTakeWhile get a = TakeWhileApplicative (\i -> if predicate i a then (get a, True) else (pure a, False))
 
 droppingWhileBase :: forall f s t a. Applicative f => LensLike (DroppingWhileApplicative f) s t a a -> (Int -> a -> Bool) -> LensLike f s t a a
 droppingWhileBase lens predicate useA =

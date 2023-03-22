@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GADTs #-}
 
 module Lens.Scratch
@@ -5,7 +6,7 @@ module Lens.Scratch
     TakingResult (..),
     takingWhileWithoutContravariant,
     takingWhileTW,
-    takingWhileD,
+    deferAp,
   )
 where
 
@@ -13,59 +14,20 @@ import Control.Arrow ((>>>))
 import Data.Functor.Contravariant
 import Debug.Trace (trace)
 import Lens.Lens
+import Lens.TraverseMonoid
 
-data Deferred i t o a where
-  DPure :: t -> Deferred i t o a
-  DAp :: Deferred i (x -> y) o a -> Deferred i x o a -> Deferred i y o a
-  DFmap :: (x -> y) -> Deferred i x o a -> Deferred i y o a
-  DValue :: i -> a -> Deferred i o o a
+newtype DeferAp a o t = DeferAp (CaptureAp () t o a)
+  deriving (Show)
 
-instance Foldable (Deferred i t o) where
-  foldr _ r (DPure _) = r
-  foldr f r (DAp df dx) = foldr f (foldr f r df) dx
-  foldr f r (DFmap _ dx) = foldr f r dx
-  foldr f r (DValue _ a) = f a r
+instance Functor (DeferAp a o) where
+  fmap f (DeferAp d) = DeferAp $ CFmap f d
 
-instance Traversable (Deferred i t o) where
-  traverse _ (DPure t) = pure $ DPure t
-  traverse f (DAp df dx) = DAp <$> traverse f df <*> traverse f dx
-  traverse f (DFmap g dx) = DFmap g <$> traverse f dx
-  traverse f (DValue i a) = DValue i <$> f a
+instance Applicative (DeferAp a o) where
+  pure a = DeferAp $ CPure a
+  (DeferAp f) <*> (DeferAp x) = DeferAp $ CAp f x
 
-instance Functor (Deferred i t o) where
-  fmap _ (DPure t) = DPure t
-  fmap f (DAp df dx) = DAp (f <$> df) (f <$> dx)
-  fmap f (DFmap g dx) = DFmap g (f <$> dx)
-  fmap f (DValue i x) = DValue i $ f x
-
-runDeferred :: Deferred i t a a -> t
-runDeferred (DPure t) = t
-runDeferred (DAp df dx) = runDeferred df $ runDeferred dx
-runDeferred (DFmap f dx) = f $ runDeferred dx
-runDeferred (DValue _ a) = a
-
-data TakingWhileDeferred a o t where
-  TakingWhileDeferred :: Bool -> t -> (Bool -> Deferred () t o a) -> TakingWhileDeferred a o t
-
-runTKD :: TakingWhileDeferred a o t -> Deferred () t o a
-runTKD (TakingWhileDeferred _ _ f) = f True
-
-instance Functor (TakingWhileDeferred a o) where
-  fmap f (TakingWhileDeferred takeX t dx) = TakingWhileDeferred takeX (f t) $ \isTaking -> if isTaking then DFmap f (dx isTaking) else DPure (f t)
-
-instance Applicative (TakingWhileDeferred a o) where
-  pure a = TakingWhileDeferred True a $ const (DPure a)
-  (TakingWhileDeferred takeF tf df) <*> ~(TakingWhileDeferred takeX tx dx) = TakingWhileDeferred (takeF && takeX) (tf tx) $ \isTaking -> if isTaking then DAp (df True) (dx takeF) else DPure (tf tx)
-
-takingWhileD :: forall f s t a. Applicative f => LensLike (TakingWhileDeferred a a) s t a a -> (a -> Bool) -> LensLike f s t a a
-takingWhileD lens predicate ref =
-  lens create
-    >>> runTKD
-    >>> traverse ref
-    >>> (runDeferred <$>)
-  where
-    create :: a -> TakingWhileDeferred a a a
-    create a = TakingWhileDeferred (predicate a) a $ \isTaking -> if isTaking && predicate a then DValue () a else DPure a
+deferAp :: Traversable t => t a -> DeferAp (t a) (t a) (t a)
+deferAp = traverse (DeferAp . CPure)
 
 data TW f a where
   TW :: Bool -> f a -> (Bool -> f a) -> TW f a

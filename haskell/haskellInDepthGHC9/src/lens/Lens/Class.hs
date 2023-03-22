@@ -13,7 +13,8 @@ module Lens.Class
   )
 where
 
-import Lens.Monoids as X
+import Lens.Monoid as X
+import Lens.TraverseMonoid as X
 
 -- note: Indexed function
 newtype Indexed i a b where
