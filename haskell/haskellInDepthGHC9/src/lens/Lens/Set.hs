@@ -6,6 +6,10 @@ module Lens.Set
   ( ASetter,
     ASetter',
     Settable (..),
+    IndexedSetter,
+    IndexedSetter',
+    AIndexedSetter,
+    AIndexedSetter',
 
     set',
     sets,
@@ -22,6 +26,9 @@ module Lens.Set
 
     assign,
     modifying,
+
+    iset,
+    iover,
   )
 where
 {- ORMOLU_ENABLE -}
@@ -37,6 +44,14 @@ type Setter s t a b = forall f. Settable f => (a -> f b) -> s -> f t
 type ASetter s t a b = (a -> Identity b) -> s -> Identity t
 
 type ASetter' s a = ASetter s s a a
+
+type IndexedSetter i s t a b = forall p f. (Indexable i p, Settable f) => p a (f b) -> p s (f t)
+
+type IndexedSetter' i s a = IndexedSetter i s s a a
+
+type AIndexedSetter i s t a b = Indexed i a (Identity b) -> s -> Identity t
+
+type AIndexedSetter' i s a = AIndexedSetter i s s a a
 
 class (Applicative f, Traversable f) => Settable f where
   untainted :: f a -> a
@@ -95,3 +110,9 @@ assign lens b = modify (set lens b)
 
 modifying :: MonadState s m => ASetter s s a b -> (a -> b) -> m ()
 modifying lens f = modify (over lens f)
+
+iset :: AIndexedSetter i s t a b -> (i -> b) -> s -> t
+iset lens f = iover lens $ \i _ -> f i
+
+iover :: AIndexedSetter i s t a b -> (i -> a -> b) -> s -> t
+iover lens f = runIdentity . lens (Indexed $ \i a -> Identity (f i a))

@@ -4,15 +4,17 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Chapter12_Template (specs) where
+module Chapter12_Template_Spec (specs) where
 
 import Chapter12.Base
-import Chapter12.TemplateProjection
-import Chapter12.TemplateReify
+import Chapter12.Template.Projection
+import Chapter12.Template.QuasiQuote
+import Chapter12.Template.Reify
 import Control.Exception
 import Control.Monad
 import Data.Foldable
 import Data.Tuple
+import Data.Tree
 import Fmt
 import System.Random
 import Test.Hspec
@@ -42,6 +44,17 @@ setup = do
       (i1, i2, i3)
       (i1, i2, i3, i4)
 
+data Alpha = A | B | C
+  deriving (Show, Eq)
+
+$(genIs ''Alpha)
+$(genIs ''Bool)
+$(genIs ''Maybe)
+$(genIs ''Either)
+$(genIs ''Tree)
+
+[str|v|]
+
 specs :: SpecWith ()
 specs =
   setup
@@ -69,11 +82,25 @@ specs =
               proj_3_2 p3 `shouldBe` v3
 
           describe "reification" $ do
-            it "should identify shapes" $ \_ -> do
-              let testPredicate p expected = traverse_ (\x -> p x `shouldBe` expected == x) [Circle, Square, Triangle]
-              testPredicate isCircle Circle
-              testPredicate isSquare Square
-              testPredicate isTriangle Triangle
+            let testPredicate expected p = traverse_ (\x -> p x `shouldBe` expected == x)
+
+            it "should identify nullary constructor" $ \_ -> do
+              testPredicate A isA [A, B, C]
+              testPredicate B isB [A, B, C]
+              testPredicate C isC [A, B, C]
+
+              testPredicate True isTrue [True, False]
+              testPredicate False isFalse [True, False]
+
+            it "should identify n-ary constructor" $ \_ -> do
+              testPredicate Nothing isNothing [Nothing, Just 'a']
+              testPredicate (Just 'a') isJust [Nothing, Just 'a']
+
+              -- binary
+              testPredicate (Left 1) isLeft [Left (1 :: Int), Right 'a']
+              testPredicate (Right 'a') isRight [Left (1 :: Int), Right 'a']
+
+              testPredicate (Node True []) isNode [Node True []]
 
           describe "listToTuple" $ do
             it "should convert to tuple" $ \TestData {..} -> do
@@ -88,4 +115,11 @@ specs =
               evaluate (listToTuple_1 []) `shouldThrow` f 1
               evaluate (listToTuple_2 []) `shouldThrow` f 2
               evaluate (listToTuple_3 []) `shouldThrow` f 3
+
+          describe "quasiquote" $ do
+            it "" $ \_ -> do
+              [str|hello
+                test|]
+                `shouldBe` ("hello\n                test" :: String)
+              v `shouldBe` 1
       )

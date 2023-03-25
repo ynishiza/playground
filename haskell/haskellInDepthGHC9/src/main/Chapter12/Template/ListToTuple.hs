@@ -3,13 +3,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Chapter12.TemplateListToTuple
+module Chapter12.Template.ListToTuple
   ( listToTupleDeclare,
     listToTupleDeclareMany,
   )
 where
 
-import Chapter12.TemplateUtils
+import Chapter12.Template.Utils
 import Control.Monad
 import Fmt
 import Language.Haskell.TH

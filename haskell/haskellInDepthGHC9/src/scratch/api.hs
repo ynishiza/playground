@@ -1,8 +1,13 @@
+-- Run with
+--
+--    stack ghci -- src/scratch/api.hs
+--
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeOperators #-}
+{-# OPTIONS_GHC -Wno-missing-export-lists #-}
 
 import Control.Monad.Logger
 import Control.Monad.State

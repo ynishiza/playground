@@ -1,3 +1,7 @@
+-- Run with
+--
+--    stack ghci -- src/scratch/servantExample.hs
+--
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE GADTs #-}

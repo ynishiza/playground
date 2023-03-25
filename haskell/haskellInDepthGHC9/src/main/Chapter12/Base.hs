@@ -83,22 +83,24 @@ import Chapter12.DerivingVia qualified
 import Chapter12.Generics qualified
 import Chapter12.GenericsSQL qualified
 import Chapter12.Overlapping qualified
-import Chapter12.TemplateListToTuple
-import Chapter12.TemplateProjection
-import Chapter12.TemplateReify
-import Chapter12.TemplateValues qualified
+import Chapter12.Template.ListToTuple
+import Chapter12.Template.Projection
+import Chapter12.Template.Reify
+import Chapter12.Template.Values qualified
 import Language.Haskell.TH
 import Utils
 
+data Shape = Circle | Triangle | Square 
+  deriving (Show, Eq)
 
 $(listToTupleDeclareMany 1 10)
 $(projectionDeclareMany 1 10)
 $(myRandomValueDeclare)
 $(myRandomValueDeclare2)
-$(mkTypePredicates (mkName "Shape"))
+$(genIsSimple (mkName "Shape"))
 
-Chapter12.TemplateValues.myVeryRandomValueDec
-Chapter12.TemplateValues.myVeryRandomFunctionDec
+Chapter12.Template.Values.myVeryRandomValueDec
+Chapter12.Template.Values.myVeryRandomFunctionDec
 
 run :: TestState
 run =
@@ -110,6 +112,6 @@ run =
         Chapter12.Overlapping.run
         Chapter12.Generics.run
         Chapter12.GenericsSQL.run
-        Chapter12.TemplateValues.run
+        Chapter12.Template.Values.run
     )
     "Chapter 12"

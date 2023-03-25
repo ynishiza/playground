@@ -3,7 +3,7 @@
 
 {-# HLINT ignore "Use camelCase" #-}
 
-module Chapter5_2_2 (testShuntingYard, main, specs) where
+module Chapter5_2_2_Spec (testShuntingYard, main, specs) where
 
 import Chapter5_2_2_Parser
 import Control.Monad.Except

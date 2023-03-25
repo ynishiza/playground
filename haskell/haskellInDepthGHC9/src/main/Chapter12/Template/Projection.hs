@@ -7,7 +7,7 @@
 {-# HLINT ignore "Use camelCase" #-}
 {-# HLINT ignore "Use section" #-}
 
-module Chapter12.TemplateProjection
+module Chapter12.Template.Projection
   ( project_rawAst,
     project_withExpr,
     projectionDeclare,
@@ -18,7 +18,7 @@ module Chapter12.TemplateProjection
   )
 where
 
-import Chapter12.TemplateUtils
+import Chapter12.Template.Utils
 import Control.Monad
 import Fmt
 import Language.Haskell.TH

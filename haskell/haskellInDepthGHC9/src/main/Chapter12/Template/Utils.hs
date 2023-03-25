@@ -3,7 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Chapter12.TemplateUtils
+module Chapter12.Template.Utils
   ( emptyCxt,
     newNameX,
     TypeVar,

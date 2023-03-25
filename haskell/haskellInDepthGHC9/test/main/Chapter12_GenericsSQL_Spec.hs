@@ -1,13 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Chapter12_GenericsSQL
+module Chapter12_GenericsSQL_Spec
   ( specs,
   )
 where
 
 import Chapter12.GenericsSQL
 import Test.Hspec
-import Test.Tasty.Hspec
 
 specs :: SpecWith ()
 specs = describe "Chapter12" $ do

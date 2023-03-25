@@ -125,5 +125,5 @@ withDaysAndTotals countryData dayInfo =
     & set current_total_deaths maxDeaths
   where
     countryData' = countryData & over days (++ dayInfo)
-    maxCases = maximum1Of (days . folded . _2 . cases . total_cases) countryData'
-    maxDeaths = maximum1Of (days . folded . _2 . deaths . total_deaths) countryData'
+    maxCases = maximum1Of (days . traverse . _2 . cases . total_cases) countryData'
+    maxDeaths = maximum1Of (days . traverse . _2 . deaths . total_deaths) countryData'

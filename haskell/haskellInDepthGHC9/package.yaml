@@ -136,6 +136,8 @@ executables:
     - criterion >= 1.5.12 && < 2
     - timeit >= 2.0 && < 3
     - template-haskell >=2.18 && <2.19
+    - haskell-src-exts >= 1.20 && <1.24
+    - haskell-src-meta >= 0.6 && < 0.9
     - singletons > 3 && < 4
     - singletons-th > 3 && < 4
     - singletons-base >= 3 && < 4

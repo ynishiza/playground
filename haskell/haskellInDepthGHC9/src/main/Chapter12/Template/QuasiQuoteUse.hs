@@ -1,12 +1,12 @@
 {-# LANGUAGE QuasiQuotes #-}
 
-module Chapter12.TemplateQuasiQuoteUse
+module Chapter12.Template.QuasiQuoteUse
   ( x,
     myDynamicOne,
   )
 where
 
-import Chapter12.TemplateQuasiQuote
+import Chapter12.Template.QuasiQuote
 
 x :: String
 x =

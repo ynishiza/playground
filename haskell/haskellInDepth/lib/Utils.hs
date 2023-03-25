@@ -1,6 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ExplicitForAll #-}
 {-# LANGUAGE PolyKinds #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
