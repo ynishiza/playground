@@ -7,6 +7,8 @@ module Lens.TraverseMonoid
     runTakingWhileCaptured,
     runCapturedAp,
     DroppingWhileApplicative (..),
+    DroppingWhileCaptured (..),
+    runDroppingWhileCaptured,
   )
 where
 
@@ -14,50 +16,50 @@ import Control.Arrow (Arrow (..))
 import Data.Functor.Contravariant
 import Data.Typeable
 
-data CaptureAp i a o result where
-  CPure :: a -> CaptureAp i a o result
-  CAp :: CaptureAp i (x -> y) o result -> CaptureAp i x o result -> CaptureAp i y o result
-  CFmap :: (x -> y) -> CaptureAp i x o result -> CaptureAp i y o result
-  CResult :: i -> result -> CaptureAp i o o result
+data CaptureAp i a o captured where
+  CPure :: a -> CaptureAp i a o captured
+  CAp :: CaptureAp i (x -> y) o captured -> CaptureAp i x o captured -> CaptureAp i y o captured
+  CFmap :: (x -> y) -> CaptureAp i x o captured -> CaptureAp i y o captured
+  CCapture :: i -> captured -> CaptureAp i o o captured
   deriving stock (Typeable)
 
 instance Foldable (CaptureAp i a o) where
   foldr _ r (CPure _) = r
   foldr f r (CAp df da) = foldr f (foldr f r df) da
   foldr f r (CFmap _ da) = foldr f r da
-  foldr f r (CResult _ result) = f result r
+  foldr f r (CCapture _ captured) = f captured r
 
 instance Traversable (CaptureAp i a o) where
   traverse _ (CPure a) = pure $ CPure a
   traverse f (CAp df da) = CAp <$> traverse f df <*> traverse f da
   traverse f (CFmap g da) = CFmap g <$> traverse f da
-  traverse f (CResult i result) = CResult i <$> f result
+  traverse f (CCapture i captured) = CCapture i <$> f captured
 
 instance Functor (CaptureAp i a o) where
   fmap _ (CPure a) = CPure a
   fmap f (CAp df da) = CAp (f <$> df) (f <$> da)
   fmap f (CFmap g da) = CFmap g (f <$> da)
-  fmap f (CResult i result) = CResult i $ f result
+  fmap f (CCapture i captured) = CCapture i $ f captured
 
-instance Show result => Show (CaptureAp i a o result) where
+instance Show captured => Show (CaptureAp i a o captured) where
   show (CPure _) = "CPure"
   show (CAp f a) = "(CAp " <> show f <> " " <> show a <> ")"
   show (CFmap _ a) = "(CFmap f " <> show a <> ")"
-  show (CResult _ v) = "(CResult " <> show v <> ")"
+  show (CCapture _ v) = "(CResult " <> show v <> ")"
 
-runCapturedAp :: CaptureAp i a result result -> a
+runCapturedAp :: CaptureAp i a captured captured -> a
 runCapturedAp (CPure t) = t
 runCapturedAp (CAp df da) = runCapturedAp df $ runCapturedAp da
 runCapturedAp (CFmap f da) = f $ runCapturedAp da
-runCapturedAp (CResult _ result) = result
+runCapturedAp (CCapture _ captured) = captured
 
-data TakingWhileCaptured i result o a where
-  TakingWhileCaptured :: a -> ((i, Bool) -> (CaptureAp () a o result, Bool)) -> TakingWhileCaptured i result o a
+data TakingWhileCaptured i captured o a where
+  TakingWhileCaptured :: a -> ((i, Bool) -> (CaptureAp () a o captured, Bool)) -> TakingWhileCaptured i captured o a
 
-runTakingWhileCaptured :: Enum i => TakingWhileCaptured i result o a -> CaptureAp () a o result
+runTakingWhileCaptured :: Enum i => TakingWhileCaptured i captured o a -> CaptureAp () a o captured
 runTakingWhileCaptured (TakingWhileCaptured _ f) = fst $ f (toEnum 0, True)
 
-instance Functor (TakingWhileCaptured i result o) where
+instance Functor (TakingWhileCaptured i captured o) where
   fmap f (TakingWhileCaptured witness ca) = TakingWhileCaptured (f witness) $ \(i, isTaking) ->
     if isTaking
       then
@@ -65,18 +67,38 @@ instance Functor (TakingWhileCaptured i result o) where
          in (CFmap f x, isTakingX)
       else (CPure (f witness), False)
 
-instance Enum i => Applicative (TakingWhileCaptured i result o) where
+instance Enum i => Applicative (TakingWhileCaptured i captured o) where
   pure a = TakingWhileCaptured a $ \(_, isTaking) -> (CPure a, isTaking)
   (TakingWhileCaptured witnessf cf) <*> ~(TakingWhileCaptured witnessa ca) = TakingWhileCaptured (witnessf witnessa) $ \(i, isTaking) ->
     if isTaking
       then
         let (f, isTakingF) = cf (i, isTaking)
-            (x, isTakingFx) = ca (succ i, isTakingF)
-         in (CAp f x, isTakingFx)
+         in first (CAp f) (ca (succ i, isTakingF))
       else (CPure (witnessf witnessa), False)
 
 instance Contravariant (TakingWhileCaptured i a o) where
-  contramap _ = (<$) $ error ""
+  contramap _ = (<$) $ error "Contravariant"
+
+data DroppingWhileCaptured i captured o a where
+  DroppingWhileCaptured :: a -> ((i, Bool) -> (CaptureAp () a o captured, Bool)) -> DroppingWhileCaptured i captured o a
+
+runDroppingWhileCaptured :: Enum i => DroppingWhileCaptured i captured o a -> CaptureAp () a o captured
+runDroppingWhileCaptured (DroppingWhileCaptured _ d) = fst $ d (toEnum 0, True)
+
+instance Functor (DroppingWhileCaptured i captured o) where
+  fmap f (DroppingWhileCaptured witness da) = DroppingWhileCaptured (f witness) $ \v -> first (CFmap f) (da v)
+
+instance Enum i => Applicative (DroppingWhileCaptured i captured o) where
+  pure a = DroppingWhileCaptured a $ \(_, isDropping) -> (CPure a, isDropping)
+  (DroppingWhileCaptured witnessf df) <*> ~(DroppingWhileCaptured witnessa da) = DroppingWhileCaptured (witnessf witnessa) $ \(i, isDropping) ->
+    if not isDropping
+      then (CAp (fst $ df (i, False)) (fst $ da (succ i, False)), False)
+      else case df (i, True) of
+        (f, False) -> first (CAp f) $ da (succ i, False)
+        (_, True) -> first (CAp (CPure witnessf)) $ da (succ i, True)
+
+instance Contravariant (DroppingWhileCaptured i captured o) where
+  contramap _ = (<$) $ error "Contravariant"
 
 data DroppingWhileApplicative f a where
   DroppingWhileApplicative :: {runDroppingWhileApplicative :: (Int, Bool) -> (f a, Bool)} -> DroppingWhileApplicative f a

@@ -12,7 +12,7 @@ import Data.Char
 import Data.Function
 import Data.Tuple
 import Lens
-import Lens.Scratch ( deferAp)
+import Lens.Scratch (deferAp)
 import System.IO.Extra
 import Test.Hspec
 import Tree
@@ -207,6 +207,9 @@ spec = describe "" $ do
           ([A .. E], B) & toListOf (droppingWhile (_1 . traverse) (< C)) & expects [C, D, E]
           ([A .. E], B) & toListOf (dropping (_1 . traverse) 2) & expects [C, D, E]
 
+          ([A .. E], B) & toListOf (droppingWhileBase2 @Int (_1 . traverse) (\_ v -> v < C)) & expects [C, D, E]
+          ([A .. E], B) & toListOf (droppingWhileBase2 @Int (_1 . traverse) (\i _ -> i < 3)) & expects [D, E]
+
           -- case: take 0
           [1, 2 :: Int] & toListOf (takingWhile traverse (> 100)) & expects []
           -- case: empty
@@ -217,6 +220,10 @@ spec = describe "" $ do
           A & preview (takingWhile id (== Z)) & expects $ Nothing
           A & view (takingWhile id (< C)) & expects A
           A & view (takingWhile id (== Z)) & expects mempty
+
+        it "gets contravariant" $ do
+          (1 :: Int) & toListOf (taking (replicated 5) 3) & expects [1, 1, 1]
+          -- (1 :: Int) & toListOf (dropping (replicated 5) 3) & expects [1, 1]
 
         it "gets infinite" $ do
           (1 :: Int) & preview repeated & expects $ Just 1
@@ -230,6 +237,10 @@ spec = describe "" $ do
         it "folds" $ do
           [A ..] & preview (takingWhile folded (< D)) & expects $ Just A
           [A ..] & toListOf (takingWhile folded (< D)) & expects [A, B, C]
+          [A ..] & toListOf (takingWhile folded (const False)) & expects []
+          [A ..] & preview (droppingWhile folded (< W)) & expects $ Just W
+          [A ..] & toListOf (droppingWhile folded (< W)) & expects [W, X, Y, Z]
+          [A ..] & toListOf (droppingWhile folded (const True)) & expects []
 
         it "sets" $ do
           [A .. E] & set (takingWhile traverse (< C)) Z & expects [Z, Z, C, D, E]
@@ -417,5 +428,4 @@ spec = describe "" $ do
     putStrLn "== take iterated ==="
     (1 :: Int) & toListOf (takingWhile (iterated (succ . succ)) (< 10)) & expects [1, 3, 5, 7, 9]
 
-    print $ deferAp [1 :: Int ..10] 
-
+    print $ deferAp [1 :: Int .. 10]
