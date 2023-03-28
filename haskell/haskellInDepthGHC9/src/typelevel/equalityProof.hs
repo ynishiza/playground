@@ -1,3 +1,6 @@
+-- Run
+--    stack ghci -- src/typelevel/equalityProof.hs
+--
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE GADTs #-}

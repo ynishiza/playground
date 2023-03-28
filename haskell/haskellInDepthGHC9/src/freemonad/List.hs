@@ -6,16 +6,16 @@ module List
   ( test,
     List (..),
     ListF,
-    liftNil,
-    liftCons,
-    liftList,
+    liftNilF,
+    liftConsF,
+    liftListF,
     execListF,
   )
 where
 
 import Data.Foldable
 import Data.Kind
-import Free
+import F 
 
 type List :: Type -> Type -> Type
 data List t a where
@@ -25,14 +25,14 @@ data List t a where
 
 type ListF t = F (List t)
 
-liftNil :: ListF t ()
-liftNil = liftF $ Nil ()
+liftNilF :: ListF t ()
+liftNilF = liftF $ Nil ()
 
-liftCons :: t -> ListF t ()
-liftCons t = liftF $ Cons t ()
+liftConsF :: t -> ListF t ()
+liftConsF t = liftF $ Cons t ()
 
-liftList :: [t] -> ListF t ()
-liftList = foldr (\t r -> liftCons t >> r) liftNil
+liftListF :: [t] -> ListF t ()
+liftListF = foldr (\t r -> liftConsF t >> r) liftNilF
 
 execListF :: ListF t a -> ([t], a)
 execListF (F f) = f ([],) m
@@ -47,25 +47,25 @@ test = do
       p0 = liftPure 100
 
       l0 :: ListF Int ()
-      l0 = liftNil
+      l0 = liftNilF
 
       l1 :: ListF Int ()
       l1 = do
-        liftCons 1
-        liftCons 2
-        liftCons 3
+        liftConsF 1
+        liftConsF 2
+        liftConsF 3
 
       l2 :: ListF Int ()
       l2 = do
-        liftCons 1
-        liftNil
-        liftNil
-        liftCons 2
+        liftConsF 1
+        liftNilF
+        liftNilF
+        liftConsF 2
 
       l3 :: ListF Int ()
       l3 = do
-        liftCons 1
-        liftList [100 .. 105]
+        liftConsF 1
+        liftListF [100 .. 105]
 
   putStrLn $ "p0:" <> show (execListF p0)
   putStrLn $ "l0:" <> show (execListF l0)

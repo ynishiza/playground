@@ -1,3 +1,6 @@
+-- Run
+--    stack ghci -- src/typelevel/singletons.hs
+--
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE PolyKinds #-}

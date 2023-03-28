@@ -58,3 +58,11 @@ cradle:
       component: haskellInDepthGHC9:exe:lens
     - path: "./test/lens"
       component: haskellInDepthGHC9:test:lens-test
+    - path: "./src/typelevel"
+      component: haskellInDepthGHC9:exe:typelevel
+    - path: "./test/typelevel"
+      component: haskellInDepthGHC9:test:typelevel-test
+    - path: "./src/template"
+      component: haskellInDepthGHC9:exe:template
+    - path: "./test/template"
+      component: haskellInDepthGHC9:test:template-test

@@ -29,7 +29,7 @@ myVeryRandomFunctionDec =
       ny = mkName "y"
    in [d|myVeryRandomFunction $(varP nx) $(varP ny) = $(varE nx) * $(varE ny)|]
 
-[d|localOne = 1|]
+$[d|localOne = 1|]
 
 localOne :: $[t|Int|]
 
@@ -50,6 +50,7 @@ run =
     "12.3"
     "Template Haskell terms"
     ( do
+        print localOne
         printBannerWrap "Expr" $
           traverse_
             printContainer

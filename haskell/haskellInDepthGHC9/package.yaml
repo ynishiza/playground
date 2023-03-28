@@ -214,6 +214,7 @@ executables:
     - singletons-base >= 3 && < 4
     ghc-options:
     - -Werror=incomplete-patterns
+
   singletonsPart4:
     main:         main.hs
     source-dirs:  ./src/singletons/part4/
@@ -276,6 +277,30 @@ executables:
     - fin > 0.2 && < 0.3
     - dec > 0.0.4 && < 1
     - singletons > 3 && < 4
+
+  template:
+    main:               main.hs
+    source-dirs:        ./src/template
+    dependencies: 
+    - haskellInDepthGHC9
+    - random
+    - template-haskell >=2.18 && <2.19
+    - haskell-src-exts >= 1.20 && <1.24
+    - haskell-src-meta >= 0.6 && < 0.9
+    - attoparsec > 0.10 && < 0.20
+
+  typelevel:
+    main:               main.hs
+    source-dirs:        ./src/typelevel
+    dependencies: 
+    - haskellInDepthGHC9
+    - random
+    - singletons > 3 && < 4
+    - singletons-th > 3 && < 4
+    - singletons-base >= 3 && < 4
+    - fin > 0.2 && < 0.3
+    - dec > 0.0.4 && < 1
+    - hspec >= 0.1 && <= 3
 
 internal-libraries: {}
 
@@ -357,7 +382,6 @@ tests:
     - tasty-hedgehog >= 0.1 && <= 1.4
     - hspec >= 0.1 && <= 3
     - hedgehog >= 0.5 && < 1.2
-    - template-haskell >=2.18 && <2.19
 
   dependentTypes-test:
     main:               main.hs
@@ -477,6 +501,31 @@ tests:
     - fin > 0.2 && < 0.3
     - dec > 0.0.4 && < 1
     - singletons > 3 && < 4
+    - hspec >= 0.1 && <= 3
+
+  template-test:
+    main:               main.hs
+    source-dirs:        ./test/template
+    dependencies: 
+    - haskellInDepthGHC9
+    - random
+    - template-haskell >=2.18 && <2.19
+    - haskell-src-exts >= 1.20 && <1.24
+    - haskell-src-meta >= 0.6 && < 0.9
+    - hspec >= 0.1 && <= 3
+    - attoparsec > 0.10 && < 0.20
+
+  typelevel-test:
+    main:               main.hs
+    source-dirs:        ./test/typelevel
+    dependencies: 
+    - haskellInDepthGHC9
+    - random
+    - singletons > 3 && < 4
+    - singletons-th > 3 && < 4
+    - singletons-base >= 3 && < 4
+    - fin > 0.2 && < 0.3
+    - dec > 0.0.4 && < 1
     - hspec >= 0.1 && <= 3
 
 benchmarks: 

@@ -1,102 +1,134 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE StandaloneKindSignatures #-}
-{-# HLINT ignore "Redundant pure" #-}
-{-# OPTIONS_GHC -Wno-missing-export-lists #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Free
-  ( F (..),
-    runWith,
-    liftPure,
-    liftF,
-    iter,
-    iterM,
-    retract,
-    foldF,
-    hoistF,
+  ( Free (..),
     MonadFree (..),
-    Free (..),
+    liftF,
+    retract,
+    iter,
+    foldFree,
+    unfoldM,
+    unfold,
     cutoff,
-    cutoff',
-    cutoff0,
-    toF,
-    fromF,
+    hoistFree,
+    iterM,
   )
 where
 
 import Control.Monad
-import Control.Monad.Free (Free (..), MonadFree (..))
-import Data.Kind
+import Control.Monad.Except
+import Control.Monad.State
+import Control.Monad.Trans.Class
+import Data.Foldable
+import Data.Functor.Classes
+import Data.Typeable
+import GHC.Generics
 
-type F :: (Type -> Type) -> Type -> Type
-data F f a where
-  F :: {runF :: forall r. (a -> r) -> (f r -> r) -> r} -> F f a
+class MonadFree f m where
+  wrap :: f (m a) -> m a
 
-runWith :: (a -> r) -> (f r -> r) -> F f a -> r
-runWith kpure kfree (F f) = f kpure kfree
+data Free f a where
+  Pure :: a -> Free f a
+  Free :: f (Free f a) -> Free f a
+  deriving stock (Typeable, Generic)
 
-instance Functor (F f) where
-  fmap fn (F f) = F $ \kpure kfree -> f (kpure . fn) kfree
+instance Show1 f => Show1 (Free f) where
+  liftShowsPrec s _ i (Pure a) = ("Pure " <>) . s i a
+  liftShowsPrec s t i (Free f) =
+    ("Free " <>)
+      . showParen
+        True
+        ( liftShowsPrec
+            (\j a -> liftShowsPrec s t j a)
+            (\l -> foldMap (liftShowsPrec s t i) l)
+            i
+            f
+        )
 
-instance Applicative (F f) where
-  pure = liftPure
+instance MonadState s f => MonadState s (Free f) where
+  get = lift get
+  put = lift . put
+
+instance MonadError e f => MonadError e (Free f) where
+  throwError = lift . throwError
+  catchError (Pure a) _ = Pure a
+  catchError (Free f) catch = Free $ catchError f (pure . catch)
+
+instance Foldable f => Foldable (Free f) where
+  foldr :: (a -> r -> r) -> r -> Free f a -> r
+  foldr g r (Pure a) = g a r
+  foldr g r (Free f) = foldr (flip $ foldr g) r f
+
+instance Traversable f => Traversable (Free f) where
+  traverse :: Applicative g => (a -> g b) -> Free f a -> g (Free f b)
+  traverse g (Pure a) = Pure <$> g a
+  traverse g (Free f) = Free <$> traverse (traverse g) f
+
+instance Functor f => Functor (Free f) where
+  fmap g (Pure a) = Pure $ g a
+  fmap g (Free f) = Free $ (g <$>) <$> f
+
+instance Functor f => Applicative (Free f) where
+  pure = Pure
   (<*>) = ap
 
-instance Monad (F f) where
-  (>>=) :: F f a -> (a -> F f b) -> F f b
-  (F f) >>= k = F $ \kpure kfree -> f (\a -> runF (k a) kpure kfree) kfree
+instance Functor f => Monad (Free f) where
+  (Pure a) >>= k = k a
+  (Free f) >>= k = Free $ (>>= k) <$> f
 
-instance Functor f => MonadFree f (F f) where
-  wrap :: f (F f a) -> F f a
-  wrap f = F $ \kpure kfree -> kfree (runWith kpure kfree <$> f)
+instance MonadFail f => MonadFail (Free f) where
+  fail = lift . fail
 
-liftPure :: a -> F f a
-liftPure a = F $ \kpure _ -> kpure a
+instance MonadFree f (Free f) where
+  wrap :: f (Free f a) -> Free f a
+  wrap = Free
 
-liftF :: Functor f => f a -> F f a
-liftF f = F $ \kpure kfree -> kfree (kpure <$> f)
+instance MonadTrans Free where
+  lift :: Monad f => f a -> Free f a
+  lift = liftF
 
-iter :: (f a -> a) -> F f a -> a
-iter kfree (F f) = f id kfree
+retract :: Monad f => Free f a -> f a
+retract (Pure a) = pure a
+retract (Free f) = f >>= retract
 
-iterM :: Monad m => (f (m a) -> m a) -> F f a -> m a
-iterM kfree (F f) = f pure kfree
+liftF :: Functor f => f a -> Free f a
+liftF = Free . (Pure <$>)
 
-retract :: Monad m => F m a -> m a
-retract (F f) = f pure join
+iter :: Functor f => (f a -> a) -> Free f a -> a
+iter _ (Pure a) = a
+iter g (Free f) = g $ iter g <$> f
 
-hoistF :: (forall x. f x -> g x) -> F f a -> F g a
-hoistF fn (F f) = F $ \kpure kfree -> f kpure (kfree . fn)
+iterM :: (Functor f, Monad m) => (f (m a) -> m a) -> Free f a -> m a
+iterM _ (Pure a) = pure a
+iterM g (Free f) = g $ iterM g <$> f
 
-foldF :: Monad m => (forall x. f x -> m x) -> F f a -> m a
-foldF fn (F f) = f pure (join . fn)
+hoistFree :: Functor g => (forall x. f x -> g x) -> Free f a -> Free g a
+hoistFree _ (Pure a) = Pure a
+hoistFree g (Free f) = Free $ hoistFree g <$> g f
 
-toF :: Functor f => Free f a -> F f a
-toF (Pure a) = liftPure a
-toF (Free f) = wrap $ toF <$> f
+foldFree :: Monad m => (forall x. f x -> m x) -> Free f a -> m a
+foldFree _ (Pure a) = pure a
+foldFree g (Free f) = g f >>= foldFree g
 
-fromF :: F f a -> Free f a
-fromF (F f) = f Pure Free
+cutoff :: Functor f => Int -> Free f a -> Free f (Maybe a)
+cutoff n x
+  | n > 0, (Pure a) <- x = Pure $ Just a
+  | n > 0, (Free f) <- x = Free $ cutoff (n - 1) <$> f
+  | otherwise = Pure Nothing
 
-cutoff :: forall f a. Functor f => Int -> F f a -> F f (Maybe a)
-cutoff n (F f) = f (cutoffAtN . liftPure . Just) step 0
-  where
-    step :: f (Int -> F f (Maybe a)) -> Int -> F f (Maybe a)
-    step value m = cutoffAtN resolved m
-      where resolved = wrap $ ($ (m + 1)) <$> value
-    cutoffAtN :: F f (Maybe a) -> Int -> F f (Maybe a)
-    cutoffAtN g m = if m < n then g else liftPure Nothing
+unfold :: Functor f => (b -> Either a (f b)) -> b -> Free f a
+unfold g r = case g r of
+  Left a -> Pure a
+  Right f -> Free $ unfold g <$> f
 
-cutoff' :: Functor f => Int -> F f a -> F f (Maybe a)
-cutoff' n = toF . cutoffBase n . fromF
-
-cutoff0 :: F f a -> F f (Maybe a)
-cutoff0 (F f) = f (liftPure . Just) (const (liftPure Nothing))
-
-cutoffBase :: Functor f => Int -> Free f a -> Free f (Maybe a)
-cutoffBase 0 _ = Pure Nothing
-cutoffBase _ (Pure a) = Pure (Just a)
-cutoffBase n (Free f) = Free $ cutoffBase (n - 1) <$> f
+unfoldM :: (Traversable f, Monad m) => (b -> m (Either a (f b))) -> b -> m (Free f a)
+unfoldM g r =
+  g r >>= \case
+    (Left a) -> pure $ Pure a
+    (Right f) -> Free <$> mapM (unfoldM g) f

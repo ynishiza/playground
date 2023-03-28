@@ -1,3 +1,6 @@
+-- Run
+--    stack ghci -- src/typelevel/buildList.hs
+--
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleInstances #-}

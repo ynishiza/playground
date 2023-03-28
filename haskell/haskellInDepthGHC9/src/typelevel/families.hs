@@ -1,3 +1,6 @@
+-- Run
+--    stack ghci -- src/typelevel/families.hs
+--
 {-# LANGUAGE DataKinds #-} 
 {-# LANGUAGE TypeFamilies #-} 
 {-# LANGUAGE StandaloneKindSignatures #-} 

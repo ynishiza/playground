@@ -3,7 +3,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
-module TypeLevel.ExpressionsSpec (
+module ExpressionsSpec (
     spec,
   ) where
 

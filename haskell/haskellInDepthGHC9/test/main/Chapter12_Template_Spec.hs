@@ -13,8 +13,8 @@ import Chapter12.Template.Reify
 import Control.Exception
 import Control.Monad
 import Data.Foldable
-import Data.Tuple
 import Data.Tree
+import Data.Tuple
 import Fmt
 import System.Random
 import Test.Hspec
@@ -30,6 +30,9 @@ data TestData a = TestData
     p4 :: (a, a, a, a)
   }
 
+expects :: (Show a, Eq a) => a -> a -> IO ()
+expects = flip shouldBe
+
 setup :: IO (TestData Int)
 setup = do
   [i1, i2, i3, i4] <- replicateM 4 $ getStdRandom uniform
@@ -44,8 +47,8 @@ setup = do
       (i1, i2, i3)
       (i1, i2, i3, i4)
 
-data Alpha = A | B | C
-  deriving (Show, Eq)
+data Alpha = A | B | C | D | E | F | G
+  deriving (Show, Eq, Bounded, Enum)
 
 $(genIs ''Alpha)
 $(genIs ''Bool)
@@ -122,4 +125,5 @@ specs =
                 test|]
                 `shouldBe` ("hello\n                test" :: String)
               v `shouldBe` 1
+
       )

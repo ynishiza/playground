@@ -1,3 +1,6 @@
+-- Run
+--    stack ghci -- src/typelevel/void.hs
+--
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TypeOperators #-}

@@ -1,3 +1,6 @@
+-- Run
+--    stack ghci -- src/typelevel/defunctionalization.hs
+--
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE StandaloneKindSignatures #-}

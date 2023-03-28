@@ -1,3 +1,6 @@
+-- Run
+--    stack ghci -- src/typelevel/evenProof.hs
+--
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE FlexibleContexts #-}

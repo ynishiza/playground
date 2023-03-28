@@ -1,6 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 
-module TypeLevel.CanonicalVectorsSpec
+module CanonicalVectorsSpec
   ( spec,
   )
 where

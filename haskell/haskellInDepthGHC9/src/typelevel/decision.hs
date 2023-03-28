@@ -1,3 +1,6 @@
+-- Run
+--    stack ghci -- src/typelevel/decision.hs
+--
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}

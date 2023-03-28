@@ -9,6 +9,8 @@ import Template.Scratch
 import Template.Reify
 import Template.Tuple
 
+main = undefined
+
 $y
 $(pure (: []) <*> mkFst')
 
@@ -23,14 +25,3 @@ v2 = $(ithOfTuple 2 1) (2 :: Int, True)
 
 v3 :: Char
 v3 = $(ithOfTuple 3 0) ('a', "Hello", True)
-
-typeInfos :: [(String, String)]
-typeInfos =
-  [ $(getNameInfo ''Show),
-    $(getNameInfo 'show),
-    $(getNameInfo ''Bool),
-    $(getNameInfo ''GHC.Generics.Rep),
-    $(getNameInfo ''GHC.Base.Int#),
-    $(getNameInfo 'True),
-    $(getNameInfo 'id)
-  ]

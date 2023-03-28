@@ -2,6 +2,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
 
 module Chapter12.Template.ListToTuple
   ( listToTupleDeclare,
@@ -12,6 +13,7 @@ where
 import Chapter12.Template.Utils
 import Control.Monad
 import Fmt
+import Data.Kind qualified
 import Language.Haskell.TH
 
 listToTupleDeclareMany :: Int -> Int -> Q [Dec]

@@ -1,14 +1,16 @@
+-- From "Dependently Typed programming with singletons"
+--  https://richarde.dev/papers/2012/singletons/paper.pdf
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE EmptyCase #-}
-{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module TypeLevel.CanonicalVectors
   ( Vec (..),
@@ -53,12 +55,12 @@ instance Show a => Show (Vec a n) where
   show VNil = "[]"
   show v@(VCons _ _) = show $ vToList v
 
-instance Show a => Show (SomeVec a ) where
+instance Show a => Show (SomeVec a) where
   show (MkSomeVec v) = show v
 
 instance Eq a => Eq (Vec a n) where
   VNil == VNil = True
-  (VCons v vs) == (VCons w ws)  = v == w && vs == ws
+  (VCons v vs) == (VCons w ws) = v == w && vs == ws
 
 withVecSNatI :: Vec a n -> (SNatI n => r) -> r
 withVecSNatI v = withSNat (withVecSNat v)
@@ -120,7 +122,7 @@ vFoldr :: (a -> b -> b) -> b -> Vec a n -> b
 vFoldr _ x0 VNil = x0
 vFoldr f x0 (VCons x xs) = f x $ vFoldr f x0 xs
 
-vRepeat :: a -> SNat n -> Vec a n 
+vRepeat :: a -> SNat n -> Vec a n
 vRepeat _ SZ = VNil
 vRepeat x SS = VCons x $ vRepeat x snat
 
