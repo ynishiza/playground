@@ -66,21 +66,46 @@ genReplicate pn pvalue = do
   (v, n, _, s) <- genReplicateWithSeparator pn pvalue (return "")
   return (v, n, s)
 
+-- Output
+--   (
+--    String,         Replicated term
+--    Int,            Number of replications
+--    String,         Delimiter
+--    String          Terms joined by delimiter
+--   )
+--
+--  e.g.
+--    ("a", 3, "|", "a|a|a")
+--
 genReplicateWithSeparator :: Gen Int -> Gen String -> Gen String -> Gen (String, Int, String, String)
-genReplicateWithSeparator pn pval psep = do
+genReplicateWithSeparator pn pval pdelim = do
   v <- pval
-  (vs, sep, res) <- genReplicateBase pn (\n -> return $ replicate n v) psep
-  return (v, length vs, sep, res)
+  (vs, delim, res) <- genDelimitedText pn (\n -> return $ replicate n v) pdelim
+  return (v, length vs, delim, res)
 
-genReplicateBase :: Gen Int -> (Int -> Gen [String]) -> Gen String -> Gen ([String], String, String)
-genReplicateBase pn pvals psep = do
+-- Input
+--   Gen Int                  Number of terms
+--   Int -> Gen [String]      List of terms
+--   Gen String               Delimiter
+-- Output
+--   (
+--    [String],               List of terms
+--    String,                 Delimiter
+--    String                  Terms joined by delimiter
+--   )
+--
+-- e.g.
+--      (["a", "b", "c"], "|", "a|b|c")
+--
+genDelimitedText :: Gen Int -> (Int -> Gen [String]) -> Gen String -> Gen ([String], String, String)
+genDelimitedText pn pvals pdelim = do
   n <- pn
   vals <- pvals n
-  sep <- psep
+  delim <- pdelim
   return
     ( vals,
-      sep,
-      intercalate sep vals
+      delim,
+      intercalate delim vals
     )
 
 parseLast :: P a -> String -> (a, String)
@@ -97,8 +122,8 @@ readpEqual p1 p2 toParse = do
   annotate $ "test string:" <> toParse
   parse p1 toParse === parseReadP p2 toParse
 
-readpEqualN :: (MonadTest m, Eq a, Show a) => Int -> P a -> R.ReadP a -> String -> m ()
-readpEqualN n p1 p2 toParse = do
+readpEqualWithNResults :: (MonadTest m, Eq a, Show a) => Int -> P a -> R.ReadP a -> String -> m ()
+readpEqualWithNResults n p1 p2 toParse = do
   readpEqual p1 p2 toParse
   annotate $
     "test string:"
@@ -148,7 +173,7 @@ readPEquivalence =
     [ testCase "[eof]" $ do
         toParse <- forAll $ genStringOfSize 0 10 H.ascii
         let n = if null toParse then 1 else 0
-        readpEqualN @(PropertyT IO) n eof R.eof toParse,
+        readpEqualWithNResults @(PropertyT IO) n eof R.eof toParse,
       --
       testCase "[satisfy]" $ do
         toMatch <- forAll genChar
@@ -268,17 +293,38 @@ readPEquivalence =
         rest <- forAll genRest
         let toParse = str <> rest
             runTest0 =
-              readpEqualN
+              readpEqualWithNResults
                 (if n == 0 then 1 else n + 1)
                 (many $ string pattern)
                 (R.many $ R.string pattern)
             runTest1 =
-              readpEqualN
+              readpEqualWithNResults
                 n
                 (many1 $ string pattern)
                 (R.many1 $ R.string pattern)
         runTest0 toParse
         runTest1 toParse,
+      --
+      testCase "[many', many1']" $ do
+        (pattern, n, str) <-
+          forAll $
+            genReplicate
+              (genIntInRange 0 10)
+              genSmallAlphaNum
+        rest <- forAll genRest
+        let toParse = str <> rest
+            runTest0' =
+              readpEqualWithNResults
+                (if n == 0 then 1 else n + 1)
+                (many' $ string pattern)
+                (R.many $ R.string pattern)
+            runTest1' =
+              readpEqualWithNResults
+                n
+                (many1' $ string pattern)
+                (R.many1 $ R.string pattern)
+        runTest0' toParse
+        runTest1' toParse,
       --
       testCase "[skipMany] empty" $ do
         c <- forAll genChar
@@ -294,12 +340,12 @@ readPEquivalence =
               genSmallAlphaNum
         let toParse = str <> rest
             runTest =
-              readpEqualN
+              readpEqualWithNResults
                 (if n == 0 then 1 else n + 1)
                 (skipMany (string pattern))
                 (R.skipMany (R.string pattern))
             runTest1 =
-              readpEqualN
+              readpEqualWithNResults
                 n
                 (skipMany1 (string pattern))
                 (R.skipMany1 (R.string pattern))
@@ -316,12 +362,12 @@ readPEquivalence =
               (H.element ["|", "_", ":", ";"])
         let toParse = str <> rest
             runTest =
-              readpEqualN
+              readpEqualWithNResults
                 (if n == 0 then 1 else n + 1)
                 (sepBy (string pattern) (string sepc))
                 (R.sepBy (R.string pattern) (R.string sepc))
             runTest1 =
-              readpEqualN
+              readpEqualWithNResults
                 (if n == 0 then 0 else n)
                 (sepBy1 (string pattern) (string sepc))
                 (R.sepBy1 (R.string pattern) (R.string sepc))
@@ -330,7 +376,7 @@ readPEquivalence =
         runTest1 toParse,
       testCase "[endBy, endBy1]" $ do
         rest <- forAll genRest
-        (pattern, n, sep, str) <-
+        (pattern, n, delim, str) <-
           forAll $
             genReplicateWithSeparator
               (genIntInRange 0 10)
@@ -338,56 +384,57 @@ readPEquivalence =
               (H.element [";", ":"])
         let toParse = str <> rest
             runTest =
-              readpEqualN
+              readpEqualWithNResults
                 (if n == 0 then 1 else n)
-                (endBy (string pattern) (string sep))
-                (R.endBy (R.string pattern) (R.string sep))
+                (endBy (string pattern) (string delim))
+                (R.endBy (R.string pattern) (R.string delim))
             runTest1 =
-              readpEqualN
+              readpEqualWithNResults
                 (if n == 0 then 0 else n - 1)
-                (endBy1 (string pattern) (string sep))
-                (R.endBy1 (R.string pattern) (R.string sep))
+                (endBy1 (string pattern) (string delim))
+                (R.endBy1 (R.string pattern) (R.string delim))
 
         runTest toParse
         runTest1 toParse,
       testCase "[chainr]" $ do
         (vals, _, toParse) <-
           forAll $
-            genReplicateBase
+            genDelimitedText
               (genIntInRange 0 10)
-              (`replicateM` (show <$> H.bool))
-              (return "&&")
+              (`replicateM` (show <$> genIntInRange 0 9))
+              (return ",")
         let n = length vals
             runTest =
-              readpEqualN
+              readpEqualWithNResults
                 (if n == 0 then 1 else n + 1)
-                (chainr B.bool B.and True)
-                (R.chainr R.bool R.and True)
+                (chainr (show <$> B.integral @Int) B.pbracket "#")
+                (R.chainr (show <$> R.int @Int) R.bracket "#")
             runTest1 =
-              readpEqualN
+              readpEqualWithNResults
                 n
-                (chainr1 B.bool B.and)
-                (R.chainr1 R.bool R.and)
+                (chainr1 (show <$> B.integral @Int) B.pbracket)
+                (R.chainr1 (show <$> R.int @Int) R.bracket)
         runTest toParse
         runTest1 toParse,
+      --
       testCase "[chainl]" $ do
         (vals, _, toParse) <-
           forAll $
-            genReplicateBase
+            genDelimitedText
               (genIntInRange 0 10)
-              (`replicateM` (show <$> H.bool))
-              (return "&&")
+              (`replicateM` (show <$> genIntInRange 0 9))
+              (return ",")
         let n = length vals
             runTest =
-              readpEqualN
+              readpEqualWithNResults
                 (if n == 0 then 1 else n + 1)
-                (chainl B.bool B.and True)
-                (R.chainl R.bool R.and True)
+                (chainl (show <$> B.integral @Int) B.pbracket "#")
+                (R.chainl (show <$> R.int @Int) R.bracket "#")
             runTest1 =
-              readpEqualN
+              readpEqualWithNResults
                 n
-                (chainl1 B.bool B.and)
-                (R.chainl1 R.bool R.and)
+                (chainl1 (show <$> B.integral @Int) B.pbracket)
+                (R.chainl1 (show <$> R.int @Int) R.bracket)
         runTest toParse
         runTest1 toParse,
       testCase "[manyTill]" $ do
@@ -400,7 +447,7 @@ readPEquivalence =
         rest <- forAll genLargeAlphaNum
         let toParse = str <> end <> rest
             runTest =
-              readpEqualN
+              readpEqualWithNResults
                 1
                 (manyTill (string value) (string end))
                 (R.manyTill (R.string value) (R.string end))

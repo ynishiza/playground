@@ -13,7 +13,6 @@ where
 import Chapter12.Template.Utils
 import Control.Monad
 import Fmt
-import Data.Kind qualified
 import Language.Haskell.TH
 
 listToTupleDeclareMany :: Int -> Int -> Q [Dec]

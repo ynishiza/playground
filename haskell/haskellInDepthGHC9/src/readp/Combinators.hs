@@ -1,6 +1,6 @@
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
 {-# HLINT ignore "Use infix" #-}
+{-# LANGUAGE BangPatterns #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {- ORMOLU_DISABLE -}
 module Combinators
   ( 
@@ -25,6 +25,8 @@ module Combinators
     optional,
     many,
     many1,
+    many',
+    many1',
     skipMany,
     skipMany1,
     sepBy,
@@ -45,8 +47,10 @@ where
 import Base.Parse qualified as PB
 import Control.Applicative as X hiding (many, optional, some)
 import Control.Monad
+import Data.Functor
 import Data.List (isPrefixOf)
 import P as X
+import Data.Function ((&))
 
 (+++) :: P a -> P a -> P a
 (+++) = (<|>)
@@ -68,7 +72,7 @@ gather pa = do
   parserToP $ PB.final $ mp <$> res
 
 pfail :: P a
-pfail = stop
+pfail = empty
 
 eof :: P ()
 eof = do
@@ -101,14 +105,14 @@ munch1 predicate = do
 skipSpaces :: P ()
 skipSpaces = skipManyWhile (`elem` " \n\t\r")
 
-choice :: [P a] -> P a
-choice = msum
+choice :: Alternative f => [f a] -> f a
+choice = asum
 
-count :: Int -> P a -> P [a]
+count :: Alternative f => Int -> f a -> f [a]
 count n pa
   | n > 0 = (:) <$> pa <*> count (n - 1) pa
-  | n == 0 = return []
-  | otherwise = pfail
+  | n == 0 = pure []
+  | otherwise = empty
 
 between :: P start -> P end -> P a -> P a
 between start end pa = do
@@ -117,93 +121,84 @@ between start end pa = do
   _ <- end
   return res
 
-option :: a -> P a -> P a
-option a pa = pa <|> return a
+option :: Alternative f => a -> f a -> f a
+option a pa = pa <|> pure a
 
-optional :: P a -> P ()
-optional pa = void pa <|> return ()
+optional :: Alternative f => f a -> f ()
+optional pa = void pa <|> pure ()
 
-many :: P a -> P [a]
-many pa = return [] <|> many1 pa
+many :: Alternative f => f a -> f [a]
+many pa = pure [] <|> many1 pa
 
-many1 :: P a -> P [a]
+many1 :: Alternative f => f a -> f [a]
 many1 pa = (:) <$> pa <*> many pa
 
-skipMany :: P a -> P ()
+many' :: Alternative m => m a -> m [a]
+many' pa = pure [] <|> many1' pa
+
+many1' :: Alternative m => m a -> m [a]
+many1' pa = ((\(!x) -> (x :)) <$> pa) <*> many' pa
+
+skipMany :: Alternative f => f a -> f ()
 skipMany pa = void $ many pa
 
-skipMany1 :: P a -> P ()
-skipMany1 pa = pa >> skipMany pa
+skipMany1 :: Alternative f => f a -> f ()
+skipMany1 pa = pa *> skipMany pa
 
 skipManyWhile :: (Char -> Bool) -> P ()
-skipManyWhile predicate = do
-  str <- look
-  loop str
+skipManyWhile predicate = look >>= loop
   where
     loop (c : cs) = when (predicate c) $ get >> loop cs
     loop _ = pure ()
 
-sepBy :: P a -> P sep -> P [a]
-sepBy pa psep = return [] <|> sepBy1 pa psep
+sepBy :: Alternative f => f a -> f sep -> f [a]
+sepBy pa psep = pure [] <|> sepBy1 pa psep
 
-sepBy1 :: forall a sep. P a -> P sep -> P [a]
-sepBy1 pa psep = do
-  v <- pa
-  return [v] <|> ((v :) <$> loop)
+sepBy1 :: forall f a sep. Alternative f => f a -> f sep -> f [a]
+sepBy1 pa psep = loop
   where
-    loop :: P [a]
-    loop = do
-      _ <- psep
-      v <- pa
-      return [v] <|> ((v :) <$> loop)
+    loop :: f [a]
+    loop = ((:) <$> pa) <*> (pure [] <|> (psep *> loop))
 
-endBy :: P a -> P sep -> P [a]
-endBy pa sep = return [] <|> endBy1 pa sep
+endBy :: Alternative f => f a -> f sep -> f [a]
+endBy pa sep = pure [] <|> endBy1 pa sep
 
-endBy1 :: forall a sep. P a -> P sep -> P [a]
-endBy1 pa psep = do
-  v <- pa
-  _ <- psep
-  return [v] <|> ((v :) <$> loop)
+endBy1 :: forall f a sep. Alternative f => f a -> f sep -> f [a]
+endBy1 pa psep = loop
   where
-    loop :: P [a]
-    loop = do
-      v <- pa
-      _ <- psep
-      return [v] <|> ((v :) <$> loop)
+    loop :: f [a]
+    loop = ((:) <$> pa) <*> (psep *> (pure [] <|> loop))
 
-chainr :: P a -> P (a -> a -> a) -> a -> P a
-chainr pa pop a = return a <|> chainr1 pa pop 
+-- (a1 * (a2 * (... an-1 *(an * a0))))
+chainr :: Alternative f => f a -> f (a -> a -> a) -> a -> f a
+chainr pa pop a = pure a <|> chainr1 pa pop
 
-chainr1 :: P a -> P (a -> a -> a) -> P a
-chainr1 pa pop = do
-  v <- pa
-  return v <|> chainr1With v pa pop
+chainr1 :: Alternative f => f a -> f (a -> a -> a) -> f a
+chainr1 pa pop = pa <|> loop
+  where
+    loop = (&) <$> pa <*> pop <*> (pa <|> loop)
 
-chainr1With :: a -> P a -> P (a -> a -> a) -> P a
-chainr1With u pa pop = do
-  op <- pop
-  v <- pa
-  return (op u v) <|> (op u <$> chainr1With v pa pop)
+-- ((.. ((a0 * a1) * a2) * a3 ...) * an-1) * an
+chainl :: Alternative f => f a -> f (a -> a -> a) -> a -> f a
+chainl pa pop a = pure a <|> chainl1 pa pop
 
-chainl :: P a -> P (a -> a -> a) -> a -> P a
-chainl pa pop a = return a <|> chainl1 pa pop 
+chainl1 :: forall f a. Alternative f => f a -> f (a -> a -> a) -> f a
+chainl1 pa pop = pa <|>  ((&) <$> pa <*> loop)
+  where
+    -- note: loop on function instead of value
+    -- i.e. can't do something like
+    --    
+    --    loopBad :: f a -> f a
+    --    loopBad v = loopBad $ (&) <$> v <*> pop <*> pa
+    --  
+    -- since this calls the loop before parsing a single term and hence loops infinitely.
+    -- Instead, we return f (a -> a) to defer the operation to the caller instead.
+    loop :: f (a -> a)
+    loop = apply <$> pop <*> pa <*> (pure id <|> loop)
+    apply op a foldUp r = foldUp (op r a)
 
-chainl1 :: P a -> P (a -> a -> a) -> P a
-chainl1 pa pop = do
-  v <- pa
-  return v <|> chainl1With v pa pop
-
-chainl1With :: a -> P a -> P (a -> a -> a) -> P a
-chainl1With u pa pop = do
-  op <- pop
-  v <- pa
-  return (op u v) <|> chainl1With (op u v) pa pop
-
-manyTill :: P a -> P a -> P [a]
+manyTill :: Alternative f => f a -> f a -> f [a]
 manyTill pa pend = ended <|> loop
   where
-    ended = pend >> return []
-    loop = do
-      v <- pa
-      (v:) <$> (ended <|> loop)
+    ended = pend $> []
+    loop = (:) <$> pa <*> (ended <|> loop)

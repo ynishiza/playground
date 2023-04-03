@@ -1,6 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Template.PrintfParser
@@ -10,12 +9,14 @@ module Template.PrintfParser
     parseS,
     parseFormats,
     parseLiteralChar,
+    isFormatValue,
     Format (..),
   )
 where
 
 import Control.Applicative
 import Data.Attoparsec.ByteString.Char8 hiding (D)
+import Data.Attoparsec.Combinator
 import Data.String
 
 data Format where
@@ -48,16 +49,11 @@ parseL = Literal <$> many1 parseLiteralChar <?> "Literal"
 -- note: parse exactly one character that isn't a format character
 parseLiteralChar :: Parser Char
 parseLiteralChar =
-  ( peekChar >>= \case
-      Nothing -> fail "Empty input"
-      (Just c1) ->
-        anyChar >> peekChar >>= \case
-          Nothing -> pure c1
-          (Just c2) ->
-            let s = [c1, c2]
-             in if isFormatValue s
-                  then fail $ "Encountered format character " <> s
-                  else pure c1
+  ( do
+      v <- lookAhead $ count 1 (parseD <|> parseS) <|> pure []
+      if null v
+        then anyChar
+        else fail ("Encountered format " <> show (head v))
   )
     <?> "literal char"
 

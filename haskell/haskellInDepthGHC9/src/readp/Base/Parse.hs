@@ -79,16 +79,3 @@ parseMaybe p s = case parse p s of
 final :: [(a, String)] -> Parse a
 final [] = Stop
 final (x : xs) = Final $ x :| xs
-
-data MyType x y f = A | B x | C x y | D (f x) | E x (MyType x y f)
-
-data M x y f = M (forall r. r -> (x -> r) -> (x -> y -> r) -> (f x -> r) -> (x -> r -> r) -> r)
-
-runM (M f) = f
-
-from :: MyType x y f -> M x y f
-from A = M $ \r _ _ _ _ -> r
-from (B b) = M $ \_ kb _ _ _ -> kb b
-from (C x y) = M $ \_ _ kc _ _ -> kc x y
-from (D f) = M $ \_ _ _ kd _ -> kd f
-from (E x m) = M $ \r kb kc kd ke -> ke x (runM (from m) r kb kc kd ke)

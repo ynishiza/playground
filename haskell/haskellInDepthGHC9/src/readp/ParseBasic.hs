@@ -19,6 +19,7 @@ module ParseBasic (
   and,
   or,
 
+  pbracket,
   test,
   ) where
 {- ORMOLU_ENABLE -}
@@ -101,6 +102,9 @@ and = string "&&" >> return (&&)
 
 or :: PBinary Bool
 or = string "||" >> return (||)
+
+pbracket :: PBinary String
+pbracket = char ',' >> return (\a b -> "(" <> a <> "," <> b <> ")")
 
 test :: IO ()
 test = do

@@ -8,6 +8,7 @@ module ReadPBasic
     and,
     or,
     andOr,
+    bracket,
   )
 where
 
@@ -55,3 +56,7 @@ or = string "||" >> return (||)
 
 andOr :: ReadP (Bool -> Bool -> Bool)
 andOr = and <|> or
+
+bracket :: ReadP (String -> String -> String)
+bracket = char ',' >> return (\a b -> "(" <> a <> "," <> b <> ")")
+

@@ -13,7 +13,6 @@ import Data.Function
 import Data.Tuple
 import Lens
 import Lens.Scratch (deferAp)
-import System.IO.Extra
 import Test.Hspec
 import Tree
 
@@ -32,14 +31,17 @@ expects expected value = value `shouldBe` expected
 expectsIO :: (Show a, Eq a) => a -> IO a -> Expectation
 expectsIO expected io = io >>= (`shouldBe` expected)
 
-expectsIOCapture :: String -> IO () -> Expectation
-expectsIOCapture expected io = captureOutput io >>= (`shouldBe` (expected, ()))
-
 spec :: Spec
 spec = describe "" $ do
   it "Lens" $ do
     (A, True) & view _1 & expects (L.view L._1 (A, True))
     (A, True) & view _2 & expects True
+
+  it "Folds are monoids (https://www.haskellforall.com/2021/09/optics-are-monoids.html)" $ do
+    (A, B) & view (_1 <> _2) & expects (A <> B)
+    zip [1 :: Int ..] [A .. E]
+      & toListOf (traverse . (_1 <> (_2 . to ((* 10) . fromEnum))))
+      & expects [1, 10, 2, 20, 3, 30, 4, 40, 5, 50]
 
   describe "Tree" $ do
     it "gets" $ do
@@ -223,7 +225,7 @@ spec = describe "" $ do
 
         it "gets contravariant" $ do
           (1 :: Int) & toListOf (taking (replicated 5) 3) & expects [1, 1, 1]
-          -- (1 :: Int) & toListOf (dropping (replicated 5) 3) & expects [1, 1]
+        -- (1 :: Int) & toListOf (dropping (replicated 5) 3) & expects [1, 1]
 
         it "gets infinite" $ do
           (1 :: Int) & preview repeated & expects $ Just 1

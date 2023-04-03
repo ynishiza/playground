@@ -28,3 +28,4 @@ compute [] str = str
 compute ((Literal l) : xs) str = compute xs [|$str <> l|]
 compute (D : xs) str = [|\(v :: Int) -> $(compute xs [|$str <> show v|])|]
 compute (S : xs) str = [|\v -> $(compute xs [|$str <> v|])|]
+

@@ -102,12 +102,15 @@ spec = describe "Template" $ do
     describe "printf" $ do
       let parse parser s = A.parseOnly parser (B.pack s)
 
-      it "parses format char" $ do
+      it "parses %d" $ do
         parse P.parseD "%d" `shouldBe` Right P.D
+
         parse P.parseD "d" `shouldBe` Left "D: string"
         parse P.parseD "%" `shouldBe` Left "D: not enough input"
 
+      it "parses %s" $ do
         parse P.parseS "%s" `shouldBe` Right P.S
+
         parse P.parseS "s" `shouldBe` Left "S: string"
         parse P.parseS "%" `shouldBe` Left "S: not enough input"
 
@@ -115,6 +118,9 @@ spec = describe "Template" $ do
         parse P.parseL "hello" `shouldBe` Right (P.Literal "hello")
         parse P.parseL " hello " `shouldBe` Right (P.Literal " hello ")
         parse P.parseL "hello%d" `shouldBe` Right (P.Literal "hello")
+
+        parse P.parseL "%shello" `shouldBe` Left "Literal > literal char: Failed reading: Encountered format S"
+        parse P.parseL "" `shouldBe` Left "Literal > literal char: not enough input"
 
       it "printf" $ do
         $(printf "hello") `shouldBe` ("hello" :: String)
