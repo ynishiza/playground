@@ -70,6 +70,7 @@ import Data.List.NonEmpty qualified as N
 import Data.Monoid
 import Data.Semigroup (Max (..))
 import Lens.Get
+import Lens.Index
 import Lens.Lens
 
 type Fold s a = forall f. (Contravariant f, Applicative f) => (a -> f a) -> s -> f s
@@ -207,7 +208,7 @@ toListOf :: Getting (Endo [a]) s a -> s -> [a]
 toListOf = runGet (\a -> Endo (a :)) (($ []) . appEndo)
 
 toIndexedList :: (Applicative f) => Getting (Indexing f (Int, a)) s a -> s -> f (Int, a)
-toIndexedList = runGet createIndexer (snd . ($ 0) . runIndexing)
+toIndexedList = runGet createIndexer (execIndexing 0)
   where
     createIndexer a = Indexing $ \i -> (i + 1, pure (i, a))
 

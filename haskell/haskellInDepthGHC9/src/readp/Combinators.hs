@@ -47,10 +47,10 @@ where
 import Base.Parse qualified as PB
 import Control.Applicative as X hiding (many, optional, some)
 import Control.Monad
+import Data.Function ((&))
 import Data.Functor
 import Data.List (isPrefixOf)
 import P as X
-import Data.Function ((&))
 
 (+++) :: P a -> P a -> P a
 (+++) = (<|>)
@@ -183,16 +183,19 @@ chainl :: Alternative f => f a -> f (a -> a -> a) -> a -> f a
 chainl pa pop a = pure a <|> chainl1 pa pop
 
 chainl1 :: forall f a. Alternative f => f a -> f (a -> a -> a) -> f a
-chainl1 pa pop = pa <|>  ((&) <$> pa <*> loop)
+chainl1 pa pop = pa <|> ((&) <$> pa <*> loop)
   where
     -- note: loop on function instead of value
-    -- i.e. can't do something like
-    --    
-    --    loopBad :: f a -> f a
-    --    loopBad v = loopBad $ (&) <$> v <*> pop <*> pa
-    --  
-    -- since this calls the loop before parsing a single term and hence loops infinitely.
-    -- Instead, we return f (a -> a) to defer the operation to the caller instead.
+    -- Can't do something like
+    --
+    --    loopLeftRecursion :: f a -> f a
+    --    loopLeftRecursion v = loopLeftRecursion $ (&) <$> v <*> pop <*> pa
+    --
+    -- since this is left recursive
+    -- i.e. it calls the loop before parsing a single term and hence loops infinitely.
+    --
+    -- We need to parse at least one term before calling the loop.
+    -- But this implies we need to defer the operation and return a function (a -> a) instead of a value directly.
     loop :: f (a -> a)
     loop = apply <$> pop <*> pa <*> (pure id <|> loop)
     apply op a foldUp r = foldUp (op r a)

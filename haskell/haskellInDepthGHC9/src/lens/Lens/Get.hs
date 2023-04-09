@@ -21,6 +21,7 @@ module Lens.Get
     to,
     ito,
     like,
+    ilike,
   )
 where
 {- ORMOLU_ENABLE -}
@@ -32,6 +33,8 @@ import Data.Function ((&))
 import Data.Functor.Const
 import Data.Functor.Contravariant
 import Lens.Lens
+import Lens.Index
+import Control.Arrow ((>>>))
 
 type Getter s t a b = forall f. (Contravariant f, Functor f) => (a -> f b) -> s -> f t
 
@@ -41,39 +44,47 @@ type Getting' s a = Getting a s a
 
 type IndexedGetting i r s a = Indexed i a (Const r a) -> s -> Const r s
 
+---- Lens
+
+to :: (Profunctor p, Contravariant f) => (s -> a) -> Optic' p f s a
+to sa = dimap sa (contramap sa) 
+
+ito :: (Indexable i p, Contravariant f) => (s -> (i, a)) -> Over' p f s a
+ito sia pafa s =
+  sia s
+    & uncurry (indexed pafa)
+    & contramap (snd . sia)
+
+like :: (Profunctor p, Functor f, Contravariant f) => a -> Optic' p f s a
+like a = dimap (const a) phantom 
+
+ilike :: (Indexable i p, Functor f, Contravariant f) => i -> a -> Over' p f s a
+ilike i a pafa _ = indexed pafa i a
+  & phantom
+
+-- 
 view :: MonadReader s m => Getting' s a -> m a
 view lens = views lens id
 
-views :: MonadReader s m => Getting' s a -> (a -> r) -> m r
-views lens f = asks (f . getConst . lens Const)
-
-use :: MonadState s m => Getting' s a -> m a
-use lens = gets (view lens)
-
-uses :: MonadState s m => Getting' s a -> (a -> r) -> m r
-uses lens f = gets (views lens f)
-
-listening :: MonadWriter s m => Getting' s a -> m u -> m (u, a)
-listening lens = listens (view lens)
-
-listenings :: MonadWriter s m => Getting' s a -> (a -> r) -> m u -> m (u, r)
-listenings lens f = listens (views lens f)
+views :: MonadReader s m => Getting r s a -> (a -> r) -> m r
+views lens ar = asks (lens (Const . ar) >>> getConst ) 
 
 iview :: MonadReader s m => IndexedGetting i (i, a) s a -> m (i, a)
-iview lens = iviews lens (curry id)
+iview lens = asks (lens f >>> getConst)
+  where f = Indexed $ \i a -> Const (i, a)
 
 iviews :: MonadReader s m => IndexedGetting i r s a -> (i -> a -> r) -> m r
-iviews lens mapping = asks (getConst . lens (Indexed $ \i a -> Const $ mapping i a))
+iviews lens ar = asks (lens f >>> getConst)
+  where f = Indexed $ \i a -> Const (ar i a)
 
-to :: (Profunctor p, Contravariant f) => (s -> a) -> Optic' p f s a
-to g = dimap g (contramap g)
+use :: MonadState s m => Getting a s a -> m a
+use lens = uses lens id
 
-ito :: (Indexable i p, Contravariant f) => (s -> (i, a)) -> Over' p f s a
-ito g ref s =
-  indexed ref i a
-    & contramap (snd . g)
-  where
-    (i, a) = g s
+uses :: MonadState s m => Getting r s a -> (a -> r) -> m r
+uses lens ar = gets (views lens ar)
 
-like :: (Profunctor p, Contravariant f, Functor f) => a -> Optic' p f s a
-like a = dimap (const a) phantom
+listening :: MonadWriter s m => Getting' s a -> m b -> m (b, a)
+listening lens = listenings lens id 
+
+listenings :: MonadWriter s m => Getting r s a -> (a -> r) -> m b -> m (b, r)
+listenings lens ar = listens (views lens ar) 

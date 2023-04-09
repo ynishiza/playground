@@ -6,12 +6,12 @@ module Lens.Set
   ( ASetter,
     ASetter',
     Settable (..),
+    Setter,
     IndexedSetter,
     IndexedSetter',
     AIndexedSetter,
     AIndexedSetter',
 
-    set',
     sets,
     mapped,
     lifted,
@@ -19,6 +19,7 @@ module Lens.Set
     contramapped,
 
     set,
+    set',
     over,
     (+~),
     (-~),
@@ -27,16 +28,19 @@ module Lens.Set
     assign,
     modifying,
 
+    isets,
     iset,
     iover,
   )
 where
 {- ORMOLU_ENABLE -}
 
+import Control.Arrow ((>>>))
 import Control.Monad.State
 import Data.Functor.Contravariant
 import Data.Functor.Identity
 import Lens.Class
+import Lens.Index
 import Lens.Lens
 
 type Setter s t a b = forall f. Settable f => (a -> f b) -> s -> f t
@@ -45,7 +49,7 @@ type ASetter s t a b = (a -> Identity b) -> s -> Identity t
 
 type ASetter' s a = ASetter s s a a
 
-type IndexedSetter i s t a b = forall p f. (Indexable i p, Settable f) => p a (f b) -> p s (f t)
+type IndexedSetter i s t a b = forall p f. (Indexable i p, Settable f) => p a (f b) -> s -> f t
 
 type IndexedSetter' i s a = IndexedSetter i s s a a
 
@@ -60,30 +64,45 @@ class (Applicative f, Traversable f) => Settable f where
   -- untainedDot f = untainted . f
   -- taintedDot f = tainted . f
   untaintedDot :: Profunctor p => p a (f b) -> p a b
+  untaintedDot = rmap untainted
   taintedDot :: Profunctor p => p a b -> p a (f b)
+  taintedDot = rmap tainted
 
 instance Settable Identity where
   untainted = runIdentity
   tainted = Identity
-  untaintedDot = rmap runIdentity
-  taintedDot = rmap Identity
 
 -- ==================== Combinators ====================
 
 sets :: (Profunctor p, Profunctor q, Settable f) => (p a b -> q s t) -> Optical p q f s t a b
-sets fn = taintedDot . fn . untaintedDot
+sets pabqst =
+  untaintedDot
+    >>> pabqst
+    >>> taintedDot
+
+isets :: ((i -> a -> b) -> s -> t) -> IndexedSetter i s t a b
+isets f pafb = f (\i a -> untainted (indexed pafb i a))
+    >>> tainted
 
 mapped :: Functor f => Setter (f a) (f b) a b
-mapped ref = tainted . ((untainted . ref) <$>)
-
-lifted :: Monad m => Setter (m a) (m b) a b
-lifted ref = tainted . (>>= pure . untainted . ref)
-
-argument :: Profunctor p => Setter (p b r) (p a r) a b
-argument ref = tainted . lmap (untainted . ref)
+mapped afb =
+  ((afb >>> untainted) <$>)
+    >>> tainted
 
 contramapped :: Contravariant f => Setter (f b) (f a) a b
-contramapped ref = tainted . contramap (untainted . ref)
+contramapped afb =
+  contramap (afb >>> untainted)
+    >>> tainted
+
+lifted :: Monad m => Setter (m a) (m b) a b
+lifted afb =
+  (>>= (afb >>> untainted >>> pure))
+    >>> tainted
+
+argument :: Profunctor p => Setter (p b r) (p a r) a b
+argument afb =
+  lmap (afb >>> untainted)
+    >>> tainted
 
 -- ==================== Exec ====================
 
@@ -115,4 +134,5 @@ iset :: AIndexedSetter i s t a b -> (i -> b) -> s -> t
 iset lens f = iover lens $ \i _ -> f i
 
 iover :: AIndexedSetter i s t a b -> (i -> a -> b) -> s -> t
-iover lens f = runIdentity . lens (Indexed $ \i a -> Identity (f i a))
+iover lens f = lens (Indexed $ \i a -> Identity (f i a))
+  >>> runIdentity

@@ -3,6 +3,7 @@
 module Lens.Lens
   ( 
     Optical,
+    Optical',
     Optic,
     Optic',
     Lens,
@@ -21,6 +22,8 @@ import Lens.Class as X
 type Lens s t a b = forall f. Functor f => (a -> f b) -> s -> f t
 
 type Optical p q f s t a b = p a (f b) -> q s (f t)
+
+type Optical' p q f s a = Optical p q f s s a a
 
 type Optic p f s t a b = p a (f b) -> p s (f t)
 

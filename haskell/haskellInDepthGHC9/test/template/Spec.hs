@@ -1,5 +1,4 @@
 {-# LANGUAGE MagicHash #-}
--- {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -9,6 +8,7 @@ import Data.Attoparsec.ByteString qualified as A
 import Data.ByteString.Char8 qualified as B
 import GHC.Base
 import GHC.Generics
+import Template.Parse
 import Template.Printf
 import Template.PrintfParser qualified as P
 import Template.QuasiQuote
@@ -32,6 +32,15 @@ myId $[p|x|] = $[|x|]
 
 myId2 :: [simple|Int|] -> Int
 myId2 [simple|x|] = x * 100
+
+[trivial|
+  someTrivialValue :: Int
+  someTrivialValue = 12
+ |]
+
+someTrivialX :: [trivial|Int -> Int|]
+someTrivialX [trivial|x|] =
+  [trivial| 2 * x |]
 
 spec :: Spec
 spec = describe "Template" $ do
@@ -138,3 +147,7 @@ spec = describe "Template" $ do
         someValue `shouldBe` 1
         [simple|hello world|] `shouldBe` "hello world"
         myId2 10 `shouldBe` 1000
+
+      it "with parser" $ do
+        someTrivialValue `shouldBe` 12
+        someTrivialX 10 `shouldBe` 20

@@ -5,6 +5,7 @@
 
 module Lens.Monoid
   ( Indexing (..),
+    execIndexing,
     XFirst (..),
     getXFirst,
     TakeWhileApplicative (..),
@@ -12,12 +13,19 @@ module Lens.Monoid
 where
 
 import Control.Arrow (first, second)
+import Control.Category ((>>>))
 import Data.Functor.Contravariant
 
 -- note: Indexing monoid
 newtype Indexing f a where
   Indexing :: {runIndexing :: Int -> (Int, f a)} -> Indexing f a
   deriving (Functor)
+
+execIndexing :: Int -> Indexing f a -> f a
+execIndexing n =
+  runIndexing
+    >>> ($ n)
+    >>> snd
 
 instance Applicative f => Applicative (Indexing f) where
   pure a = Indexing (,pure a)

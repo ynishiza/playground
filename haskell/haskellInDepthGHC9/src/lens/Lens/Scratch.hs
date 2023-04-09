@@ -14,7 +14,6 @@ import Control.Arrow ((>>>))
 import Data.Functor.Contravariant
 import Debug.Trace (trace)
 import Lens.Lens
-import Lens.TraverseMonoid
 
 newtype DeferAp a o t = DeferAp (CaptureAp () t o a)
   deriving (Show)

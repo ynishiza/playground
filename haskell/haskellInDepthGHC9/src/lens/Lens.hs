@@ -16,6 +16,7 @@ import Lens.Get as X
 import Lens.Set as X
 import Lens.Lens as X
 import Lens.Traverse as X
+import Lens.Index as X
 
 
 class Field1 s t a b | s -> a, t -> b, s b -> t, t a -> s where
