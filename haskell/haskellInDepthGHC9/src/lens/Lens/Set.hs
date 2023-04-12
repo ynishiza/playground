@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TupleSections #-}
 
 {- ORMOLU_DISABLE -}
 module Lens.Set
@@ -7,6 +8,7 @@ module Lens.Set
     ASetter',
     Settable (..),
     Setter,
+    IndexPreservingSetter,
     IndexedSetter,
     IndexedSetter',
     AIndexedSetter,
@@ -17,6 +19,7 @@ module Lens.Set
     lifted,
     argument,
     contramapped,
+    cloneSetter,
 
     set,
     set',
@@ -27,6 +30,9 @@ module Lens.Set
 
     assign,
     modifying,
+    scribe,
+    passing,
+    censoring,
 
     isets,
     iset,
@@ -35,85 +41,81 @@ module Lens.Set
 where
 {- ORMOLU_ENABLE -}
 
-import Control.Arrow ((>>>))
+import Control.Arrow (Arrow (second), (>>>))
 import Control.Monad.State
+import Control.Monad.Writer.Class
+import Data.Coerce (coerce)
+import Data.Function ((&))
 import Data.Functor.Contravariant
 import Data.Functor.Identity
 import Lens.Class
 import Lens.Index
 import Lens.Lens
 
-type Setter s t a b = forall f. Settable f => (a -> f b) -> s -> f t
-
 type ASetter s t a b = (a -> Identity b) -> s -> Identity t
 
 type ASetter' s a = ASetter s s a a
-
-type IndexedSetter i s t a b = forall p f. (Indexable i p, Settable f) => p a (f b) -> s -> f t
-
-type IndexedSetter' i s a = IndexedSetter i s s a a
 
 type AIndexedSetter i s t a b = Indexed i a (Identity b) -> s -> Identity t
 
 type AIndexedSetter' i s a = AIndexedSetter i s s a a
 
-class (Applicative f, Traversable f) => Settable f where
-  untainted :: f a -> a
-  tainted :: a -> f a
-
-  -- untainedDot f = untainted . f
-  -- taintedDot f = tainted . f
-  untaintedDot :: Profunctor p => p a (f b) -> p a b
-  untaintedDot = rmap untainted
-  taintedDot :: Profunctor p => p a b -> p a (f b)
-  taintedDot = rmap tainted
-
-instance Settable Identity where
-  untainted = runIdentity
-  tainted = Identity
-
 -- ==================== Combinators ====================
 
 sets :: (Profunctor p, Profunctor q, Settable f) => (p a b -> q s t) -> Optical p q f s t a b
-sets pabqst =
-  untaintedDot
-    >>> pabqst
-    >>> taintedDot
+sets lensBase kp =
+  rmap untainted kp
+    & lensBase
+    & rmap tainted
 
-isets :: ((i -> a -> b) -> s -> t) -> IndexedSetter i s t a b
-isets f pafb = f (\i a -> untainted (indexed pafb i a))
-    >>> tainted
+setting :: ((a -> b) -> s -> t) -> IndexPreservingSetter s t a b
+setting f p = rmap untainted p
+  & strong (\a b -> undefined)
+  & undefined
 
 mapped :: Functor f => Setter (f a) (f b) a b
-mapped afb =
-  ((afb >>> untainted) <$>)
-    >>> tainted
-
-contramapped :: Contravariant f => Setter (f b) (f a) a b
-contramapped afb =
-  contramap (afb >>> untainted)
-    >>> tainted
+mapped ka x =
+  untaintedDot ka <$> x
+    & tainted
 
 lifted :: Monad m => Setter (m a) (m b) a b
-lifted afb =
-  (>>= (afb >>> untainted >>> pure))
-    >>> tainted
+lifted ka x =
+  x
+    >>= (ka >>> untainted >>> pure)
+    & tainted
 
-argument :: Profunctor p => Setter (p b r) (p a r) a b
-argument afb =
-  lmap (afb >>> untainted)
-    >>> tainted
+contramapped :: Contravariant f => Setter (f a) (f b) b a
+contramapped ka x =
+  contramap (ka >>> untainted) x
+    & tainted
 
--- ==================== Exec ====================
+argument :: (Profunctor p) => Setter (p a c) (p b c) b a
+argument ka f =
+  lmap (ka >>> untainted) f
+    & tainted
+
+isets :: ((i -> a -> b) -> s -> t) -> IndexedSetter i s t a b
+isets lensBase ka x =
+  lensBase (\i a -> untainted (indexed ka i a)) x
+    & tainted
+
+cloneSetter :: ASetter s t a b -> Setter s t a b
+cloneSetter lens ka = (ka >>> untainted >>> Identity)
+  & lens
+  &  (>>> runIdentity >>> tainted)
+
+-- ==================== Functor effect ====================
 
 set :: ASetter s t a b -> b -> s -> t
 set lens b = over lens (const b)
 
-set' :: ASetter' s a -> a -> s -> s
+set' :: ASetter s t a a -> a -> s -> t
 set' = set
 
 over :: ASetter s t a b -> (a -> b) -> s -> t
-over lens fn = runIdentity . lens (Identity . fn)
+over lens f s =
+  lens (f >>> coerce) s
+    & coerce
 
 (+~) :: Num a => ASetter s t a a -> a -> s -> t
 lens +~ v = over lens (+ v)
@@ -130,9 +132,25 @@ assign lens b = modify (set lens b)
 modifying :: MonadState s m => ASetter s s a b -> (a -> b) -> m ()
 modifying lens f = modify (over lens f)
 
+scribe :: (MonadWriter w m, Monoid s) => ASetter s w a a -> a -> m ()
+scribe lens a =
+  set lens a mempty
+    & tell
+
+passing :: MonadWriter w m => ASetter w w u v -> m (a, u -> v) -> m a
+passing lens =
+  (>>= (second (over lens) >>> return))
+    >>> pass
+
+censoring :: MonadWriter w m => (u -> v) -> ASetter w w u v -> m a -> m a
+censoring f lens =
+  ((,f) <$>)
+    >>> passing lens
+
 iset :: AIndexedSetter i s t a b -> (i -> b) -> s -> t
 iset lens f = iover lens $ \i _ -> f i
 
 iover :: AIndexedSetter i s t a b -> (i -> a -> b) -> s -> t
-iover lens f = lens (Indexed $ \i a -> Identity (f i a))
-  >>> runIdentity
+iover lens f =
+  lens (Indexed $ \i a -> Identity (f i a))
+    >>> runIdentity

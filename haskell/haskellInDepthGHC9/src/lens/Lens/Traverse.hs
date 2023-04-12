@@ -21,12 +21,6 @@ import Control.Arrow ((>>>))
 import Lens.Monoid
 import Lens.Lens
 
-type Traversal s t a b = forall f. Applicative f => (a -> f b) -> s -> f t
-
-type IndexedTraversal i s t a b = forall p f. (Indexable i p, Applicative f) => p a (f b) -> s -> f t
-
-type IndexedTraversal' i s a = IndexedTraversal i s s a a
-
 traversal :: ((a -> f b) -> s -> f t) -> LensLike f s t a b
 traversal = id
 

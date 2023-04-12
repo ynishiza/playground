@@ -13,6 +13,7 @@ import Data.Function
 import Data.Tuple
 import Lens
 import Lens.Scratch (deferAp)
+import Person
 import Test.Hspec
 import Tree
 
@@ -49,92 +50,117 @@ spec = describe "" $ do
       & toListOf (traverse . (_1 <> (_2 . to ((* 10) . fromEnum))))
       & expects [1, 10, 2, 20, 3, 30, 4, 40, 5, 50]
 
-  describe "Tree" $ do
-    it "gets" $ do
-      let t :: Tree Int
-          t =
-            Node
-              ( Node
-                  (Leaf 1)
-                  ( Node
-                      (Leaf 10)
-                      (Leaf 3)
-                  )
-              )
-              (Leaf (-1))
-      -- get
-      t
-        & preview _right
-        & expects
-        $ Just (Leaf (-1))
-      t
-        & preview (_right . _leaf)
-        & expects
-        $ Just (-1)
-      t
-        & preview (_right . _left)
-        & expects Nothing
-      t
-        & preview (_right . _right)
-        & expects Nothing
+  describe "User defined data types" $ do
+    describe "[Record data type] person" $ do
+      let personA = Person "A" A
+          personB = Person "B" B
+          persons = [personA, personB]
 
-      t
-        & preview (_left . _left . _leaf)
-        & expects
-        $ Just 1
-      t
-        & preview (_left . _right . _left . _leaf)
-        & expects
-        $ Just 10
-      t
-        & preview (_left . _right . _right . _leaf)
-        & expects
-        $ Just 3
-      t
-        & preview (_left . _left)
-        & expects
-        $ Just (Leaf 1)
-      t
-        & preview _leaf
-        & expects Nothing
+      it "gets" $ do
+        personA
+          & view _name
+          & expects "A"
+        personA
+          & view _value
+          & expects A
+        persons
+          & toListOf (traverse . _name)
+          & expects ["A", "B"]
 
-    it "sets" $ do
-      let t :: Tree Int
-          t =
-            Node
-              ( Node
-                  (Leaf 1)
-                  (Leaf 10)
-              )
-              (Leaf 4)
+      it "sets" $ do
+        personA
+          & set _name "a"
+          & expects (Person "a" A)
+        personA
+          & set _value Z
+          & expects (Person "A" Z)
 
-      t
-        & set traverse 'a'
-        & expects
-        $ Node
-          ( Node
-              (Leaf 'a')
-              (Leaf 'a')
-          )
-          (Leaf 'a')
-      t
-        & set mapped 'a'
-        & expects
-        $ Node
-          ( Node
-              (Leaf 'a')
-              (Leaf 'a')
-          )
-          (Leaf 'a')
-      t
-        & over traverse (* 10)
-        & expects
-        $ Node
-          ( Node
-              (Leaf 10)
-              (Leaf 100)
-          )
-          (Leaf 40)
+    describe "[Recursive data type] Tree" $ do
+      it "gets" $ do
+        let t :: Tree Int
+            t =
+              Node
+                ( Node
+                    (Leaf 1)
+                    ( Node
+                        (Leaf 10)
+                        (Leaf 3)
+                    )
+                )
+                (Leaf (-1))
+        -- get
+        t
+          & preview _right
+          & expects
+          $ Just (Leaf (-1))
+        t
+          & preview (_right . _leaf)
+          & expects
+          $ Just (-1)
+        t
+          & preview (_right . _left)
+          & expects Nothing
+        t
+          & preview (_right . _right)
+          & expects Nothing
+
+        t
+          & preview (_left . _left . _leaf)
+          & expects
+          $ Just 1
+        t
+          & preview (_left . _right . _left . _leaf)
+          & expects
+          $ Just 10
+        t
+          & preview (_left . _right . _right . _leaf)
+          & expects
+          $ Just 3
+        t
+          & preview (_left . _left)
+          & expects
+          $ Just (Leaf 1)
+        t
+          & preview _leaf
+          & expects Nothing
+
+      it "sets" $ do
+        let t :: Tree Int
+            t =
+              Node
+                ( Node
+                    (Leaf 1)
+                    (Leaf 10)
+                )
+                (Leaf 4)
+
+        t
+          & set traverse 'a'
+          & expects
+          $ Node
+            ( Node
+                (Leaf 'a')
+                (Leaf 'a')
+            )
+            (Leaf 'a')
+        t
+          & set mapped 'a'
+          & expects
+          $ Node
+            ( Node
+                (Leaf 'a')
+                (Leaf 'a')
+            )
+            (Leaf 'a')
+        t
+          & over traverse (* 10)
+          & expects
+          $ Node
+            ( Node
+                (Leaf 10)
+                (Leaf 100)
+            )
+            (Leaf 40)
 
   describe "Lens.Index" $ do
     it "[reindex]" $ do
@@ -834,8 +860,8 @@ spec = describe "" $ do
           & iset traversed (< (2 :: Int))
           & expects [True, True, False, False]
         [A .. D]
-          & iset traversed (< (2 :: Int))
-          & expects [True, True, False, False]
+          & iover traversed (,)
+          & expects [(0 :: Int, A), (1, B), (2, C), (3, D)]
 
     describe "Prelude" $ do
       it "[Prelude]" $ do
@@ -855,6 +881,23 @@ spec = describe "" $ do
         (1 :: Int, A)
           & _1 ?~ 4
           & expects (Just (4 :: Int), A)
+
+  describe "Lens.Prism" $ do
+    it "[_Just, _Nothing]" $ do
+      [Just True, Nothing, Just False]
+        & itoListOf (folded . _Just)
+        & expects [(0 :: Int, True), (2, False)]
+      [Just True, Nothing, Just False]
+        & itoListOf (folded . _Nothing)
+        & expects [(1 :: Int, ())]
+
+    it "[_Left, _Right]" $ do
+      [Right True, Left A, Right False, Left Z]
+        & itoListOf (folded . _Right)
+        & expects [(0 :: Int, True), (2, False)]
+      [Right True, Left A, Right False, Left Z]
+        & itoListOf (folded . _Left)
+        & expects [(1 :: Int, A), (3, Z)]
 
   it "scratch" $ do
     putStrLn "== preview ==="

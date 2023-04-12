@@ -59,24 +59,3 @@ lensF = lensL
 
 lensS :: Fold (a, c) a
 lensS = lensL
-
--- isTraversal_Setter :: Traversal s t a b -> Setter s t a b
--- isTraversal_Setter = id
-
--- isGetter_Fold :: Getter s s a a -> Fold s a
--- isGetter_Fold = id
-
--- isTravesal_Fold :: Traversal s s a a -> Fold s a
--- isTravesal_Fold = id
-
--- isTraverse_traversal :: Traversable t => Traversal (t a) (t a) a a
--- isTraverse_traversal = traverse
-
--- isGetter_Getting :: Getter s s a a -> Getting r s a
--- isGetter_Getting = id
-
--- isFold_Getting :: Monoid r => Fold s a -> Getting r s a
--- isFold_Getting = id
-
--- isIndexedFold_Fold :: IndexedFold i s a -> Fold s a
--- isIndexedFold_Fold = id

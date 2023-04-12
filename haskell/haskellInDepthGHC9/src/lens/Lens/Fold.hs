@@ -56,7 +56,6 @@ module Lens.Fold
     elemIndicesOf,
     ifoldMapOf,
     itoListOf,
-
   )
 where
 {- ORMOLU_ENABLE -}
@@ -72,10 +71,6 @@ import Data.Semigroup (Max (..))
 import Lens.Get
 import Lens.Index
 import Lens.Lens
-
-type Fold s a = forall f. (Contravariant f, Applicative f) => (a -> f a) -> s -> f s
-
-type IndexedFold i s a = forall f p. (Indexable i p, Contravariant f, Applicative f) => p a (f a) -> s -> f s
 
 asIndexed :: Monoid r => IndexedFold i s a -> IndexedGetting i r s a
 asIndexed = id
@@ -102,7 +97,7 @@ iterated next k = go
 replicated :: Int -> Fold a a
 replicated n = folding (replicate n)
 
-filtered :: (Choice p, Applicative f) => (a -> Bool) -> Optic' p f a a
+filtered :: (ProfunctorChoice p, Applicative f) => (a -> Bool) -> Optic' p f a a
 filtered predicate =
   dimap
     (\a -> if predicate a then Right a else Left a)

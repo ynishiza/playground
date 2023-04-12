@@ -5,6 +5,7 @@
 
 module Lens.Index
   ( Indexed (..),
+    selfIndex,
     reindex,
     indexing,
     indices,
@@ -28,22 +29,20 @@ instance Applicative (Indexed i a) where
 instance Profunctor (Indexed i) where
   dimap g h (Indexed f) = Indexed $ \i -> h . f i . g
 
-instance NormalProfunctor (Indexed i) where
-  normalDimap f g (Indexed fn) = Indexed $ \i a -> g a $ fn i $ f a
+instance ProfunctorArrow (Indexed i) where
+  arr' f = Indexed $ \_ a -> f a
+  first' (Indexed f) = Indexed $ \i (a, c) -> (f i a, c)
 
-instance ToProfunctor (Indexed i) where
-  toProfunctor = Indexed . const
-
-instance Choice (Indexed i) where
+instance ProfunctorChoice (Indexed i) where
   left' (Indexed f) = Indexed $ \i x -> case x of
     (Left a) -> Left $ f i a
     (Right c) -> Right c
-  right' (Indexed f) = Indexed $ \i x -> case x of
-    (Right a) -> Right $ f i a
-    (Left c) -> Left c
 
 instance Indexable i (Indexed i) where
   indexed = runIndexed
+
+selfIndex :: Indexable a p => p a b -> a -> b
+selfIndex pab a = indexed pab a a
 
 reindex :: Indexable j p => (i -> j) -> (Indexed i a b -> r) -> p a b -> r
 reindex f lens pab = lens $ Indexed $ \i a -> indexed pab (f i) a
