@@ -40,8 +40,6 @@ type Setter s t a b = forall f. Settable f => (a -> f b) -> s -> f t
 
 type Fold s a = forall f. (Contravariant f, Applicative f) => (a -> f a) -> s -> f s
 
-type IndexedFold i s a = forall f p. (Indexable i p, Contravariant f, Applicative f) => p a (f a) -> s -> f s
-
 type Getter s t a b = forall f. (Contravariant f, Functor f) => (a -> f b) -> s -> f t
 
 type Traversal s t a b = forall f. Applicative f => (a -> f b) -> s -> f t
@@ -61,6 +59,8 @@ type IndexedSetter i s t a b = forall p f. (Indexable i p, Settable f) => p a (f
 type IndexedSetter' i s a = IndexedSetter i s s a a
 
 type IndexPreservingSetter s t a b = forall p f. (ProfunctorArrow p, Settable f) => p a (f b) -> p s (f t)
+
+type IndexedFold i s a = forall f p. (Indexable i p, Contravariant f, Applicative f) => p a (f a) -> s -> f s
 
 type IndexedTraversal i s t a b = forall p f. (Indexable i p, Applicative f) => p a (f b) -> s -> f t
 

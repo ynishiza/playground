@@ -174,7 +174,7 @@ runGet :: (a -> r) -> (r -> b) -> Getting r s a -> s -> b
 runGet wrapper unwrapper lens = unwrapper . getConst . lens (Const . wrapper)
 
 preview :: Getting (XFirst a) s a -> s -> Maybe a
-preview = runGet (Just >>> XFirst) getXFirst
+preview = runGet (XFirst . Just) getXFirst
 
 foldOf :: Getting a s a -> s -> a
 foldOf useA = getConst . useA Const
@@ -185,15 +185,15 @@ foldMapOf useA f = f . foldOf useA
 foldrOf :: Getting (Endo r) s a -> (a -> r -> r) -> r -> s -> r
 foldrOf getFold f r0 =
   runGet
-    (f >>> Endo)
-    (appEndo >>> ($ r0))
+    (Endo . f)
+    (($ r0) . appEndo)
     getFold
 
 foldlOf :: Getting (Dual (Endo r)) s a -> (r -> a -> r) -> r -> s -> r
 foldlOf getFold f r0 =
   runGet
-    (flip f >>> Endo >>> Dual)
-    (getDual >>> appEndo >>> ($ r0))
+    (Dual . Endo . flip f)
+    (($ r0) . appEndo . getDual)
     getFold
 
 toNonEmptyOf :: Getting (Endo (N.NonEmpty a)) s a -> a -> s -> N.NonEmpty a
@@ -262,7 +262,7 @@ elemIndicesOf :: Eq a => IndexedGetting i (Endo [i]) s a -> a -> s -> [i]
 elemIndicesOf lens a0 =
   runIndexedGet
     (\i a -> Endo $ \r -> if a == a0 then i : r else r)
-    (appEndo >>> ($ []))
+    (($ []) . appEndo)
     lens
 
 ifoldMapOf :: IndexedGetting i r s a -> (i -> a -> r) -> s -> r
@@ -275,4 +275,4 @@ itoListOf :: IndexedGetting i (Endo [(i, a)]) s a -> s -> [(i, a)]
 itoListOf =
   runIndexedGet
     (\i a -> Endo $ \l -> (i, a) : l)
-    (appEndo >>> ($ []))
+    (($ []) . appEndo)

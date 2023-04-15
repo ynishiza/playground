@@ -92,7 +92,7 @@ instance Functor m => Profunctor (Kleisli m) where
   dimap l r (Kleisli f) = Kleisli $ l >>> f >>> (r <$>)
 
 instance Applicative m => ProfunctorArrow (Kleisli m) where
-  arr' f = Kleisli $ f >>> pure
+  arr' f = Kleisli $ pure . f
   first' (Kleisli f) = Kleisli $ \(a, b) -> (,b) <$> f a
 
 instance Applicative m => ProfunctorChoice (Kleisli m) where

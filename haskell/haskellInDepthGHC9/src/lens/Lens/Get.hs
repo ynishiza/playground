@@ -1,7 +1,7 @@
 {-# LANGUAGE RankNTypes #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
 {-# HLINT ignore "Use curry" #-}
+{-# LANGUAGE TupleSections #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {- ORMOLU_DISABLE -}
 module Lens.Get
@@ -20,13 +20,13 @@ module Lens.Get
 
     to,
     ito,
+    ito',
     like,
     ilike,
   )
 where
 {- ORMOLU_ENABLE -}
 
-import Control.Arrow ((>>>))
 import Control.Monad.Reader
 import Control.Monad.State
 import Control.Monad.Writer
@@ -48,10 +48,15 @@ to :: (Profunctor p, Contravariant f) => (s -> a) -> Optic' p f s a
 to sa = dimap sa (contramap sa)
 
 ito :: (Indexable i p, Contravariant f) => (s -> (i, a)) -> Over' p f s a
-ito f ka =
-  f 
-    >>> uncurry (indexed ka)
-    >>> contramap (snd . f)
+ito f ka s =
+  f s
+    & uncurry (indexed ka)
+    & contramap (snd . f)
+
+ito' :: (Indexable i p, Contravariant f) => (i -> s -> (i, a)) -> p a (f a) -> Indexed i s (f s)
+ito' f ka = Indexed $ \i s ->
+  uncurry (indexed ka) (f i s)
+    & contramap (snd . f i)
 
 like :: (Profunctor p, Functor f, Contravariant f) => a -> Optic' p f s a
 like a = dimap (const a) phantom
@@ -68,15 +73,15 @@ view :: MonadReader s m => Getting' s a -> m a
 view lens = views lens id
 
 views :: MonadReader s m => Getting r s a -> (a -> r) -> m r
-views lens ar = asks (lens (Const . ar) >>> getConst)
+views lens ar = asks (getConst . lens (Const . ar))
 
 iview :: MonadReader s m => IndexedGetting i (i, a) s a -> m (i, a)
-iview lens = asks (lens f >>> getConst)
+iview lens = asks (getConst . lens f)
   where
     f = Indexed $ \i a -> Const (i, a)
 
 iviews :: MonadReader s m => IndexedGetting i r s a -> (i -> a -> r) -> m r
-iviews lens ar = asks (lens f >>> getConst)
+iviews lens ar = asks (getConst . lens f)
   where
     f = Indexed $ \i a -> Const (ar i a)
 

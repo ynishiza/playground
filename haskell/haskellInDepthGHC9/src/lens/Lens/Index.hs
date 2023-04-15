@@ -10,10 +10,15 @@ module Lens.Index
     indexing,
     indices,
     index,
+    withIndex,
+    asIndex,
+    (<.>),
+    (.>),
+    (<.),
   )
 where
 
-import Control.Arrow ((>>>))
+import Data.Function ((&))
 import Lens.Class
 import Lens.Lens
 
@@ -38,21 +43,63 @@ instance ProfunctorChoice (Indexed i) where
     (Left a) -> Left $ f i a
     (Right c) -> Right c
 
-instance Indexable i (Indexed i) where
+-- NOTE: i ~ j for type inference
+--
+--    instance Indexable i (Indexed i)                  BAD  instance Indexable i (Indexed j) exists only if i == j
+--    instance i ~ j => Indexable i (Indexed j)         GOOD instance Indexable i (Indexed j) exists for any i, j but valid only if i == j
+--
+-- e.g.
+--    -- with i ~ j
+--    itoListOf folded [True, False]                    OK. [(0, True), (1, False)]
+--
+--    -- without i ~ j
+--    itoListOf folded [True, False]                    ERROR. "Ambiguous type variable ..."
+--
+instance i ~ j => Indexable i (Indexed j) where
   indexed = runIndexed
 
+-- use index of outer
+(<.) :: Indexable i p => (Indexed i s t -> r) -> ((a -> b) -> s -> t) -> p a b -> r
+(<.) lens1 lens2 ka = lens1 $
+  Indexed $
+    \i -> lens2 (indexed ka i)
+
+-- zip indices 
+(<.>) :: Indexable (i, j) p => (Indexed i s t -> r) -> (Indexed j a b -> s -> t) -> p a b -> r
+(<.>) = icompose (,)
+
+-- use index of inner
+(.>) :: ((s -> t) -> r) -> (p a b -> s -> t) -> p a b -> r
+(.>) lens1 lens2 ka =
+  lens1 $
+    lens2 ka
+
+icompose :: Indexable k p => (i -> j -> k) -> (Indexed i s t -> r) -> (Indexed j a b -> s -> t) -> p a b -> r
+icompose f lens1 lens2 ka = lens1 $ 
+  Indexed $ \i -> lens2 $ 
+    Indexed $ \j -> indexed ka (f i j)
+
 selfIndex :: Indexable a p => p a b -> a -> b
-selfIndex pab a = indexed pab a a
+selfIndex ka a = indexed ka a a
 
 reindex :: Indexable j p => (i -> j) -> (Indexed i a b -> r) -> p a b -> r
-reindex f lens pab = lens $ Indexed $ \i a -> indexed pab (f i) a
+reindex f lens ka = lens $ Indexed $ \i a -> indexed ka (f i) a
+
 
 indexing :: Indexable Int p => LensLike (Indexing f) s t a b -> Over p f s t a b
-indexing lens pafb =
-  lens f
-    >>> execIndexing 0
+indexing lens ka s =
+  lens run s
+    & execIndexing 0
   where
-    f a = Indexing $ \i -> (i + 1, indexed pafb i a)
+    run a = Indexing $ \i -> (i + 1, indexed ka i a)
+
+-- traverse indices
+asIndex :: (Indexable i p, Functor f) => p i (f i) -> Indexed i s (f s)
+asIndex ki = Indexed $ \i s -> s <$ indexed ki i i
+
+-- traverse (index, value) pair
+withIndex :: (Indexable i p, Functor f) => p (i, s) (f (j, t)) -> Indexed i s (f t)
+withIndex ki = Indexed $ \i s -> snd <$> indexed ki i (i, s)
 
 indices :: (Indexable i p, Applicative f) => (i -> Bool) -> Optical' p (Indexed i) f a a
 indices predicate pafa = Indexed $ \i a -> if predicate i then indexed pafa i a else pure a

@@ -57,6 +57,8 @@ type family IsEven a where
 computeIfEvenT :: (IsEven n ~ 'True) => SNat n -> IO ()
 computeIfEvenT n = putStrLn $ show (snatToNatural n) ++ " is even"
 
+x = computeIfEvenT (SS @('S ('S 'Z)))
+
 useSomeEvenT :: forall n. SNat n -> IO ()
 useSomeEvenT n = case decideEven2 n of
                    Yes Refl -> computeIfEvenT n

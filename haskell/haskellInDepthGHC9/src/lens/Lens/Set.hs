@@ -69,9 +69,10 @@ sets lensBase kp =
     & rmap tainted
 
 setting :: ((a -> b) -> s -> t) -> IndexPreservingSetter s t a b
-setting f p = rmap untainted p
-  & strong (\a b -> undefined)
-  & undefined
+setting f p =
+  rmap untainted p
+    & strong (\a b -> undefined)
+    & undefined
 
 mapped :: Functor f => Setter (f a) (f b) a b
 mapped ka x =
@@ -81,17 +82,17 @@ mapped ka x =
 lifted :: Monad m => Setter (m a) (m b) a b
 lifted ka x =
   x
-    >>= (ka >>> untainted >>> pure)
+    >>= (pure . untainted . ka)
     & tainted
 
 contramapped :: Contravariant f => Setter (f a) (f b) b a
 contramapped ka x =
-  contramap (ka >>> untainted) x
+  contramap (untainted . ka) x
     & tainted
 
 argument :: (Profunctor p) => Setter (p a c) (p b c) b a
 argument ka f =
-  lmap (ka >>> untainted) f
+  lmap (untainted . ka) f
     & tainted
 
 isets :: ((i -> a -> b) -> s -> t) -> IndexedSetter i s t a b
@@ -100,9 +101,10 @@ isets lensBase ka x =
     & tainted
 
 cloneSetter :: ASetter s t a b -> Setter s t a b
-cloneSetter lens ka = (ka >>> untainted >>> Identity)
-  & lens
-  &  (>>> runIdentity >>> tainted)
+cloneSetter lens ka =
+  (Identity . untainted . ka)
+    & lens
+    & (>>> (tainted . runIdentity))
 
 -- ==================== Functor effect ====================
 
@@ -114,7 +116,7 @@ set' = set
 
 over :: ASetter s t a b -> (a -> b) -> s -> t
 over lens f s =
-  lens (f >>> coerce) s
+  lens (coerce . f) s
     & coerce
 
 (+~) :: Num a => ASetter s t a a -> a -> s -> t
@@ -139,7 +141,7 @@ scribe lens a =
 
 passing :: MonadWriter w m => ASetter w w u v -> m (a, u -> v) -> m a
 passing lens =
-  (>>= (second (over lens) >>> return))
+  (>>= (return . second (over lens) ))
     >>> pass
 
 censoring :: MonadWriter w m => (u -> v) -> ASetter w w u v -> m a -> m a

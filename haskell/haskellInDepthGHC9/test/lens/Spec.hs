@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RankNTypes #-}
 {-# HLINT ignore "Take on a non-positive" #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -165,27 +167,59 @@ spec = describe "" $ do
   describe "Lens.Index" $ do
     it "[reindex]" $ do
       [A .. D]
-        & itoListOf (reindex (* (100 :: Int)) folded)
-        & expects [(0 :: Int, A), (100, B), (200, C), (300, D)]
+        & itoListOf (reindex (* 100) folded)
+        & expects [(0, A), (100, B), (200, C), (300, D)]
 
     it "[indexing]" $ do
       [A .. D]
         & itoListOf (indexing traverse)
-        & expects [(0 :: Int, A), (1, B), (2, C), (3, D)]
+        & expects [(0, A), (1, B), (2, C), (3, D)]
 
     it "[index, indices]" $ do
       [A .. D]
         & toListOf (folded . indices (even @Int))
         & expects [A, C]
       [A .. D]
-        & toListOf (folded . index (0 :: Int))
+        & toListOf (folded . index 0)
         & expects [A]
       [A .. D]
-        & toListOf (folded . index (1 :: Int))
+        & toListOf (folded . index 1)
         & expects [B]
       [A .. D]
-        & toListOf (folded . index (100 :: Int))
+        & toListOf (folded . index 100)
         & expects []
+
+    it "[withIndex, asIndex]" $ do
+      [A .. D]
+        & toListOf (folded . asIndex)
+        & expects [0, 1, 2, 3]
+      [A .. D]
+        & toListOf (folded . asIndex . to (even @Int))
+        & expects [True, False, True, False]
+      [A .. D]
+        & toListOf (folded . withIndex)
+        & expects [(0, A), (1, B), (2, C), (3, D)]
+
+    it "[<.>]" $ do
+      [[A, B], [C, D, E]]
+        & itoListOf (folded <.> folded)
+        & expects [((0, 0), A), ((0, 1), B), ((1, 0), C), ((1, 1), D), ((1, 2), E)]
+
+      [[A, B], [C, D, E]]
+        & itoListOf (folded <. folded)
+        & expects [(0, A), (0, B), (1, C), (1, D), (1, E)]
+
+      [[A, B], [C, D, E]]
+        & itoListOf (folded .> folded)
+        & expects [(0, A), (1, B), (0, C), (1, D), (2, E)]
+
+      [A .. D]
+        & itoListOf (folded <.> ito (\x -> (fromEnum x * 10, x)))
+        & expects [((0, 10), A), ((1, 20), B), ((2, 30), C), ((3, 40), D)]
+
+      [A .. D]
+        & itoListOf (folded <.> (ito (\x -> (fromEnum x, x)) . withIndex))
+        & expects [((0, 1), (1, A)), ((1, 2), (2, B)), ((2, 3), (3, C)), ((3, 4), (4, D))]
 
   describe "Lens.Get" $ do
     let deepData =
@@ -251,7 +285,7 @@ spec = describe "" $ do
         & flip evalStateT deepData
         & expectsIO B
 
-    describe "combinators" $ do
+    describe "Lenses" $ do
       it "[like] constant values" $ do
         -- like: constant
         deepData
@@ -265,7 +299,10 @@ spec = describe "" $ do
           & expects
           $ "aaaa"
 
-      it "[to, ito] construct getter" $ do
+      it "[to, ito] map getter" $ do
+        'a'
+          & view (to succ)
+          & expects 'b'
         deepData
           & view (_1 . to succ)
           & expects B
@@ -276,13 +313,25 @@ spec = describe "" $ do
           & toListOf (_2 . _2 . _2 . _2 . _1 . traverse . to toUpper)
           & expects "ABCD"
 
+        -- chain
+        ["1", "2", "3", "4", "5", "10"]
+          & toListOf (traverse . to (read @Int) . to (\i -> if even i then Just i else Nothing) . _Just)
+          & expects [2, 4, 10]
+
         -- ito
-        zip [A .. E] [1 :: Int ..]
-          & ianyOf (traverse . ito swap) (\(i :: Int) _ -> i < 10)
-          & expects True
-        zip [A .. E] [1 :: Int ..]
-          & ianyOf (traverse . ito swap) (\(i :: Int) _ -> i > 10)
-          & expects False
+        zip [A .. E] [1 ..]
+          & itoListOf (traverse . ito swap)
+          & expects [(1 :: Int, A), (2, B), (3, C), (4, D), (5, E)]
+
+      it "[ito'] map preserving indices" $ do
+        [A .. E]
+          & itoListOf (indexing traverse . ito' (\i x -> (i * 10, x)))
+          & expects [(0, A), (10, B), (20, C), (30, D), (40, E)]
+
+        -- ito' = withIndex . ito
+        [A .. E]
+          & itoListOf (indexing traverse . withIndex . ito (\(i, x) -> (i * 10, x)))
+          & expects [(0, A), (10, B), (20, C), (30, D), (40, E)]
 
   describe "Lens.Fold" $ do
     it "folds" $ do
@@ -304,7 +353,7 @@ spec = describe "" $ do
         & preview traverse
         & expects (Nothing :: Maybe ())
 
-    describe "combinators" $ do
+    describe "Lenses" $ do
       it "[folded] traverse with index" $ do
         -- folded
         zip [A .. E] ['a' ..]
@@ -539,7 +588,7 @@ spec = describe "" $ do
           & expects
           $ words text
 
-    describe "Prelude" $ do
+    describe "Effects" $ do
       it "[Prelude]" $ do
         let x =
               [A .. E]
@@ -608,15 +657,15 @@ spec = describe "" $ do
 
         x
           & itoListOf (folded . _1)
-          & expects [(0 :: Int, A), (1, B), (2, C), (3, D), (4, E)]
+          & expects [(0, A), (1, B), (2, C), (3, D), (4, E)]
         x
           & itoListOf (folded . _2)
-          & expects [(0 :: Int, 1), (1, 2), (2, 3), (3, 4), (4, 5)]
+          & expects [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5)]
         x
-          & ifoldMapOf (folded . _1) (\(i :: Int) a -> show i <> show a <> ":")
+          & ifoldMapOf (folded . _1) (\i a -> show i <> show a <> ":")
           & expects "0A:1B:2C:3D:4E:"
         x
-          & ifoldMapOf (folded . _2) (\(i :: Int) a -> show i <> show a <> ":")
+          & ifoldMapOf (folded . _2) (\i a -> show i <> show a <> ":")
           & expects "01:12:23:34:45:"
 
       it "[elemIndexOf] get index of element" $ do
@@ -626,7 +675,7 @@ spec = describe "" $ do
         [A .. E]
           & elemIndexOf folded A
           & expects
-          $ Just (0 :: Int)
+          $ Just 0
         [A .. E]
           & elemIndexOf folded Z
           & expects
@@ -638,16 +687,16 @@ spec = describe "" $ do
         x
           & elemIndexOf (folded . _1) B
           & expects
-          $ Just (1 :: Int)
+          $ Just 1
         [A, B, C, A, D, E, A]
           & elemIndicesOf folded A
-          & expects [0 :: Int, 3, 6]
+          & expects [0, 3, 6]
         [A, B, C, A, D, E]
           & elemIndicesOf folded Z
           & expects ([] @Int)
 
   describe "Lens.Traverse" $ do
-    describe "combinators" $ do
+    describe "Lenses" $ do
       it "[element, elements] get value at index" $ do
         let x =
               [A .. E]
@@ -757,38 +806,7 @@ spec = describe "" $ do
         & over mapped succ
         & expects [B, C, D, E]
 
-    it "[set] set fixed value" $ do
-      A
-        & set id D
-        & expects D
-
-      -- composition
-      (A, 'a')
-        & set _1 B
-        & expects (B, 'a')
-      (A, 'a')
-        & set _2 1
-        & expects (A, 1 :: Int)
-      [A, B, C]
-        & set traverse B
-        & expects [B, B, B]
-
-    it "[over] map value" $ do
-      A
-        & over id succ
-        & expects B
-      A
-        & over id show
-        & expects "A"
-
-      (A, 'a')
-        & over _1 succ
-        & expects (B, 'a')
-      [A, B, C]
-        & over traverse succ
-        & expects [B, C, D]
-
-    describe "combinators" $ do
+    describe "Lenses" $ do
       it "[sets] create setter" $ do
         let pairBoth = sets (\f (a, a') -> (f a, f a'))
 
@@ -857,13 +875,44 @@ spec = describe "" $ do
     describe "Indexed" $ do
       it "[iset, iover]" $ do
         [A .. D]
-          & iset traversed (< (2 :: Int))
+          & iset traversed (< 2)
           & expects [True, True, False, False]
         [A .. D]
           & iover traversed (,)
           & expects [(0 :: Int, A), (1, B), (2, C), (3, D)]
 
-    describe "Prelude" $ do
+    describe "Effects" $ do
+      it "[set] set fixed value" $ do
+        A
+          & set id D
+          & expects D
+
+        -- composition
+        (A, 'a')
+          & set _1 B
+          & expects (B, 'a')
+        (A, 'a')
+          & set _2 1
+          & expects (A, 1 :: Int)
+        [A, B, C]
+          & set traverse B
+          & expects [B, B, B]
+
+      it "[over] map value" $ do
+        A
+          & over id succ
+          & expects B
+        A
+          & over id show
+          & expects "A"
+
+        (A, 'a')
+          & over _1 succ
+          & expects (B, 'a')
+        [A, B, C]
+          & over traverse succ
+          & expects [B, C, D]
+
       it "[Prelude]" $ do
         (1 :: Int)
           & id +~ 3
@@ -883,23 +932,173 @@ spec = describe "" $ do
           & expects (Just (4 :: Int), A)
 
   describe "Lens.Prism" $ do
-    it "[_Just, _Nothing]" $ do
-      [Just True, Nothing, Just False]
-        & itoListOf (folded . _Just)
-        & expects [(0 :: Int, True), (2, False)]
-      [Just True, Nothing, Just False]
-        & itoListOf (folded . _Nothing)
-        & expects [(1 :: Int, ())]
+    it "composes" $ do
+      Just (Just (Left ((), Right True)))
+        & preview (_Just . _Just . _Left . _2 . _Right)
+        & expects (Just True)
+      Just (Just (Left ((), Right @String True)))
+        & preview (_Just . _Just . _Left . _2 . _Left)
+        & expects Nothing
+      Just (Just (Left ((), Right True)))
+        & preview (_Just . _Just . (_Right @((), Either Int Bool) @String))
+        & expects Nothing
+      Just (Just (Left ((), Right True)))
+        & preview (_Just . _Nothing)
+        & expects Nothing
+      Just (Just (Left ((), Right True)))
+        & preview _Nothing
+        & expects Nothing
 
-    it "[_Left, _Right]" $ do
-      [Right True, Left A, Right False, Left Z]
-        & itoListOf (folded . _Right)
-        & expects [(0 :: Int, True), (2, False)]
-      [Right True, Left A, Right False, Left Z]
-        & itoListOf (folded . _Left)
-        & expects [(1 :: Int, A), (3, Z)]
+    it "[Getter]" $ do
+      Just A
+        & preview _Just
+        & expects (Just A)
+      Just A
+        & preview (_Just . to succ)
+        & expects (Just B)
+
+    it "[Traversal]" $ do
+      [Left 'a', Right A, Left 'b', Right B]
+        & itoListOf (indexing traverse . _Left)
+        & expects [(0, 'a'), (2, 'b')]
+      [Left 'a', Right A, Left 'b', Right B]
+        & itoListOf (indexing traverse . _Right . to succ)
+        & expects [(1, B), (3, C)]
+
+    it "[Setter]" $ do
+      (True, Right @Int A)
+        & set (_2 . _Right) Z
+        & expects (True, Right Z)
+      (True, Left @Int 1)
+        & set (_2 . _Right) Z
+        & expects (True, Left 1)
+
+    it "[Fold]" $ do
+      [Left 'a', Right A, Right B, Right C, Left 'd']
+        & foldOf (traverse . _Right)
+        & expects C
+
+    describe "Lenses" $ do
+      it "[_Just, _Nothing]" $ do
+        [Just True, Nothing, Just False]
+          & itoListOf (folded . _Just)
+          & expects [(0, True), (2, False)]
+        [Just True, Nothing, Just False]
+          & itoListOf (folded . _Nothing)
+          & expects [(1, ())]
+        [Just True, Nothing, Just False]
+          & itoListOf (folded . _Nothing . ito' (\i _ -> (i * 100, i)))
+          & expects [(100, 1)]
+
+      it "[_Left, _Right]" $ do
+        [Right True, Left A, Right False, Left Z]
+          & itoListOf (folded . _Right)
+          & expects [(0, True), (2, False)]
+        [Right True, Left A, Right False, Left Z]
+          & itoListOf (folded . _Left)
+          & expects [(1, A), (3, Z)]
+
+      it "[only, nearly]" $ do
+        (1 :: Int)
+          & preview (only 1)
+          & expects (Just 1)
+        (1 :: Int)
+          & preview (only 0)
+          & expects Nothing
+        (1 :: Int)
+          & preview (nearly (< 10))
+          & expects (Just 1)
+        (1 :: Int)
+          & preview (nearly (< 1))
+          & expects Nothing
+
+        -- chain
+        (1 :: Int)
+          & preview (only 1 . to (+ 10))
+          & expects (Just 11)
+        (1 :: Int)
+          & preview (only 0 . to (+ 10))
+          & expects Nothing
+
+    describe "Effects" $ do
+      it "[isn't]" $ do
+        Nothing
+          & isn't _Just
+          & expects True
+        Nothing
+          & isn't _Nothing
+          & expects False
+        Just True
+          & isn't _Just
+          & expects False
+        Just True
+          & isn't _Nothing
+          & expects True
+
+        Right True
+          & isn't _Right
+          & expects False
+        Right True
+          & isn't _Left
+          & expects True
+        Left True
+          & isn't _Right
+          & expects True
+        Left True
+          & isn't _Left
+          & expects False
+
+      it "[matching]" $ do
+        Just A
+          & matching _Just
+          & expects (Right @(Maybe Alpha) A)
+        Just A
+          & matching _Nothing
+          & expects (Left (Just A))
+        Nothing
+          & matching _Nothing
+          & expects (Right @(Maybe Alpha) ())
+        Nothing
+          & matching _Just
+          & expects (Left @(Maybe Alpha) @Alpha Nothing)
+
+        Left A
+          & matching _Left
+          & expects (Right @(Either Alpha Int) A)
+        Left A
+          & matching _Right
+          & expects (Left @(Either Alpha Int) @Int (Left A))
+
+      it "[below]" $ do
+        [Just A, Just B, Nothing]
+          & view (below _Just)
+          & expects []
+        [Just A, Just B]
+          & view (below _Just)
+          & expects [A, B]
+        [Nothing, Nothing]
+          & view (below _Nothing)
+          & expects [(), ()]
+
+        -- with index
+        [Just A, Just B]
+          & itoListOf (below _Just. folded)
+          & expects [(0, A), (1, B)]
+        [Nothing, Nothing]
+          & itoListOf (below _Nothing. folded)
+          & expects [(0, ()), (1, ())]
 
   it "scratch" $ do
+    [True]
+      & toListOf (traverse . to show)
+      & expects ["True"]
+    A
+      & view (to show)
+      & expects "A"
+    (1 :: Int)
+      & view (to show)
+      & expects "1"
+
     putStrLn "== preview ==="
     [1 .. 10 :: Int]
       & preview (takingWhile traverse (< 5))
