@@ -1,6 +1,10 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 {-# HLINT ignore "Take on a non-positive" #-}
+{-# HLINT ignore "Use second" #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# HLINT ignore "Take on a non-_positive" #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module Spec
@@ -15,7 +19,9 @@ import Data.Function
 import Data.Tuple
 import Lens
 import Lens.Scratch (deferAp)
+import Lens.TH
 import Person
+import System.IO.Error qualified as E
 import Test.Hspec
 import Tree
 
@@ -33,6 +39,15 @@ expects expected value = value `shouldBe` expected
 
 expectsIO :: (Show a, Eq a) => a -> IO a -> Expectation
 expectsIO expected io = io >>= (`shouldBe` expected)
+
+data MyData a = MyData 
+  { myProp1 :: String,
+    myProp2 :: Int,
+    myProp3 :: a
+  }
+  deriving stock (Eq, Show)
+
+$(createFieldLenses ''MyData)
 
 spec :: Spec
 spec = describe "" $ do
@@ -397,19 +412,33 @@ spec = describe "" $ do
           & expects
           $ [A, A, A]
 
+      it "[foldring]" $ do
+        [A .. D]
+          & toListOf (foldring foldr)
+          & expects [A, B, C, D]
+        [A .. E]
+          & firstOf (foldring foldr)
+          & expects (Just A)
+        [A .. E]
+          & lastOf (foldring foldr)
+          & expects (Just E)
+
       it "[replicate, repeat]" $ do
         -- replicate, repeat
         (A, B)
           & toListOf (_1 . replicated 3)
           & expects [A, A, A]
+
         (A, B)
           & toListOf (_1 . repeated)
           & take 0
           & expects []
+
         (A, B)
           & toListOf (_1 . repeated)
           & take 5
           & expects [A, A, A, A, A]
+
         (A, B)
           & toListOf (_1 . iterated (succ . succ))
           & take 5
@@ -697,6 +726,11 @@ spec = describe "" $ do
 
   describe "Lens.Traverse" $ do
     describe "Lenses" $ do
+      it "[traversed]" $ do
+        [A .. E]
+          & itoListOf traversed
+          & expects [(0, A), (1, B), (2, C), (3, D), (4, E)]
+
       it "[element, elements] get value at index" $ do
         let x =
               [A .. E]
@@ -932,6 +966,13 @@ spec = describe "" $ do
           & expects (Just (4 :: Int), A)
 
   describe "Lens.Prism" $ do
+    let _positive :: Prism' Int Int
+        _positive = nearly (> 0)
+        _negative :: Prism' Int Int
+        _negative = nearly (< 0)
+        emptyString :: Prism' String String
+        emptyString = nearly (== "")
+
     it "composes" $ do
       Just (Just (Left ((), Right True)))
         & preview (_Just . _Just . _Left . _2 . _Right)
@@ -979,6 +1020,14 @@ spec = describe "" $ do
         & expects C
 
     describe "Lenses" $ do
+      it "[prism] build" $ do
+        1 & isn't _positive & expects False
+        (-1) & isn't _positive & expects True
+        1 & set _positive 10 & expects 10
+        (-1) & set _positive 10 & expects (-1)
+
+        "" & isn't emptyString & expects False
+
       it "[_Just, _Nothing]" $ do
         [Just True, Nothing, Just False]
           & itoListOf (folded . _Just)
@@ -997,6 +1046,68 @@ spec = describe "" $ do
         [Right True, Left A, Right False, Left Z]
           & itoListOf (folded . _Left)
           & expects [(1, A), (3, Z)]
+
+      it "[_Show]" $ do
+        "1"
+          & preview _Show
+          & expects (Just (1 :: Int))
+        "1a"
+          & preview _Show
+          & expects (Just @Int 1)
+        "a"
+          & preview _Show
+          & expects (Nothing @Int)
+        "1"
+          & preview _Show
+          & expects (Just @Int 1)
+
+      it "[aside] traverse coordinate" $ do
+        ("one", 1)
+          & set (aside _positive) ("ten", 10)
+          & expects ("ten", 10)
+
+        ("one", 1)
+          & preview (aside _positive)
+          & expects (Just ("one", 1))
+
+        ("negative one", -1)
+          & set (aside _positive) ("ten", 10)
+          & expects ("negative one", -1)
+
+        ("negative one", -1)
+          & preview (aside _positive)
+          & expects Nothing
+
+      it "[without]" $ do
+        let _isEOFError :: Prism' IOError IOError
+            _isEOFError = nearly E.isEOFError
+            e1 = E.ioeSetErrorType (E.userError "") E.eofErrorType
+
+        Right @IOError @Int 10
+          & over (without _isEOFError _negative) (Left . userError . either show (("Not positive " <>) . show))
+          & expects (Right 10)
+        Right @IOError @Int (-1)
+          & over (without _isEOFError _negative) (Left . userError . either show (("Not positive " <>) . show))
+          & expects (Left $ userError "Not positive -1")
+
+        Left @IOError @Int e1
+          & over (without _isEOFError _negative) (Left . userError . either show (("Not positive " <>) . show))
+          & expects (Left $ userError "end of file")
+
+        Right @IOError @Int 1
+          & preview (without _isEOFError _positive)
+          & expects (Just $ Right 1)
+        Right @IOError @Int (-1)
+          & preview (without _isEOFError _positive)
+          & expects Nothing
+
+        Left @IOError @Int (userError "ERROR")
+          & preview (without _isEOFError _positive)
+          & expects Nothing
+
+        Left @IOError @Int e1
+          & preview (without _isEOFError _positive)
+          & expects (Just $ Left e1)
 
       it "[only, nearly]" $ do
         (1 :: Int)
@@ -1019,6 +1130,21 @@ spec = describe "" $ do
         (1 :: Int)
           & preview (only 0 . to (+ 10))
           & expects Nothing
+
+      it "[prefix,suffix]" $ do
+        "Hello world"
+          & view (prefixed "Hello")
+          & expects " world"
+        "Hello world"
+          & view (prefixed "world")
+          & expects ""
+
+        "Hello world"
+          & view (suffixed "world")
+          & expects "Hello "
+        "Hello world"
+          & view (suffixed "Hello")
+          & expects ""
 
     describe "Effects" $ do
       it "[isn't]" $ do
@@ -1082,11 +1208,39 @@ spec = describe "" $ do
 
         -- with index
         [Just A, Just B]
-          & itoListOf (below _Just. folded)
+          & itoListOf (below _Just . folded)
           & expects [(0, A), (1, B)]
         [Nothing, Nothing]
-          & itoListOf (below _Nothing. folded)
+          & itoListOf (below _Nothing . folded)
           & expects [(0, ()), (1, ())]
+
+  describe "Lens.Template" $ do
+    it "" $ do
+      let x = MyData "hello" 1 True
+
+      x
+        & view _myProp1
+        & expects "hello"
+
+      x
+        & view _myProp2
+        & expects 1
+
+      x
+        & view _myProp3
+        & expects True
+
+      x
+        & set _myProp1 "x"
+        & expects (MyData "x" 1 True)
+
+      x
+        & set _myProp2 2
+        & expects (MyData "hello" 2 True)
+
+      x
+        & set _myProp3 False
+        & expects (MyData "hello" 1 False)
 
   it "scratch" $ do
     [True]

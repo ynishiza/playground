@@ -2,76 +2,133 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TupleSections #-}
 
 {- ORMOLU_DISABLE -}
 module Lens.Prism
-  ( prism,
+  ( 
+    Splittable(..),
+    APrism,
+    APrism',
+    toPrism,
+    prism,
     prism',
     _Just,
     _Nothing,
     _Left,
     _Right,
+    _Show,
     only,
     nearly,
+    aside,
+    without,
+    outside,
+    Prefixed(..),
+    Suffixed(..),
 
-    withPrism,
     below,
     matching,
-    isn't
+    matching',
+    isn't,
+
+    useSplittable,
+    usePrism,
   )
 where
 {- ORMOLU_ENABLE -}
 
+import Control.Arrow (Arrow (second), (>>>))
+import Data.Bifunctor (Bifunctor (bimap))
 import Data.Function ((&))
 import Data.Functor.Identity
+import Data.List qualified as L
 import Data.Void (Void, absurd)
 import Lens.Lens
-import Control.Arrow ((>>>))
 
-type APrism s t a b = Split a b a (Identity b) -> Split a b s (Identity t)
+type APrism s t a b = Splittable a b a (Identity b) -> Splittable a b s (Identity t)
 
 type APrism' s a = APrism s s a a
 
-data Split a b s t where
-  Split :: (s -> Either t a) -> (b -> t) -> Split a b s t
+data Splittable a b s t where
+  Splittable :: (s -> Either t a) -> (b -> t) -> Splittable a b s t
 
-instance Functor (Split a b s) where
-  fmap :: (x -> y) -> Split a b s x -> Split a b s y
-  fmap f (Split split kb) = Split (either (Left . f) Right . split) (f . kb)
+useSplittable :: ((s -> Either t a) -> (b -> t) -> r) -> Splittable a b s t -> r
+useSplittable run (Splittable split merge) = run split merge
 
-instance Profunctor (Split a b) where
-  dimap :: (u -> s) -> (t -> v) -> Split a b s t -> Split a b u v
-  dimap f r (Split ks kb) =
-    Split
-      ( \x -> case ks (f x) of
-          (Left t) -> Left (r t)
-          (Right a) -> Right a
-      )
-      (r . kb)
+instance Functor (Splittable a b s) where
+  fmap :: (x -> y) -> Splittable a b s x -> Splittable a b s y
+  fmap f (Splittable split merge) = Splittable (either (Left . f) Right . split) (f . merge)
 
-instance ProfunctorChoice (Split a b) where
-  left' :: Split a b s t -> Split a b (Either s v) (Either t v)
-  left' (Split ks kb) =
-    Split
+instance Profunctor (Splittable a b) where
+  dimap :: (u -> s) -> (t -> v) -> Splittable a b s t -> Splittable a b u v
+  dimap l r (Splittable split merge) =
+    Splittable
+      (either (Left . r) Right . split . l)
+      (r . merge)
+
+instance ProfunctorChoice (Splittable a b) where
+  left' :: Splittable a b s t -> Splittable a b (Either s v) (Either t v)
+  left' (Splittable split merge) =
+    Splittable
       ( \case
-          (Left a) -> case ks a of
-            Left b -> Left (Left b)
-            Right c -> Right c
-          (Right v) -> Left (Right v)
+          Left s -> case split s of
+            Left t -> Left $ Left t
+            Right a -> Right a
+          Right v -> Left $ Right v
       )
-      (Left . kb)
+      (Left . merge)
 
--- Combinators
+toPrism :: (s -> Either t a, b -> t) -> Prism s t a b
+toPrism (split, merge) k =
+  right' k
+    & dimap
+      split
+      ( \case
+          Left t -> pure t
+          Right fb -> merge <$> fb
+      )
+
+runPrism :: APrism s t a b -> (s -> Either t a, b -> t)
+runPrism lens =
+  lens (Splittable Right Identity)
+    & useSplittable
+      ( \split merge ->
+          ( either (Left . runIdentity) Right . split,
+            runIdentity . merge
+          )
+      )
+
+class Prefixed a where
+  prefixed :: a -> Prism' a a
+
+class Suffixed a where
+  suffixed :: a -> Prism' a a
+
+instance Eq a => Prefixed [a] where
+  prefixed as =
+    prism'
+      ( \l ->
+          if as `L.isPrefixOf` l
+            then Just (drop (length as) l)
+            else Nothing
+      )
+      id
+
+instance Eq a => Suffixed [a] where
+  suffixed as =
+    prism'
+      ( \l ->
+          if as `L.isSuffixOf` l
+            then Just (take (length l - length as) l)
+            else Nothing
+      )
+      id
 
 prism :: (s -> Either t a) -> (b -> t) -> Prism s t a b
-prism ks kb ka =
-  right' ka
-    & dimap
-      ks
-      (either pure (kb <$>))
+prism = curry toPrism
 
 prism' :: (s -> Maybe a) -> (b -> s) -> Prism s s a b
-prism' ks = prism (\s -> maybe (Left s) Right (ks s)) 
+prism' split = prism (\s -> maybe (Left s) Right (split s))
 
 _Just :: Prism (Maybe a) (Maybe b) a b
 _Just = prism (maybe (Left Nothing) Right) Just
@@ -88,6 +145,15 @@ _Left = prism (either Right (Right >>> Left)) Left
 _Right :: Prism (Either a b) (Either a c) b c
 _Right = prism (either (Left >>> Left) Right) Right
 
+_Show :: forall a. (Show a, Read a) => Prism' String a
+_Show =
+  prism
+    ( \s -> case reads @a s of
+        [(a, _)] -> Right a
+        _ -> Left s
+    )
+    show
+
 _Void :: Prism s s a Void
 _Void = prism Left absurd
 
@@ -97,32 +163,77 @@ only a0 = nearly (== a0)
 nearly :: (a -> Bool) -> Prism' a a
 nearly f = prism (\a -> if f a then Right a else Left a) id
 
--- Effects
+outside :: ProfunctorRepresentation p => APrism s t a b -> Prism (p t r) (p s r) (p b r) (p a r)
+outside lens =
+  runPrism lens
+    & ( \(split, merge) ->
+          prism
+            (\t -> undefined)
+            (\a -> undefined)
+      )
 
-withPrism :: APrism s t a b -> ((s -> Either t a) -> (b -> t) -> r) -> r
-withPrism lens with =
-  lens (Split Right Identity)
-    & g
-  where
-    g (Split ks kb) =
-      with
-        (either (Left . runIdentity) Right . ks)
-        (runIdentity . kb)
+aside :: APrism s t a b -> Prism (e, s) (e, t) (e, a) (e, b)
+aside lens =
+  runPrism lens
+    & ( \(split, merge) ->
+          prism
+            (\(e, s) -> bimap (e,) (e,) $ split s)
+            (second merge)
+      )
+
+without :: APrism s t a b -> APrism u v c d -> Prism (Either s u) (Either t v) (Either a c) (Either b d)
+without l1 l2 =
+  runPrism l1
+    & ( \(split, merge) ->
+          runPrism l2
+            & ( \(maybeC, mergeD) ->
+                  prism
+                    ( \case
+                        Left s -> case split s of
+                          Left t -> Left $ Left t
+                          Right a -> Right $ Left a
+                        Right u -> case maybeC u of
+                          Left v -> Left $ Right v
+                          Right c -> Right $ Right c
+                    )
+                    ( \case
+                        Left b -> Left $ merge b
+                        Right d -> Right $ mergeD d
+                    )
+              )
+      )
 
 below :: Traversable t => APrism' s a -> Prism' (t s) (t a)
-below lens k = withPrism lens $ \ks kb ->
-  k
-    & prism (\ts -> either (Left . const ts) Right (traverse ks ts))
-        (kb <$>)
+below lens =
+  runPrism lens & \(split, merge) ->
+    prism
+      ( \t ->
+          traverse split t
+            & either (Left . const t) Right
+      )
+      (merge <$>)
+
+-- Effects
+
+usePrism :: APrism s t a b -> ((s -> Either t a) -> (b -> t) -> r) -> r
+usePrism lens f =
+  runPrism lens
+    & uncurry f
 
 isn't :: APrism s t a b -> s -> Bool
 isn't lens s =
-  withPrism
-    lens
-    ( \resolve _ -> case resolve s of
-        (Left _) -> True
-        _ -> False
-    )
+  runPrism lens
+    & ( \(split, _) -> case split s of
+          (Left _) -> True
+          _ -> False
+      )
 
 matching :: APrism s t a b -> s -> Either t a
-matching lens s = withPrism lens (\f _ -> f s)
+matching lens s =
+  runPrism lens
+    & (\(f, _) -> f s)
+
+matching' :: LensLike (Either a) s t a b -> s -> Either t a
+matching' lens s =
+  lens Left s
+    & either Right Left

@@ -13,8 +13,11 @@ module Lens.Set
     IndexedSetter',
     AIndexedSetter,
     AIndexedSetter',
+    fromSetter,
+    toSetter,
 
     sets,
+    sets_,
     mapped,
     lifted,
     argument,
@@ -44,7 +47,6 @@ where
 import Control.Arrow (Arrow (second), (>>>))
 import Control.Monad.State
 import Control.Monad.Writer.Class
-import Data.Coerce (coerce)
 import Data.Function ((&))
 import Data.Functor.Contravariant
 import Data.Functor.Identity
@@ -60,6 +62,16 @@ type AIndexedSetter i s t a b = Indexed i a (Identity b) -> s -> Identity t
 
 type AIndexedSetter' i s a = AIndexedSetter i s s a a
 
+toSetter :: ((a -> b) -> s -> t) -> Setter s t a b
+toSetter build k s =
+  build (untainted . k) s
+    & tainted
+
+fromSetter :: ASetter s t a b -> (a -> b) -> s -> t
+fromSetter lens k s =
+  lens (tainted . k) s
+    & untainted
+
 -- ==================== Combinators ====================
 
 sets :: (Profunctor p, Profunctor q, Settable f) => (p a b -> q s t) -> Optical p q f s t a b
@@ -67,6 +79,9 @@ sets lensBase kp =
   rmap untainted kp
     & lensBase
     & rmap tainted
+
+sets_ :: ((a -> b) -> s -> t) -> Setter s t a b
+sets_ = toSetter
 
 setting :: ((a -> b) -> s -> t) -> IndexPreservingSetter s t a b
 setting f p =
@@ -115,9 +130,7 @@ set' :: ASetter s t a a -> a -> s -> t
 set' = set
 
 over :: ASetter s t a b -> (a -> b) -> s -> t
-over lens f s =
-  lens (coerce . f) s
-    & coerce
+over = fromSetter
 
 (+~) :: Num a => ASetter s t a a -> a -> s -> t
 lens +~ v = over lens (+ v)
@@ -141,7 +154,7 @@ scribe lens a =
 
 passing :: MonadWriter w m => ASetter w w u v -> m (a, u -> v) -> m a
 passing lens =
-  (>>= (return . second (over lens) ))
+  (>>= (return . second (over lens)))
     >>> pass
 
 censoring :: MonadWriter w m => (u -> v) -> ASetter w w u v -> m a -> m a

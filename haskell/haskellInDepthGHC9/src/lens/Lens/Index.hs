@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Lens.Index
   ( Indexed (..),
@@ -57,6 +58,11 @@ instance ProfunctorChoice (Indexed i) where
 --
 instance i ~ j => Indexable i (Indexed j) where
   indexed = runIndexed
+
+instance ProfunctorRepresentation (Indexed i) where
+  type Rep (Indexed i) = (->) i
+  toRep (Indexed f) a i = f i a
+  fromRep f = Indexed $ \i a -> f a i
 
 -- use index of outer
 (<.) :: Indexable i p => (Indexed i s t -> r) -> ((a -> b) -> s -> t) -> p a b -> r

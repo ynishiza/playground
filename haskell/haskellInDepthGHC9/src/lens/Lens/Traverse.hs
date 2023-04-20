@@ -6,6 +6,8 @@ module Lens.Traverse
   ( IndexedTraversal,
     Traversal,
     IndexedTraversal',
+    fromTraverse,
+    toTraverse,
     traversal,
     traversed,
     traverseOf,
@@ -18,11 +20,16 @@ where
 {- ORMOLU_ENABLE -}
 
 import Control.Arrow ((>>>))
-import Lens.Monoid
 import Lens.Lens
 
+fromTraverse :: ((a -> f b) -> s -> f t) -> LensLike f s t a b
+fromTraverse = id
+
+toTraverse :: LensLike f s t a b -> (a -> f b) -> s -> f t
+toTraverse = id
+
 traversal :: ((a -> f b) -> s -> f t) -> LensLike f s t a b
-traversal = id
+traversal = fromTraverse
 
 traversed :: Traversable t => IndexedTraversal Int (t a) (t b) a b
 traversed pafb =
@@ -30,7 +37,7 @@ traversed pafb =
     >>> execIndexing 0
 
 traverseOf :: LensLike f s t a b -> (a -> f b) -> s -> f t
-traverseOf lens = lens
+traverseOf = toTraverse
 
 elementOf :: Applicative f => LensLike (Indexing f) s t a a -> Int -> IndexedLensLike Int f s t a a
 elementOf lens n = elementsOf lens (== n)

@@ -9,9 +9,13 @@
 module Lens.Fold
   ( Fold,
     IndexedFold,
+    fromFoldMap,
+    toFoldMap,
 
     folded,
     ifoldr,
+    folding,
+    foldring,
     repeated,
     replicated,
     iterated,
@@ -71,9 +75,17 @@ import Data.Semigroup (Max (..))
 import Lens.Get
 import Lens.Index
 import Lens.Lens
+import Data.Function ((&))
+import Data.Coerce (coerce)
 
 asIndexed :: Monoid r => IndexedFold i s a -> IndexedGetting i r s a
 asIndexed = id
+
+toFoldMap :: ((a -> r) -> s -> r) -> Getting r s a
+toFoldMap = toGetter
+
+fromFoldMap :: Getting r s a -> (a -> r) -> s -> r
+fromFoldMap = fromGetter
 
 -- ========== Combinators ==========
 
@@ -81,7 +93,11 @@ folded :: Foldable t => IndexedFold Int (t a) a
 folded k = phantom . ifoldr (\i a r -> indexed k i a *> r) (pure ())
 
 folding :: Foldable t => (s -> t a) -> Fold s a
-folding f useA = phantom . traverse_ useA . f
+folding f lens = phantom . traverse_ lens . f
+
+foldring :: (Contravariant f, Applicative f) => ((a -> f a -> f a) -> f a -> s -> f a) -> LensLike f s t a b
+foldring build k s = build (\a r -> k a *> r) (phantom $ pure ()) s
+  & phantom
 
 ifoldr :: Foldable t => (Int -> a -> r -> r) -> r -> t a -> r
 ifoldr combine r0 t = foldr (\a next -> \i -> combine i a (next $ i + 1)) (const r0) t 0
@@ -105,7 +121,7 @@ filtered predicate =
     . right'
 
 filteredSimple :: Applicative f => (a -> Bool) -> LensLike' f a a
-filteredSimple predicate useA a = if predicate a then useA a else pure a
+filteredSimple predicate lens a = if predicate a then lens a else pure a
 
 backwards :: Profunctor p => Optic p (Backwards f) s t a b -> Optic p f s t a b
 backwards lens = rmap forwards . lens . rmap Backwards
@@ -171,16 +187,18 @@ has :: Getting Any s a -> s -> Bool
 has = notNullOf
 
 runGet :: (a -> r) -> (r -> b) -> Getting r s a -> s -> b
-runGet wrapper unwrapper lens = unwrapper . getConst . lens (Const . wrapper)
+runGet wrapper unwrapper lens = lens (Const . wrapper)
+  >>> getConst
+  >>> unwrapper
 
 preview :: Getting (XFirst a) s a -> s -> Maybe a
 preview = runGet (XFirst . Just) getXFirst
 
 foldOf :: Getting a s a -> s -> a
-foldOf useA = getConst . useA Const
+foldOf lens = foldMapOf lens id
 
-foldMapOf :: Getting a s a -> (a -> r) -> s -> r
-foldMapOf useA f = f . foldOf useA
+foldMapOf :: Getting r s a -> (a -> r) -> s -> r
+foldMapOf = fromFoldMap
 
 foldrOf :: Getting (Endo r) s a -> (a -> r -> r) -> r -> s -> r
 foldrOf getFold f r0 =
@@ -247,8 +265,8 @@ findOf lens predicate = runGet (\a -> if predicate a then Just a else Nothing) i
 
 runIndexedGet :: (i -> a -> r) -> (r -> m) -> IndexedGetting i r s a -> s -> m
 runIndexedGet wrap unwrap lens =
-  lens (Indexed $ \i a -> Const $ wrap i a)
-    >>> getConst
+  lens (Indexed $ \i a -> coerce $ wrap i a)
+    >>> coerce
     >>> unwrap
 
 elemIndexOf :: Eq a => IndexedGetting i (XFirst i) s a -> a -> s -> Maybe i

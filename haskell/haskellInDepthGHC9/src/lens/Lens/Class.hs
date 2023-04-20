@@ -2,6 +2,8 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TupleSections #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 {- ORMOLU_DISABLE -}
 module Lens.Class
@@ -10,6 +12,7 @@ module Lens.Class
     ProfunctorChoice (..),
     Indexable (..),
     ProfunctorArrow(..),
+    ProfunctorRepresentation(..),
     strong,
     uncurry',
 
@@ -23,6 +26,7 @@ import Control.Arrow (Arrow (..), Kleisli (..), (>>>))
 import Data.Coerce
 import Data.Function ((&))
 import Data.Functor.Identity
+import Data.Kind (Type)
 import Data.Tuple (swap)
 import Lens.Monoid as X
 import Lens.TraverseMonoid as X
@@ -38,6 +42,7 @@ class Profunctor p where
   rmap = dimap id
 
 class Profunctor p => ProfunctorChoice p where
+  {-# MINIMAL left' | right' #-}
   left' :: p a b -> p (Either a c) (Either b c)
   left' k =
     right' k
@@ -48,6 +53,7 @@ class Profunctor p => ProfunctorChoice p where
       & dimap (either Right Left) (either Right Left)
 
 class Profunctor p => ProfunctorArrow p where
+  {-# MINIMAL arr', (first' | second') #-}
   arr' :: (a -> b) -> p a b
   first' :: p a b -> p (a, c) (b, c)
   first' p =
@@ -74,6 +80,11 @@ uncurry' p =
 class Profunctor p => Indexable i p where
   indexed :: p a b -> i -> a -> b
 
+class (Profunctor p, Functor (Rep p)) => ProfunctorRepresentation p where
+  type Rep p :: Type -> Type
+  toRep :: p a b -> a -> Rep p b 
+  fromRep :: (a -> Rep p b) -> p a b
+
 instance Profunctor (->) where
   dimap f g fn = g . fn . f
 
@@ -88,6 +99,11 @@ instance ProfunctorChoice (->) where
 instance Indexable i (->) where
   indexed p _ = p
 
+instance ProfunctorRepresentation (->) where
+  type Rep (->) = Identity
+  toRep p = Identity . p
+  fromRep f = runIdentity . f
+
 instance Functor m => Profunctor (Kleisli m) where
   dimap l r (Kleisli f) = Kleisli $ l >>> f >>> (r <$>)
 
@@ -101,6 +117,7 @@ instance Applicative m => ProfunctorChoice (Kleisli m) where
     (Right b) -> pure $ Right b
 
 class (Applicative f, Traversable f) => Settable f where
+  {-# MINIMAL untainted, tainted #-}
   untainted :: f a -> a
   tainted :: a -> f a
 

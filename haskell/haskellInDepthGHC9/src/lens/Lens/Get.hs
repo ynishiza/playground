@@ -1,6 +1,5 @@
 {-# LANGUAGE RankNTypes #-}
 {-# HLINT ignore "Use curry" #-}
-{-# LANGUAGE TupleSections #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {- ORMOLU_DISABLE -}
@@ -9,8 +8,12 @@ module Lens.Get
     Getting,
     Getting',
     IndexedGetting,
+    toGetter,
+    fromGetter,
+
     view,
     views,
+    views_,
     use,
     uses,
     listening,
@@ -19,6 +22,7 @@ module Lens.Get
     iviews,
 
     to,
+    to_,
     ito,
     ito',
     like,
@@ -42,10 +46,22 @@ type Getting' s a = Getting a s a
 
 type IndexedGetting i r s a = Indexed i a (Const r a) -> s -> Const r s
 
+toGetter :: ((a -> r) -> s -> r) -> Getting r s a
+toGetter build k s = build (getConst . k) s 
+  & Const
+
+fromGetter :: Getting r s a -> (a -> r) -> s -> r
+fromGetter lens k s =
+  lens (Const . k) s
+    & getConst
+
 ---- Lens
 
 to :: (Profunctor p, Contravariant f) => (s -> a) -> Optic' p f s a
 to sa = dimap sa (contramap sa)
+
+to_ :: ((a -> r) -> s -> r) -> Getting r s a
+to_ = toGetter
 
 ito :: (Indexable i p, Contravariant f) => (s -> (i, a)) -> Over' p f s a
 ito f ka s =
@@ -74,6 +90,9 @@ view lens = views lens id
 
 views :: MonadReader s m => Getting r s a -> (a -> r) -> m r
 views lens ar = asks (getConst . lens (Const . ar))
+
+views_ :: Getting r s a -> (a -> r) -> s -> r
+views_ = fromGetter
 
 iview :: MonadReader s m => IndexedGetting i (i, a) s a -> m (i, a)
 iview lens = asks (getConst . lens f)

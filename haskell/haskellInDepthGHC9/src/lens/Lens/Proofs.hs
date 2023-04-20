@@ -7,7 +7,10 @@
 
 module Lens.Proofs () where
 
+import Data.Function ((&))
 import Lens
+import Data.Functor.Const
+import Data.Functor.Contravariant
 
 traversalIsSetter :: Traversal s t a b -> Setter s t a b
 traversalIsSetter = id
@@ -59,3 +62,27 @@ lensF = lensL
 
 lensS :: Fold (a, c) a
 lensS = lensL
+
+setterToFrom :: ((a -> b) -> s -> t) -> (a -> b) -> s -> t
+setterToFrom = fromSetter . toSetter
+
+setterFromTo :: ASetter s t a b -> Setter s t a b
+setterFromTo = toSetter . fromSetter
+
+getterFromTo :: Getting r s a -> Getting r s a
+getterFromTo = toGetter . fromGetter
+
+getterToFrom :: ((a -> r) -> s -> r) -> (a -> r) -> s -> r
+getterToFrom = fromGetter . toGetter
+
+foldToFrom :: ((a -> r) -> s -> r) -> (a -> r) -> s -> r
+foldToFrom = fromFoldMap . toFoldMap
+
+foldFromTo :: Getting a s a -> Getting a s a
+foldFromTo = toFoldMap . fromFoldMap
+
+lensTraverseLens :: LensLike f s t a b -> LensLike f s t a b
+lensTraverseLens = fromTraverse . toTraverse
+
+traverseLensTraverse :: ((a -> f b) -> s -> f t) -> ((a -> f b) -> s -> f t)
+traverseLensTraverse = toTraverse . fromTraverse
