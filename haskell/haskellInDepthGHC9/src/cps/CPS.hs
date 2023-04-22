@@ -2,10 +2,12 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
 {-# HLINT ignore "Avoid lambda using `infix`" #-}
 
 module CPS
   ( CMaybe (..),
+    CMaybeT (..),
     CList (..),
     CFree (..),
     Cfn (..),
@@ -15,7 +17,6 @@ where
 
 import Control.Monad
 import Control.Monad.Free
-import Control.Monad.Trans.Class
 import Control.Monad.Trans.Maybe
 
 class Invertible m n | m -> n where
@@ -90,11 +91,11 @@ instance Functor f => Invertible (CFree f) (Free f) where
 newtype Cfn t a = Cfn {runCfn :: forall r. (a -> r) -> t -> r}
 
 instance Invertible (Cfn t) ((->) t) where
-  from (Cfn m) = m id 
+  from (Cfn m) = m id
   to f = Cfn $ \k t -> k (f t)
 
 instance Functor (Cfn t) where
-  fmap f (Cfn m) = Cfn $ \k t -> m (k.f) t
+  fmap f (Cfn m) = Cfn $ \k t -> m (k . f) t
 
 instance Applicative (Cfn t) where
   pure a = Cfn $ \k _ -> k a
@@ -103,4 +104,3 @@ instance Applicative (Cfn t) where
 instance Monad (Cfn t) where
   (>>=) :: Cfn t a -> (a -> Cfn t b) -> Cfn t b
   (Cfn m) >>= h = Cfn $ \k t -> m (\a -> runCfn (h a) k t) t
-

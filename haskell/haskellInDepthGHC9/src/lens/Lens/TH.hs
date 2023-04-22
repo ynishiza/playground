@@ -16,39 +16,67 @@ createFieldLenses :: Name -> Q [Dec]
 createFieldLenses =
   reify
     >=> ( \case
-            TyConI d -> createFieldLensesForType d
+            TyConI d -> createFieldLensesForDec d
             info -> fail $ "Not a type constructor:" <> show info
         )
 
-createFieldLensesForType :: Dec -> Q [Dec]
-createFieldLensesForType (DataD _ tyName tyVarBndrs _ dataCons _) =
-  traverse buildLenses dataCons
+createFieldLensesForDec :: Dec -> Q [Dec]
+-- note: lens for data type
+--
+-- case 1: records
+--   e.g.
+--      data MyData a = MkMyData { v1 :: String, v2 :: a }
+--
+-- case 2: GADT records
+--   e.g.
+--      data MyData a where
+--        MkMyData :: { v1 :: String, v2 :: a } -> MyData a
+--        MkMyData :: forall a. { v1 :: String, v2 :: a } -> MyData a
+--
+--
+createFieldLensesForDec (DataD _ tyName tyVarBndrs _ dataCons _) =
+  traverse (buildForDataConstructor (tyVarBndrName <$> tyVarBndrs)) dataCons
     & (concat <$>)
   where
-    tyVars = tyVarBndrName <$> tyVarBndrs
-    tyInfo = (tyName, tyVars)
-    buildLenses (RecC _ fieldVars) =
+    buildForDataConstructor tyVarNames (RecC _ fieldVars) = buildFieldVars tyVarNames fieldVars
+    buildForDataConstructor tyVarNames (RecGadtC _ fieldVars _) = buildFieldVars tyVarNames fieldVars
+    buildForDataConstructor _ (ForallC t _ c) = buildForDataConstructor (tyVarBndrName <$> t) c
+    buildForDataConstructor _ x = fail $ "Unsupported type:" <> show x
+    buildFieldVars tyVarNames fieldVars =
       traverse
-        (\(fieldName, _, fieldType) -> createFieldLens (tyInfo, (fieldName, fieldType)))
+        ( \(fieldName, _, fieldTy) ->
+            createFieldLens ((tyName, tyVarNames), (fieldName, fieldTy))
+        )
         fieldVars
         & (concat <$>)
-    buildLenses x = fail $ "Unsupported type" <> show x
-createFieldLensesForType _ = fail "Not a data constructor"
+createFieldLensesForDec _ = fail "Not a data constructor"
 
+-- note: create lens for any data field
+--
+--  e.g. if
+--      data MyData a = MyData { getA :: a }
+--
+--    then build lens _getA by
+--
+--      _getA :: (ProfunctorArrow p, Functor f) => Optic p f (MyData a) (MyData b) a b
+--      _getA = lmap getA
+--        >>> strong (\s fb -> (\b -> s { getA = b }) <$> fb)
+--
 createFieldLens :: (TypeConInfo, FieldInfo) -> Q [Dec]
-createFieldLens info@((tyName, tyVarNames), (fieldName, fieldType)) = do
-  (mappedTypeVars, mappedFieldType) <- mapFieldVars info
+createFieldLens info@((tyName, tyVarNames), (fieldName, fieldTy)) = do
+  (mappedTypeVars, mappedFieldType) <- assignNewFieldVars info
   pType <- newName "p"
   fType <- newName "f"
   let srcType = appsT (ConT tyName) (VarT <$> tyVarNames)
       dstType = appsT (ConT tyName) (VarT <$> mappedTypeVars)
-      op :: Q Type
-      op =
+      sigType :: Q Type
+      sigType =
         [t|
           (ProfunctorArrow $(varT pType), Functor $(varT fType)) =>
-          Optic $(varT pType) $(varT fType) $(pure srcType) $(pure dstType) $(pure fieldType) $(pure mappedFieldType)
+          Optic $(varT pType) $(varT fType) $(pure srcType) $(pure dstType) $(pure fieldTy) $(pure mappedFieldType)
           |]
-  lensSignature <- sigD (createLensName fieldName) op
+
+  lensSignature <- sigD (createLensName fieldName) sigType
   lensExpression <- fieldLensBody fieldName
   return (lensSignature : lensExpression)
 
@@ -57,14 +85,17 @@ createLensName name = mkName $ "_" <> nameBase name
 
 fieldLensBody :: Name -> Q [Dec]
 fieldLensBody fieldName = do
-  [srcValue, x] <- replicateM 2 (newName "x")
-  let updateExp :: Q Exp
-      updateExp = recUpdE (varE srcValue) [pure (fieldName, VarE x)]
-      lensName = mkName $ "_" <> nameBase fieldName
+  srcValue <- newName "src"
+  x <- newName "x"
+  let -- e.g.
+      --      src { getA = x }
+      updateFieldExp :: Q Exp
+      updateFieldExp = recUpdE (varE srcValue) [pure (fieldName, VarE x)]
+      lensName = createLensName fieldName
       updateLens =
         [|
           lmap $(varE fieldName)
-            >>> strong (\ $(varP srcValue) v -> (\ $(varP x) -> $(updateExp)) <$> v)
+            >>> strong (\ $(varP srcValue) v -> (\ $(varP x) -> $(updateFieldExp)) <$> v)
           |]
 
   (: []) <$> funD lensName [clause [] (normalB updateLens) []]
@@ -73,39 +104,46 @@ type TypeConInfo = (Name, [Name])
 
 type FieldInfo = (Name, Type)
 
-mapFieldVars :: (TypeConInfo, FieldInfo) -> Q ([Name], Type)
-mapFieldVars ((_, tyVarNames), (_, fieldType)) = do
-  newVars <- replicateM (size toReplace) $ newName "a"
-  let a = zip (S.toList toReplace) newVars
-      x = foldr (flip replaceTypeVars) fieldType a
-      y = foldr (flip replaceTypeVarNames) tyVarNames a
-  return (y, x)
+assignNewFieldVars :: (TypeConInfo, FieldInfo) -> Q ([Name], Type)
+assignNewFieldVars ((_, tyVarNames), (_, fieldTy)) = do
+  newVarNames <- replicateM (size toReplace) $ newName "a"
+  let oldNew = zip (S.toList toReplace) newVarNames
+      newFieldTy = foldr (flip replaceTypeVarsInType) fieldTy oldNew
+      newTyVarNames = foldr (flip replaceTypeVarsInNames) tyVarNames oldNew
+  return (newTyVarNames, newFieldTy)
   where
-    fieldVars = getTypeVars fieldType
+    fieldVars = getTypeVars fieldTy
     toReplace = intersection fieldVars (S.fromList tyVarNames)
 
+-- Note: gets all type variables of a field
+-- e.g.
+--      SomeData String a b (m c)   ->    ["a", "b", "m", "c"]
 getTypeVars :: Type -> Set Name
 getTypeVars (AppT s t) = getTypeVars s `union` getTypeVars t
 getTypeVars (AppKindT _ t) = getTypeVars t
 getTypeVars (SigT t _) = getTypeVars t
-getTypeVars (VarT n) = S.singleton n
-getTypeVars (ConT n) = S.singleton n
+getTypeVars (VarT varName) = S.singleton varName
+getTypeVars (ConT varName) = S.singleton varName
 getTypeVars _ = empty
 
-replaceTypeVars :: Type -> (Name, Name) -> Type
-replaceTypeVars _type i@(toReplace, replaced) = case _type of
-  (AppT s t) -> AppT (replaceTypeVars s i) (replaceTypeVars t i)
-  (AppKindT k t) -> AppKindT k $ replaceTypeVars t i
-  (SigT t k) -> SigT (replaceTypeVars t i) k
-  (VarT var) -> VarT $ replace var
-  (ConT var) -> ConT $ replace var
+-- Note: replace type variable in a type
+-- e.g. if
+--        (toReplace, replaceWith) = ("a", "x")
+--      then
+--
+--         MyData a b       ->   MyData x b
+--         MyData (m a) b   ->   MyData (m x) b
+--
+replaceTypeVarsInType :: Type -> (Name, Name) -> Type
+replaceTypeVarsInType _type i@(toReplace, replaceWith) = case _type of
+  (AppT s t) -> AppT (replaceTypeVarsInType s i) (replaceTypeVarsInType t i)
+  (AppKindT k t) -> AppKindT k $ replaceTypeVarsInType t i
+  (SigT t k) -> SigT (replaceTypeVarsInType t i) k
+  (VarT varName) -> VarT $ replace varName
+  (ConT varName) -> ConT $ replace varName
   _ -> _type
   where
-    replace n = if n == toReplace then replaced else n
+    replace n = if n == toReplace then replaceWith else n
 
-replaceTypeVarNames :: [Name] -> (Name, Name) -> [Name]
-replaceTypeVarNames names (n1, n2) = (\n -> if n == n1 then n2 else n) <$> names
-
--- appAllT :: NonEmpty Type -> Type
--- appAllT (a :| b:ts) = AppT a (appAllT $ b :| ts)
--- appAllT (a :| []) = a
+replaceTypeVarsInNames :: [Name] -> (Name, Name) -> [Name]
+replaceTypeVarsInNames names (toReplace, replaceWith) = (\n -> if n == toReplace then replaceWith else n) <$> names

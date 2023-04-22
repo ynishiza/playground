@@ -163,57 +163,55 @@ only a0 = nearly (== a0)
 nearly :: (a -> Bool) -> Prism' a a
 nearly f = prism (\a -> if f a then Right a else Left a) id
 
-outside :: ProfunctorRepresentation p => APrism s t a b -> Prism (p t r) (p s r) (p b r) (p a r)
-outside lens =
-  runPrism lens
-    & ( \(split, merge) ->
-          prism
-            (\t -> undefined)
-            (\a -> undefined)
-      )
+outside :: forall q p f s t a b r. (ProfunctorArrow q, Functor f, ProfunctorRepresentation p) => APrism s t a b -> Optic q f (p t r) (p s r) (p b r) (p a r)
+outside lens k =
+  k
+    & lmap (lmap merge)
+    & strong (\t a -> toS (toRep t) . toRep <$> a)
+  where
+    (split, merge) = runPrism lens
+    toS :: (t -> (Rep p) r) -> (a -> (Rep p) r) -> p s r
+    toS pt pa = fromRep $ either pt pa . split
+
+-- Effects
 
 aside :: APrism s t a b -> Prism (e, s) (e, t) (e, a) (e, b)
 aside lens =
-  runPrism lens
-    & ( \(split, merge) ->
-          prism
-            (\(e, s) -> bimap (e,) (e,) $ split s)
-            (second merge)
-      )
+  prism
+    (\(e, s) -> bimap (e,) (e,) $ split s)
+    (second merge)
+  where
+    (split, merge) = runPrism lens
 
 without :: APrism s t a b -> APrism u v c d -> Prism (Either s u) (Either t v) (Either a c) (Either b d)
 without l1 l2 =
-  runPrism l1
-    & ( \(split, merge) ->
-          runPrism l2
-            & ( \(maybeC, mergeD) ->
-                  prism
-                    ( \case
-                        Left s -> case split s of
-                          Left t -> Left $ Left t
-                          Right a -> Right $ Left a
-                        Right u -> case maybeC u of
-                          Left v -> Left $ Right v
-                          Right c -> Right $ Right c
-                    )
-                    ( \case
-                        Left b -> Left $ merge b
-                        Right d -> Right $ mergeD d
-                    )
-              )
-      )
+  prism
+    ( \case
+        Left s -> case split s of
+          Left t -> Left $ Left t
+          Right a -> Right $ Left a
+        Right u -> case splitC u of
+          Left v -> Left $ Right v
+          Right c -> Right $ Right c
+    )
+    ( \case
+        Left b -> Left $ merge b
+        Right d -> Right $ mergeD d
+    )
+  where
+    (split, merge) = runPrism l1
+    (splitC, mergeD) = runPrism l2
 
 below :: Traversable t => APrism' s a -> Prism' (t s) (t a)
 below lens =
-  runPrism lens & \(split, merge) ->
-    prism
-      ( \t ->
-          traverse split t
-            & either (Left . const t) Right
-      )
-      (merge <$>)
-
--- Effects
+  prism
+    ( \t ->
+        traverse split t
+          & either (Left . const t) Right
+    )
+    (merge <$>)
+  where
+    (split, merge) = runPrism lens
 
 usePrism :: APrism s t a b -> ((s -> Either t a) -> (b -> t) -> r) -> r
 usePrism lens f =
@@ -221,17 +219,16 @@ usePrism lens f =
     & uncurry f
 
 isn't :: APrism s t a b -> s -> Bool
-isn't lens s =
-  runPrism lens
-    & ( \(split, _) -> case split s of
-          (Left _) -> True
-          _ -> False
-      )
+isn't lens s = case split s of
+  (Left _) -> True
+  _ -> False
+  where
+    (split, _) = runPrism lens
 
 matching :: APrism s t a b -> s -> Either t a
-matching lens s =
-  runPrism lens
-    & (\(f, _) -> f s)
+matching lens = split
+  where
+    (split, _) = runPrism lens
 
 matching' :: LensLike (Either a) s t a b -> s -> Either t a
 matching' lens s =

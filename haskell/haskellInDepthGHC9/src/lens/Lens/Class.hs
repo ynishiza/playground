@@ -80,7 +80,7 @@ uncurry' p =
 class Profunctor p => Indexable i p where
   indexed :: p a b -> i -> a -> b
 
-class (Profunctor p, Functor (Rep p)) => ProfunctorRepresentation p where
+class (ProfunctorArrow p, Functor (Rep p)) => ProfunctorRepresentation p where
   type Rep p :: Type -> Type
   toRep :: p a b -> a -> Rep p b 
   fromRep :: (a -> Rep p b) -> p a b

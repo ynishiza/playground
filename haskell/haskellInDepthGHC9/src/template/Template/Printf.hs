@@ -24,8 +24,8 @@ printf str =
     v = parseOnly parseFormats (B.pack str)
 
 compute :: [Format] -> Q Exp -> Q Exp
-compute [] str = str
-compute ((Literal l) : xs) str = compute xs [|$str <> l|]
-compute (D : xs) str = [|\(v :: Int) -> $(compute xs [|$str <> show v|])|]
-compute (S : xs) str = [|\v -> $(compute xs [|$str <> v|])|]
+compute [] resultText = resultText
+compute ((Literal l) : formats) resultText = compute formats [|$resultText <> l|]
+compute (D : formats) resultText = [|\(v :: Int) -> $(compute formats [|$resultText <> show v|])|]
+compute (S : formats) resultText = [|\v -> $(compute formats [|$resultText <> v|])|]
 

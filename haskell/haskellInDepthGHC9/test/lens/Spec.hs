@@ -1,10 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RankNTypes #-}
 {-# HLINT ignore "Take on a non-positive" #-}
-{-# HLINT ignore "Use second" #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# HLINT ignore "Take on a non-_positive" #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module Spec
@@ -19,7 +13,6 @@ import Data.Function
 import Data.Tuple
 import Lens
 import Lens.Scratch (deferAp)
-import Lens.TH
 import Person
 import System.IO.Error qualified as E
 import Test.Hspec
@@ -39,15 +32,6 @@ expects expected value = value `shouldBe` expected
 
 expectsIO :: (Show a, Eq a) => a -> IO a -> Expectation
 expectsIO expected io = io >>= (`shouldBe` expected)
-
-data MyData a = MyData 
-  { myProp1 :: String,
-    myProp2 :: Int,
-    myProp3 :: a
-  }
-  deriving stock (Eq, Show)
-
-$(createFieldLenses ''MyData)
 
 spec :: Spec
 spec = describe "" $ do
@@ -1061,6 +1045,23 @@ spec = describe "" $ do
           & preview _Show
           & expects (Just @Int 1)
 
+      it "[outside]" $ do
+        let maybe2 :: b -> (a -> b) -> Maybe a -> b
+            maybe2 b f =
+              const b
+                & set (outside _Just) f
+            either2 :: (a -> r) -> (b -> r) -> Either a b -> r
+            either2 f g =
+              either2 f g
+                & set (outside _Left) f
+                & set (outside _Right) g
+
+        maybe2 Z id (Just B) & expects B
+        maybe2 Z id Nothing & expects Z
+
+        either2 succ pred (Left A) & expects B
+        either2 succ pred (Right A) & expects NotAlpha
+
       it "[aside] traverse coordinate" $ do
         ("one", 1)
           & set (aside _positive) ("ten", 10)
@@ -1213,34 +1214,6 @@ spec = describe "" $ do
         [Nothing, Nothing]
           & itoListOf (below _Nothing . folded)
           & expects [(0, ()), (1, ())]
-
-  describe "Lens.Template" $ do
-    it "" $ do
-      let x = MyData "hello" 1 True
-
-      x
-        & view _myProp1
-        & expects "hello"
-
-      x
-        & view _myProp2
-        & expects 1
-
-      x
-        & view _myProp3
-        & expects True
-
-      x
-        & set _myProp1 "x"
-        & expects (MyData "x" 1 True)
-
-      x
-        & set _myProp2 2
-        & expects (MyData "hello" 2 True)
-
-      x
-        & set _myProp3 False
-        & expects (MyData "hello" 1 False)
 
   it "scratch" $ do
     [True]
