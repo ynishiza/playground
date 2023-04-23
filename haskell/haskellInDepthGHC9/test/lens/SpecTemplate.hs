@@ -12,10 +12,13 @@ import Test.Hspec
 expects :: (Show a, Eq a) => a -> a -> Expectation
 expects expected value = value `shouldBe` expected
 
-data MyData a = MyData
+data MyData a m b = MyData
   { myProp1 :: String,
     myProp2 :: Int,
-    myProp3 :: a
+    -- variable
+    myProp3 :: a,
+    -- type constructor variable
+    myProp4 :: m b
   }
   deriving stock (Eq, Show)
 
@@ -23,13 +26,19 @@ data MyGADTData a where
   MyGADTData :: {gProp1 :: String, gProp2 :: a} -> MyGADTData a
   deriving stock (Eq, Show)
 
-$(createFieldLenses ''MyData)
-$(createFieldLenses ''MyGADTData)
+data Tree a where
+  Leaf :: a -> Tree a
+  Node :: Tree a -> Tree a -> Tree a
+  deriving stock (Eq, Show, Functor, Foldable, Traversable)
+
+$(genFieldLenses ''MyData)
+$(genFieldLenses ''MyGADTData)
+$(genConstructorPrisms ''Tree)
 
 spec :: Spec
 spec = describe "Lens.Template" $ do
   it "Fields" $ do
-    let x = MyData "hello" 1 True
+    let x = MyData "hello" 1 True ['a']
 
     x
       & view _myProp1
@@ -42,18 +51,25 @@ spec = describe "Lens.Template" $ do
     x
       & view _myProp3
       & expects True
+    x
+      & view _myProp4
+      & expects ['a']
 
     x
       & set _myProp1 "x"
-      & expects (MyData "x" 1 True)
+      & expects (x { myProp1 = "x" })
 
     x
       & set _myProp2 2
-      & expects (MyData "hello" 2 True)
+      & expects (x { myProp2 = 2 })
 
     x
       & set _myProp3 False
-      & expects (MyData "hello" 1 False)
+      & expects (x { myProp3 = False })
+
+    x
+      & set (_myProp4 . traverse) '0'
+      & expects (x { myProp4 = ['0'] })
 
   it "GADT fields" $ do
     let x = MyGADTData "hello" True
@@ -73,3 +89,24 @@ spec = describe "Lens.Template" $ do
     x
       & set _gProp2 False
       & expects (MyGADTData "hello" False)
+
+  it "" $ do
+    Leaf True
+      & preview _Leaf
+      & expects
+      $ Just True
+    Leaf True
+      & preview _Node
+      & expects Nothing
+    Node (Leaf True) (Leaf False)
+      & preview _Node
+      & expects
+      $ Just (Leaf True, Leaf False)
+    Node (Leaf True) (Leaf False)
+      & preview _Leaf
+      & expects Nothing
+
+    -- Leaf True
+    --   & set _Leaf "a"
+    --   & expects
+    --   $ Leaf "a"

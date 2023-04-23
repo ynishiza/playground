@@ -7,6 +7,7 @@
 module Lens
   ( Field1 (..),
     Field2 (..),
+    Field3 (..),
     module X,
   )
 where

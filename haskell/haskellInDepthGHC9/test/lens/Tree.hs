@@ -3,9 +3,12 @@
 
 module Tree
   ( Tree (..),
-    _leaf,
-    _left,
-    _right,
+    _Leaf,
+    _LeftTree,
+    _RightTree,
+    _LeftTree',
+    _RightTree',
+    _Node,
   )
 where
 
@@ -17,25 +20,49 @@ data Tree a where
   Node :: Tree a -> Tree a -> Tree a
   deriving stock (Show, Eq, Ord, Foldable, Functor, Traversable)
 
-ifLeaf :: (a -> r) -> r -> Tree a -> r
-ifLeaf f _ (Leaf a) = f a
-ifLeaf _ g _ = g
+_Leaf :: (ProfunctorChoice p, Applicative f) => Optic p f (Tree a) (Tree a) a a
+_Leaf =
+  prism
+    (\tree -> case tree of
+                Node _ _ -> Left tree
+                Leaf a -> Right a)
+    Leaf
 
-ifNode :: (Tree a -> Tree a -> r) -> r -> Tree a -> r
-ifNode f _ (Node l r) = f l r
-ifNode _ g _ = g
+_LeftTree :: (ProfunctorChoice p, ProfunctorArrow p, Applicative f) => Optic' p f (Tree a) (Tree a)
+_LeftTree = _Branch True
 
-_leaf :: (ProfunctorArrow p, Applicative f) => Optic p f (Tree a) (Tree a) a a
-_leaf p =
-  lmap (ifLeaf id (error "Should never happen")) p
-    & strong (\tree x -> ifLeaf (const (Leaf <$> x)) (pure tree) tree)
+_RightTree :: (ProfunctorChoice p, ProfunctorArrow p, Applicative f) => Optic' p f (Tree a) (Tree a)
+_RightTree = _Branch False
 
-_left :: (ProfunctorArrow p, Applicative f) => Optic' p f (Tree a) (Tree a)
-_left p =
-  lmap (ifNode const (error "Should never happen")) p
-    & strong (\tree x -> ifNode (\_ r -> flip Node r <$> x) (pure tree) tree)
+_Branch :: (ProfunctorChoice p, ProfunctorArrow p, Applicative f) => Bool -> Optic' p f (Tree a) (Tree a)
+_Branch isLeft k =
+  right' k
+    & lmap
+      ( \tree -> case tree of
+          Node l r -> Right $ if isLeft then l else r
+          _ -> Left tree
+      )
+    & strong
+      ( \tree b -> case b of
+          Left t -> pure t
+          Right x -> merge tree <$> x
+      )
+  where
+    merge (Node l r) t = if isLeft then Node t r else Node l t
+    merge _ _ = error ""
 
-_right :: forall f a. Applicative f => LensLike f (Tree a) (Tree a) (Tree a) (Tree a)
-_right p =
-  lmap (ifNode (\_ r -> r) (error "Should never happen")) p
-    & strong (\tree x -> ifNode (\l _ -> Node l <$> x) (pure tree) tree)
+_LeftTree' :: Applicative f => LensLike' f (Tree a) (Tree a)
+_LeftTree' k (Node l r) = flip Node r <$> k l
+_LeftTree' _ l@(Leaf _) = pure l
+
+_RightTree' :: Applicative f => LensLike' f (Tree a) (Tree a)
+_RightTree' k (Node l r) = Node l <$> k r
+_RightTree' _ l@(Leaf _) = pure l
+
+_Node :: Prism' (Tree a) (Tree a, Tree a)
+_Node =
+  prism
+    (\tree -> case tree of
+                Node l r -> Right (l, r)
+                Leaf _ -> Left tree)
+    (uncurry Node)

@@ -33,6 +33,9 @@ expects expected value = value `shouldBe` expected
 expectsIO :: (Show a, Eq a) => a -> IO a -> Expectation
 expectsIO expected io = io >>= (`shouldBe` expected)
 
+shouldNotHappen :: a
+shouldNotHappen = error "Should not happen"
+
 spec :: Spec
 spec = describe "" $ do
   it "Lens" $ do
@@ -91,38 +94,38 @@ spec = describe "" $ do
                 (Leaf (-1))
         -- get
         t
-          & preview _right
+          & preview _RightTree
           & expects
           $ Just (Leaf (-1))
         t
-          & preview (_right . _leaf)
+          & preview (_RightTree . _Leaf)
           & expects
           $ Just (-1)
         t
-          & preview (_right . _left)
+          & preview (_RightTree . _LeftTree)
           & expects Nothing
         t
-          & preview (_right . _right)
+          & preview (_RightTree . _RightTree)
           & expects Nothing
 
         t
-          & preview (_left . _left . _leaf)
+          & preview (_LeftTree . _LeftTree . _Leaf)
           & expects
           $ Just 1
         t
-          & preview (_left . _right . _left . _leaf)
+          & preview (_LeftTree . _RightTree . _LeftTree . _Leaf)
           & expects
           $ Just 10
         t
-          & preview (_left . _right . _right . _leaf)
+          & preview (_LeftTree . _RightTree . _RightTree . _Leaf)
           & expects
           $ Just 3
         t
-          & preview (_left . _left)
+          & preview (_LeftTree . _LeftTree)
           & expects
           $ Just (Leaf 1)
         t
-          & preview _leaf
+          & preview _Leaf
           & expects Nothing
 
       it "sets" $ do
@@ -162,6 +165,26 @@ spec = describe "" $ do
                 (Leaf 100)
             )
             (Leaf 40)
+
+      it "profunctor and lens equality" $ do
+        let t :: Tree Int
+            t =
+              Node
+                ( Node
+                    (Leaf 1)
+                    ( Node
+                        (Leaf 10)
+                        (Leaf 3)
+                    )
+                )
+                (Leaf (-1))
+
+        expects
+          (preview _LeftTree t)
+          (preview _LeftTree' t)
+        expects
+          (preview _RightTree t)
+          (preview _RightTree' t)
 
   describe "Lens.Index" $ do
     it "[reindex]" $ do
@@ -1045,22 +1068,44 @@ spec = describe "" $ do
           & preview _Show
           & expects (Just @Int 1)
 
-      it "[outside]" $ do
-        let maybe2 :: b -> (a -> b) -> Maybe a -> b
-            maybe2 b f =
-              const b
+      it "[outside] pattern matching" $ do
+        let maybeP :: b -> (a -> b) -> Maybe a -> b
+            maybeP b f =
+              maybeP b f
+                & set (outside _Nothing) (const b)
                 & set (outside _Just) f
-            either2 :: (a -> r) -> (b -> r) -> Either a b -> r
-            either2 f g =
-              either2 f g
+            eitherP :: (a -> r) -> (b -> r) -> Either a b -> r
+            eitherP f g =
+              eitherP f g
                 & set (outside _Left) f
                 & set (outside _Right) g
+            tree :: forall a r. (a -> r) -> (Tree a -> Tree a -> r) -> Tree a -> r
+            tree f g =
+              tree f g
+                & set (outside _Leaf) f
+                & set (outside _Node) (uncurry g)
 
-        maybe2 Z id (Just B) & expects B
-        maybe2 Z id Nothing & expects Z
+        Just B
+          & maybeP Z id
+          & expects B
 
-        either2 succ pred (Left A) & expects B
-        either2 succ pred (Right A) & expects NotAlpha
+        Nothing
+          & maybeP Z id
+          & expects Z
+
+        Left A
+          & eitherP succ pred
+          & expects B
+        Right A
+          & eitherP succ pred
+          & expects NotAlpha
+
+        Leaf A
+          & tree succ shouldNotHappen
+          & expects B
+        Node (Leaf C) (Leaf D)
+          & tree succ (\l _ -> tree succ shouldNotHappen l)
+          & expects D
 
       it "[aside] traverse coordinate" $ do
         ("one", 1)

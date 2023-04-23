@@ -88,8 +88,8 @@ toPrism (split, merge) k =
           Right fb -> merge <$> fb
       )
 
-runPrism :: APrism s t a b -> (s -> Either t a, b -> t)
-runPrism lens =
+fromPrism :: APrism s t a b -> (s -> Either t a, b -> t)
+fromPrism lens =
   lens (Splittable Right Identity)
     & useSplittable
       ( \split merge ->
@@ -163,13 +163,13 @@ only a0 = nearly (== a0)
 nearly :: (a -> Bool) -> Prism' a a
 nearly f = prism (\a -> if f a then Right a else Left a) id
 
-outside :: forall q p f s t a b r. (ProfunctorArrow q, Functor f, ProfunctorRepresentation p) => APrism s t a b -> Optic q f (p t r) (p s r) (p b r) (p a r)
+outside :: forall {q} {p} {f} s t a b r. (ProfunctorArrow q, Functor f, ProfunctorRepresentation p) => APrism s t a b -> Optic q f (p t r) (p s r) (p b r) (p a r)
 outside lens k =
   k
     & lmap (lmap merge)
     & strong (\t a -> toS (toRep t) . toRep <$> a)
   where
-    (split, merge) = runPrism lens
+    (split, merge) = fromPrism lens
     toS :: (t -> (Rep p) r) -> (a -> (Rep p) r) -> p s r
     toS pt pa = fromRep $ either pt pa . split
 
@@ -181,7 +181,7 @@ aside lens =
     (\(e, s) -> bimap (e,) (e,) $ split s)
     (second merge)
   where
-    (split, merge) = runPrism lens
+    (split, merge) = fromPrism lens
 
 without :: APrism s t a b -> APrism u v c d -> Prism (Either s u) (Either t v) (Either a c) (Either b d)
 without l1 l2 =
@@ -199,8 +199,8 @@ without l1 l2 =
         Right d -> Right $ mergeD d
     )
   where
-    (split, merge) = runPrism l1
-    (splitC, mergeD) = runPrism l2
+    (split, merge) = fromPrism l1
+    (splitC, mergeD) = fromPrism l2
 
 below :: Traversable t => APrism' s a -> Prism' (t s) (t a)
 below lens =
@@ -211,11 +211,11 @@ below lens =
     )
     (merge <$>)
   where
-    (split, merge) = runPrism lens
+    (split, merge) = fromPrism lens
 
 usePrism :: APrism s t a b -> ((s -> Either t a) -> (b -> t) -> r) -> r
 usePrism lens f =
-  runPrism lens
+  fromPrism lens
     & uncurry f
 
 isn't :: APrism s t a b -> s -> Bool
@@ -223,12 +223,12 @@ isn't lens s = case split s of
   (Left _) -> True
   _ -> False
   where
-    (split, _) = runPrism lens
+    (split, _) = fromPrism lens
 
 matching :: APrism s t a b -> s -> Either t a
 matching lens = split
   where
-    (split, _) = runPrism lens
+    (split, _) = fromPrism lens
 
 matching' :: LensLike (Either a) s t a b -> s -> Either t a
 matching' lens s =
