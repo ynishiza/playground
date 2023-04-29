@@ -141,7 +141,7 @@ spec = describe "Lens.Template" $ do
         & expects (MyGADTData "hello" False)
 
     describe "polymorphism" $ do
-      it "may be polymorphic if there are is no variable overlap with other fields" $ do
+      it "is polymorphic lens (i.e. Optic p s t a b) if there are no variable overlaps with other fields" $ do
         -- polymorphic
         MyData "hello" 1 True ['a']
           & set _myProp3 ()
@@ -150,7 +150,7 @@ spec = describe "Lens.Template" $ do
           & set _myProp4 (Just False)
           & expects (MyData "hello" 1 True (Just False))
 
-      it "is monomorphic if there is an overlap" $ do
+      it "is monomorphic lens (i.e. Optic' p s a) if there is at least one variable overlap with another field" $ do
         Point (1 :: Int) 0
           & set _coordX 10
           & expects (Point 10 0)

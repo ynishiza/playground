@@ -22,7 +22,7 @@ where
 import Data.Function ((&))
 import Lens.Class
 import Lens.Lens
-import Lens.Monoid
+import Lens.Monoid.Monoid
 
 -- note: Indexed function
 newtype Indexed i a b where

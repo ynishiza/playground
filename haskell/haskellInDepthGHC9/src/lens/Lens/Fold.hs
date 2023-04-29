@@ -25,7 +25,6 @@ module Lens.Fold
     dropping,
     droppingWhile,
     droppingWhileBase,
-    droppingWhileBase2,
     filtered,
     filteredSimple,
     backwards,
@@ -66,7 +65,6 @@ where
 {- ORMOLU_ENABLE -}
 
 import Control.Applicative.Backwards
-import Control.Arrow ((>>>))
 import Data.Coerce (coerce)
 import Data.Foldable
 import Data.Function ((&))
@@ -78,8 +76,7 @@ import Data.Semigroup (Max (..))
 import Lens.Get
 import Lens.Index
 import Lens.Lens
-import Lens.Monoid
-import Lens.TraverseMonoid
+import Lens.Monoid.Monoid as M
 
 asIndexed :: Monoid r => IndexedFold i s a -> IndexedGetting i r s a
 asIndexed = id
@@ -130,54 +127,40 @@ filteredSimple predicate lens a = if predicate a then lens a else pure a
 backwards :: Profunctor p => Optic p (Backwards f) s t a b -> Optic p f s t a b
 backwards lens = rmap forwards . lens . rmap Backwards
 
-dropping :: Applicative f => LensLike (DroppingWhileCaptured Int a a) s t a a -> Int -> LensLike f s t a a
-dropping lens n = droppingWhileBase2 lens (\i _ -> i < n)
+dropping :: Applicative f => LensLike (FreeDrop Int a a) s t a a -> Int -> LensLike f s t a a
+dropping lens n = droppingWhileBase lens (\i _ -> i < n)
 
-droppingWhile :: Applicative f => LensLike (DroppingWhileCaptured Int a a) s t a a -> (a -> Bool) -> LensLike f s t a a
-droppingWhile lens predicate = droppingWhileBase2 lens (\_ v -> predicate v)
+droppingWhile :: Applicative f => LensLike (FreeDrop Int a a) s t a a -> (a -> Bool) -> LensLike f s t a a
+droppingWhile lens predicate = droppingWhileBase lens (\_ v -> predicate v)
 
-takingWhile :: forall f a s t. Applicative f => LensLike (TakingWhileCaptured Int a a) s t a a -> (a -> Bool) -> LensLike f s t a a
+takingWhile :: forall f a s t. Applicative f => LensLike (FreeTake Int a a) s t a a -> (a -> Bool) -> LensLike f s t a a
 takingWhile lens predicate = takingWhileBase lens (\_ a -> predicate a)
 
-taking :: Applicative f => LensLike (TakingWhileCaptured Int a a) s t a a -> Int -> LensLike f s t a a
+taking :: Applicative f => LensLike (FreeTake Int a a) s t a a -> Int -> LensLike f s t a a
 taking lens n = takingWhileBase lens (\i _ -> i < n)
 
-takingWhileBase :: forall f i a s t. (Enum i, Applicative f) => LensLike (TakingWhileCaptured i a a) s t a a -> (i -> a -> Bool) -> LensLike f s t a a
-takingWhileBase lens predicate ref =
-  lens create
-    >>> runTakingWhileCaptured
-    >>> traverse ref
-    >>> (runCapturedAp <$>)
+takingWhileBase :: forall f i a s t. (Enum i, Applicative f) => LensLike (FreeTake i a a) s t a a -> (i -> a -> Bool) -> LensLike f s t a a
+takingWhileBase lens predicate ref s =
+  lens capture s
+    & runFreeTake
+    & storeTraverses ref
+    & (M.fold <$>)
   where
-    create :: a -> TakingWhileCaptured i a a a
-    create a = TakingWhileCaptured a $ \(i, isTaking) -> if isTaking && predicate i a then (CCapture () a, True) else (CPure a, False)
+    capture :: a -> FreeTake i a a a
+    capture a = FreeTake a $ \(i, isTaking) -> if isTaking && predicate i a then (FStore a, True) else (FPure a, False)
 
-droppingWhileBase :: forall f s t a. Applicative f => LensLike (DroppingWhileApplicative f) s t a a -> (Int -> a -> Bool) -> LensLike f s t a a
-droppingWhileBase lens predicate useA =
-  lens (createDrop useA)
-    >>> run
+droppingWhileBase :: forall i f s t a. (Enum i, Applicative f) => LensLike (FreeDrop i a a) s t a a -> (i -> a -> Bool) -> LensLike f s t a a
+droppingWhileBase lens predicate ref s =
+  lens capture s
+    & ruunFreeDrop
+    & storeTraverses ref
+    & (M.fold <$>)
   where
-    run :: Applicative f => DroppingWhileApplicative f r -> f r
-    run r = fst $ runDroppingWhileApplicative r (0, False)
-    createDrop :: (a -> f a) -> a -> DroppingWhileApplicative f a
-    createDrop get a = DroppingWhileApplicative $ \(i, isDropping) -> case (isDropping, predicate i a) of
-      (False, False) -> (get a, False)
-      (False, True) -> (pure a, True)
-      (True, True) -> (pure a, True)
-      (True, False) -> (get a, False)
-
-droppingWhileBase2 :: forall i f s t a. (Enum i, Applicative f) => LensLike (DroppingWhileCaptured i a a) s t a a -> (i -> a -> Bool) -> LensLike f s t a a
-droppingWhileBase2 lens predicate ref =
-  lens createDrop
-    >>> runDroppingWhileCaptured
-    >>> traverse ref
-    >>> (runCapturedAp <$>)
-  where
-    createDrop :: a -> DroppingWhileCaptured i a a a
-    createDrop a = DroppingWhileCaptured a $ \(i, isDropping) ->
+    capture :: a -> FreeDrop i a a a
+    capture a = FreeDrop a $ \(i, isDropping) ->
       if not isDropping || not (predicate i a)
-        then (CCapture () a, False)
-        else (CPure a, True)
+        then (FStore a, False)
+        else (FPure a, True)
 
 lined :: Fold String String
 lined = folding lines
@@ -194,10 +177,10 @@ hasn't :: Getting Any s a -> s -> Bool
 hasn't = nullOf
 
 runGet :: (a -> r) -> (r -> b) -> Getting r s a -> s -> b
-runGet wrapper unwrapper lens =
-  lens (Const . wrapper)
-    >>> getConst
-    >>> unwrapper
+runGet wrapper unwrapper lens s =
+  lens (Const . wrapper) s
+    & getConst
+    & unwrapper
 
 preview :: Getting (XFirst a) s a -> s -> Maybe a
 preview = runGet (XFirst . Just) getXFirst
@@ -272,10 +255,10 @@ findOf lens predicate = runGet (\a -> if predicate a then Just a else Nothing) i
 -- ==================== Indexed ====================
 
 runIndexedGet :: (i -> a -> r) -> (r -> m) -> IndexedGetting i r s a -> s -> m
-runIndexedGet wrap unwrap lens =
-  lens (Indexed $ \i a -> coerce $ wrap i a)
-    >>> coerce
-    >>> unwrap
+runIndexedGet wrap unwrap lens s =
+  lens (Indexed $ \i a -> coerce $ wrap i a) s
+    & coerce
+    & unwrap
 
 elemIndexOf :: Eq a => IndexedGetting i (XFirst i) s a -> a -> s -> Maybe i
 elemIndexOf lens a0 =

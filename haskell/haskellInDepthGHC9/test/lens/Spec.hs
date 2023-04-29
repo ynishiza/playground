@@ -13,9 +13,9 @@ import Control.Lens qualified as L
 import Control.Monad.State
 import Data.Char
 import Data.Function
+import Data.Functor.Identity
 import Data.Tuple
 import Lens
-import Lens.Scratch (deferAp)
 import Lens.TH
 import Person
 import System.IO.Error qualified as E
@@ -552,10 +552,10 @@ spec = describe "" $ do
             & expects [C, D, E]
 
           ([A .. E], B)
-            & toListOf (droppingWhileBase2 @Int (_1 . traverse) (\_ v -> v < C))
+            & toListOf (droppingWhileBase @Int (_1 . traverse) (\_ v -> v < C))
             & expects [C, D, E]
           ([A .. E], B)
-            & toListOf (droppingWhileBase2 @Int (_1 . traverse) (\i _ -> i < 3))
+            & toListOf (droppingWhileBase @Int (_1 . traverse) (\i _ -> i < 3))
             & expects [D, E]
 
           -- case: take 0
@@ -828,6 +828,25 @@ spec = describe "" $ do
         Node (Leaf A) (Node (Leaf B) (Leaf C))
           & set (partsOf traverse) [U]
           & expects (Node (Leaf U) (Node (Leaf B) (Leaf C)))
+
+      it "[holesOf]" $ do
+        let holes =
+              "abcde"
+                & holesOf traverse
+                & fmap (\h f -> runIdentity $ h (Identity . f))
+
+        head holes pred
+          & expects "`bcde"
+        head holes succ
+          & expects "bbcde"
+        (holes !! 1) pred
+          & expects "aacde"
+        (holes !! 1) succ
+          & expects "accde"
+        last holes pred
+          & expects "abcdd"
+        last holes succ
+          & expects "abcdf"
 
       it "[element, elements] get value at index" $ do
         let x =
@@ -1401,5 +1420,3 @@ spec = describe "" $ do
     (1 :: Int)
       & toListOf (takingWhile (iterated (succ . succ)) (< 10))
       & expects [1, 3, 5, 7, 9]
-
-    print $ deferAp [1 :: Int .. 10]

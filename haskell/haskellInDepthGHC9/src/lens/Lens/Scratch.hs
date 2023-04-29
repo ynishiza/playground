@@ -6,7 +6,6 @@ module Lens.Scratch
     TakingResult (..),
     takingWhileWithoutContravariant,
     takingWhileTW,
-    deferAp,
   )
 where
 
@@ -14,20 +13,20 @@ import Control.Arrow ((>>>))
 import Data.Functor.Contravariant
 import Debug.Trace (trace)
 import Lens.Lens
-import Lens.TraverseMonoid
+-- import Lens.TraverseMonoid
 
-newtype DeferAp a o t = DeferAp (CaptureAp () t o a)
-  deriving (Show)
+-- newtype DeferAp a o t = DeferAp (CaptureAp () t o a)
+--   deriving (Show)
 
-instance Functor (DeferAp a o) where
-  fmap f (DeferAp d) = DeferAp $ CFmap f d
+-- instance Functor (DeferAp a o) where
+--   fmap f (DeferAp d) = DeferAp $ CFmap f d
 
-instance Applicative (DeferAp a o) where
-  pure a = DeferAp $ CPure a
-  (DeferAp f) <*> (DeferAp x) = DeferAp $ CAp f x
+-- instance Applicative (DeferAp a o) where
+--   pure a = DeferAp $ CPure a
+--   (DeferAp f) <*> (DeferAp x) = DeferAp $ CAp f x
 
-deferAp :: Traversable t => t a -> DeferAp (t a) (t a) (t a)
-deferAp = traverse (DeferAp . CPure)
+-- deferAp :: Traversable t => t a -> DeferAp (t a) (t a) (t a)
+-- deferAp = traverse (DeferAp . CPure)
 
 data TW f a where
   TW :: Bool -> f a -> (Bool -> f a) -> TW f a
