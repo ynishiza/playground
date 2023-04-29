@@ -33,6 +33,10 @@ module Lens.Set
 
     assign,
     modifying,
+    (.=),
+    (+=),
+    (-=),
+
     scribe,
     passing,
     censoring,
@@ -86,7 +90,6 @@ sets_ = toSetter
 setting :: ((a -> b) -> s -> t) -> IndexPreservingSetter s t a b
 setting f p =
   rmap untainted p
-    & strong (\a b -> undefined)
     & undefined
 
 mapped :: Functor f => Setter (f a) (f b) a b
@@ -146,6 +149,15 @@ assign lens b = modify (set lens b)
 
 modifying :: MonadState s m => ASetter s s a b -> (a -> b) -> m ()
 modifying lens f = modify (over lens f)
+
+(.=) :: (MonadState s m) => ASetter s s a a -> a -> m ()
+lens .= v = assign lens v
+
+(+=) :: (MonadState s m, Num a) => ASetter s s a a -> a -> m ()
+lens += v = modifying lens (+ v)
+
+(-=) :: (MonadState s m, Num a) => ASetter s s a a -> a -> m ()
+lens -= v = modifying lens (subtract v)
 
 scribe :: (MonadWriter w m, Monoid s) => ASetter s w a a -> a -> m ()
 scribe lens a =

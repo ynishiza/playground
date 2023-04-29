@@ -33,6 +33,7 @@ module Lens.Fold
     worded,
 
     has,
+    hasn't,
     preview,
     foldOf,
     foldMapOf,
@@ -66,7 +67,9 @@ where
 
 import Control.Applicative.Backwards
 import Control.Arrow ((>>>))
+import Data.Coerce (coerce)
 import Data.Foldable
+import Data.Function ((&))
 import Data.Functor.Const
 import Data.Functor.Contravariant
 import Data.List.NonEmpty qualified as N
@@ -75,8 +78,8 @@ import Data.Semigroup (Max (..))
 import Lens.Get
 import Lens.Index
 import Lens.Lens
-import Data.Function ((&))
-import Data.Coerce (coerce)
+import Lens.Monoid
+import Lens.TraverseMonoid
 
 asIndexed :: Monoid r => IndexedFold i s a -> IndexedGetting i r s a
 asIndexed = id
@@ -96,8 +99,9 @@ folding :: Foldable t => (s -> t a) -> Fold s a
 folding f lens = phantom . traverse_ lens . f
 
 foldring :: (Contravariant f, Applicative f) => ((a -> f a -> f a) -> f a -> s -> f a) -> LensLike f s t a b
-foldring build k s = build (\a r -> k a *> r) (phantom $ pure ()) s
-  & phantom
+foldring build k s =
+  build (\a r -> k a *> r) (phantom $ pure ()) s
+    & phantom
 
 ifoldr :: Foldable t => (Int -> a -> r -> r) -> r -> t a -> r
 ifoldr combine r0 t = foldr (\a next -> \i -> combine i a (next $ i + 1)) (const r0) t 0
@@ -186,10 +190,14 @@ worded = folding words
 has :: Getting Any s a -> s -> Bool
 has = notNullOf
 
+hasn't :: Getting Any s a -> s -> Bool
+hasn't = nullOf
+
 runGet :: (a -> r) -> (r -> b) -> Getting r s a -> s -> b
-runGet wrapper unwrapper lens = lens (Const . wrapper)
-  >>> getConst
-  >>> unwrapper
+runGet wrapper unwrapper lens =
+  lens (Const . wrapper)
+    >>> getConst
+    >>> unwrapper
 
 preview :: Getting (XFirst a) s a -> s -> Maybe a
 preview = runGet (XFirst . Just) getXFirst

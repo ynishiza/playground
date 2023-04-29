@@ -85,7 +85,7 @@ toPrism (split, merge) k =
       split
       ( \case
           Left t -> pure t
-          Right fb -> merge <$> fb
+          Right b -> merge <$> b
       )
 
 fromPrism :: APrism s t a b -> (s -> Either t a, b -> t)
@@ -161,7 +161,7 @@ only :: Eq a => a -> Prism' a a
 only a0 = nearly (== a0)
 
 nearly :: (a -> Bool) -> Prism' a a
-nearly f = prism (\a -> if f a then Right a else Left a) id
+nearly predicate = prism (\a -> if predicate a then Right a else Left a) id
 
 outside :: forall {q} {p} {f} s t a b r. (ProfunctorArrow q, Functor f, ProfunctorRepresentation p) => APrism s t a b -> Optic q f (p t r) (p s r) (p b r) (p a r)
 outside lens k =

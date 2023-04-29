@@ -17,7 +17,6 @@ module Lens.Class
     uncurry',
 
     Settable(..),
-    module X,
   )
 where
 {- ORMOLU_ENABLE -}
@@ -28,8 +27,6 @@ import Data.Function ((&))
 import Data.Functor.Identity
 import Data.Kind (Type)
 import Data.Tuple (swap)
-import Lens.Monoid as X
-import Lens.TraverseMonoid as X
 
 -- ==================== Profunctor ====================
 

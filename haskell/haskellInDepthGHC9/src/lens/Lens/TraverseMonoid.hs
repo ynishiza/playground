@@ -129,3 +129,19 @@ instance Semigroup a => Semigroup (DroppingWhileR a) where
 
 instance Monoid a => Monoid (DroppingWhileR a) where
   mempty = DroppingWhileR $ const (mempty, True)
+
+capturedToList :: CaptureAp i a o captured -> [captured]
+capturedToList = foldr (:) []
+
+mapCaptured :: ([captured], CaptureAp i a captured captured) -> ([captured], a)
+mapCaptured ([], c) = ([], runCapturedAp c)
+mapCaptured (as, CPure v) = (as, v)
+mapCaptured (a:as, CCapture _ _) = (as, a)
+mapCaptured (as, CFmap f x) = (as', f x')
+  where
+    (as', x') = mapCaptured (as, x)
+mapCaptured (as, CAp f x) = (as'', f' x')
+  where
+    (as', f') = mapCaptured (as, f)
+    (as'', x') = mapCaptured (as', x)
+

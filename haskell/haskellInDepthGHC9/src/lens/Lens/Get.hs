@@ -47,8 +47,9 @@ type Getting' s a = Getting a s a
 type IndexedGetting i r s a = Indexed i a (Const r a) -> s -> Const r s
 
 toGetter :: ((a -> r) -> s -> r) -> Getting r s a
-toGetter build k s = build (getConst . k) s 
-  & Const
+toGetter build k s =
+  build (getConst . k) s
+    & Const
 
 fromGetter :: Getting r s a -> (a -> r) -> s -> r
 fromGetter lens k s =

@@ -1,3 +1,6 @@
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# HLINT ignore "Take on a non-positive" #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -13,6 +16,7 @@ import Data.Function
 import Data.Tuple
 import Lens
 import Lens.Scratch (deferAp)
+import Lens.TH
 import Person
 import System.IO.Error qualified as E
 import Test.Hspec
@@ -26,6 +30,17 @@ instance Semigroup Alpha where
 
 instance Monoid Alpha where
   mempty = NotAlpha
+
+data Point where
+  Point :: {coordX :: Double, coordY :: Double} -> Point
+  deriving stock (Show, Eq)
+
+data Segment where
+  Segment :: {startPoint :: Point, endPoint :: Point} -> Segment
+  deriving stock (Show, Eq)
+
+$(genFieldLenses ''Point)
+$(genFieldLenses ''Segment)
 
 expects :: (Show a, Eq a) => a -> a -> Expectation
 expects expected value = value `shouldBe` expected
@@ -53,6 +68,32 @@ spec = describe "" $ do
     zip [1 :: Int ..] [A .. E]
       & toListOf (traverse . (_1 <> (_2 . to ((* 10) . fromEnum))))
       & expects [1, 10, 2, 20, 3, 30, 4, 40, 5, 50]
+
+  it "[Each]" $ do
+    -- fold
+    (A, B, C)
+      & toListOf (each @Int)
+      & expects [A, B, C]
+    [A .. D]
+      & toListOf (each @Int)
+      & expects [A, B, C, D]
+    (A, B, C)
+      & itoListOf each
+      & expects [(0 :: Int, A), (1, B), (2, C)]
+    [A .. D]
+      & itoListOf each
+      & expects [(0 :: Int, A), (1, B), (2, C), (3, D)]
+
+    -- set
+    (A, B, C)
+      & set (each @Int) False
+      & expects (False, False, False)
+    (A, B, C)
+      & over (each @Int) succ
+      & expects (B, C, D)
+    [A .. D]
+      & over (each @Int) succ
+      & expects [B, C, D, E]
 
   describe "User defined data types" $ do
     describe "[Record data type] person" $ do
@@ -733,10 +774,60 @@ spec = describe "" $ do
 
   describe "Lens.Traverse" $ do
     describe "Lenses" $ do
-      it "[traversed]" $ do
+      it "[traversed] traverse with index" $ do
         [A .. E]
           & itoListOf traversed
           & expects [(0, A), (1, B), (2, C), (3, D), (4, E)]
+
+      it "[both]" $ do
+        -- get
+        (A, B)
+          & toListOf both
+          & expects [A, B]
+
+        -- set
+        (A, B)
+          & over both succ
+          & expects (B, C)
+
+      it "[beside]" $ do
+        -- get
+        (A, [B, C])
+          & toListOf (beside id traverse)
+          & expects [A, B, C]
+
+        -- set
+        (A, [B, C])
+          & over (beside id traverse) fromEnum
+          & expects (1, [2, 3])
+
+        -- nested
+        ((A, (B, C)), ((D, E), F))
+          & toListOf (beside (beside id both) (beside both id))
+          & expects [A, B, C, D, E, F]
+        ((A, (B, C)), ((D, E), F))
+          & over (beside (beside id both) (beside both id)) fromEnum
+          & expects ((1, (2, 3)), ((4, 5), 6))
+
+      it "[partsOf]" $ do
+        Node (Leaf A) (Node (Leaf B) (Leaf C))
+          & view (partsOf traverse)
+          & expects [A, B, C]
+
+        -- exact
+        Node (Leaf A) (Node (Leaf B) (Leaf C))
+          & set (partsOf traverse) [U, V, W]
+          & expects (Node (Leaf U) (Node (Leaf V) (Leaf W)))
+
+        -- too long
+        Node (Leaf A) (Node (Leaf B) (Leaf C))
+          & set (partsOf traverse) [U ..]
+          & expects (Node (Leaf U) (Node (Leaf V) (Leaf W)))
+
+        -- too short
+        Node (Leaf A) (Node (Leaf B) (Leaf C))
+          & set (partsOf traverse) [U]
+          & expects (Node (Leaf U) (Node (Leaf B) (Leaf C)))
 
       it "[element, elements] get value at index" $ do
         let x =
@@ -971,6 +1062,25 @@ spec = describe "" $ do
         (1 :: Int, A)
           & _1 ?~ 4
           & expects (Just (4 :: Int), A)
+
+      it "[State combinators] can code in imperative style" $ do
+        let origin = Point 0 0
+
+        ( do
+            _startPoint .= Point 1 2
+            _endPoint .= Point 3 4
+          )
+          & flip execState (Segment origin origin)
+          & expects (Segment (Point 1 2) (Point 3 4))
+
+        ( do
+            (_startPoint . _coordX) += 10
+            (_startPoint . _coordY) -= 20
+            (_endPoint . _coordX) += 100
+            (_endPoint . _coordY) -= 200
+          )
+          & flip execState (Segment origin origin)
+          & expects (Segment (Point 10 (-20)) (Point 100 (-200)))
 
   describe "Lens.Prism" $ do
     let _positive :: Prism' Int Int

@@ -3,8 +3,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Lens.TH.DataConstructor
-  ( 
-    genAllConstructorPrisms,
+  ( genAllConstructorPrisms,
     genConstructorPrismRaw,
     genConstructorPrismExp,
   )
@@ -12,12 +11,22 @@ where
 
 import Control.Monad
 import Data.Function
+import Data.Set hiding (foldl)
 import Language.Haskell.TH
 import Lens
 import Lens.TH.Utils
 import TH.Utilities
-import Data.Set hiding (foldl)
 
+-- Note:
+--
+-- Creates a prism for sum types
+-- e.g.
+--
+--      data Tree a = Leaf a | Node (Tree a) (Tree a)
+--
+--      _Leaf :: Prism' (Tree a) a
+--      _Node :: Prism' (Tree a) (Tree a, Tree a)
+--
 genAllConstructorPrisms :: Dec -> Q [Dec]
 genAllConstructorPrisms (DataD _ tyName tyVarBndrs _ dataCons _) =
   traverse build dataCons
@@ -32,14 +41,29 @@ genAllConstructorPrisms (DataD _ tyName tyVarBndrs _ dataCons _) =
       genConstructorPrismRaw
         (tyName, n)
         (conName, snd <$> conVars)
-          where
-            n = getVarNamesInType ty
-              & delete tyName
-              & toList
+      where
+        n =
+          getVarNamesInType ty
+            & delete tyName
+            & toList
     build (ForallC _ _ c) = build c
     build i = fail $ "Unsupported" <> show i
 genAllConstructorPrisms _ = fail "Not a data constructor"
 
+-- Note:
+--
+-- Creates a prism like
+-- e.g. if
+--
+--      data Tree a = Leaf a | Node (Tree a) (Tree a)
+--
+--      _Leaf :: Prism' (Tree a) a
+--      _Leaf = prism
+--        (\s -> case s of
+--          (Leaf a) -> Right a
+--          _ -> Left s)
+--        (a -> Leaf a)
+--
 genConstructorPrismRaw :: (Name, [Name]) -> (Name, [Type]) -> Q [Dec]
 genConstructorPrismRaw (tyName, typeVarNames) (conName, conVars) = do
   let sType = conType tyName (VarT <$> typeVarNames)
@@ -53,8 +77,8 @@ genConstructorPrismRaw (tyName, typeVarNames) (conName, conVars) = do
 genConstructorPrismExp :: (Name, Int) -> Q [Dec]
 genConstructorPrismExp (conName, conVarN) = do
   conVars <- replicateM conVarN $ newName "a"
-  let varTuple = tupleExpOf conVars
-      varTuplePattern = tuplePatternOf conVars
+  let valueTuple = tupleExpOf conVars
+      valueTuplePat = tuplePatternOf conVars
       conExp = applyConstructorOf conName conVars
       conPat = constructorPatternOf conName conVars
       prismName = createPrismName conName
@@ -63,10 +87,10 @@ genConstructorPrismExp (conName, conVarN) = do
         [|
           prism
             ( \x -> case x of
-                $(pure conPat) -> Right $(pure varTuple)
+                $(pure conPat) -> Right $(pure valueTuple)
                 _ -> Left x
             )
-            (\ $(pure varTuplePattern) -> $(pure conExp))
+            (\ $(pure valueTuplePat) -> $(pure conExp))
           |]
 
   dec <- funD prismName [clause [] (normalB prismExp) []]

@@ -14,7 +14,7 @@ _name k =
   lmap name k
   & strong (\p v -> (\x -> (p {name = x})) <$> v)
 
-_value :: (ProfunctorArrow p, Functor f) => Optic' p f (Person a) a
+_value :: (ProfunctorArrow p, Functor f) => Optic p f (Person a) (Person b) a b
 _value k =
   lmap value k
   & strong (\p v -> (\x -> (p {value = x})) <$> v)

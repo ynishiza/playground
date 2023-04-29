@@ -11,6 +11,7 @@ import Data.Functor.Contravariant
 import Data.Functor.Identity
 import Lens.Get (Getting)
 import Lens.Lens
+import Lens.Monoid
 import Lens.Prism (APrism, Splittable (Splittable), useSplittable)
 import Lens.Set (ASetter)
 
