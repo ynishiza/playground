@@ -1,0 +1,1 @@
+../../src/isprime/Prime.hs

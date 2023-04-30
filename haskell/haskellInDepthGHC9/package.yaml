@@ -110,6 +110,47 @@ executables:
     # - -ddump-to-file
     # - -ddump-file-prefix=mydump
     # - -ddump-deriv
+    #
+
+  du:
+    main: Main.hs
+    source-dirs: src/du
+    dependencies:
+      - optparse-applicative >= 0.17 && < 0.20
+    default-extensions: []
+
+  suntimes:
+    source-dirs: src/suntimes
+    main: Main.hs
+    dependencies:
+      - haskellInDepthGHC9
+      - aeson >= 2 && <3
+      - req > 3.10 && < 3.20
+      - http-client > 0.7
+      - http-types 
+      - optparse-applicative >= 0.17 && < 0.20
+
+    default-extensions:
+      - OverloadedStrings
+
+  iplookup:
+    source-dirs: src/ip/lookup
+    main: Main.hs
+    dependencies:
+      - haskellInDepthGHC9
+      - split 
+      - fingertree 
+      - optparse-applicative >= 0.17 && < 0.20
+    default-extensions:
+      - OverloadedStrings
+
+  isprime:
+    main: Main.hs
+    source-dirs: src/isprime
+    dependencies:
+      - haskellInDepthGHC9
+      - timeit 
+    default-extensions: []
 
   radarSafe:
     main:               main.hs
@@ -345,6 +386,59 @@ tests:
     - streaming-bytestring > 0.2 && < 0.3
     - lens > 4.15
 
+  du-test: 
+    main:               Spec.hs
+    source-dirs:      ./test/du
+    dependencies: 
+    - haskellInDepthGHC9
+    - optparse-applicative >= 0.17 && < 0.20
+
+  suntimes-test:
+    main:               Spec.hs
+    source-dirs:      ./test/suntimes
+    dependencies: 
+    - haskellInDepthGHC9
+    - aeson >= 2 && <3
+    - req > 3.10 && < 3.20
+    - http-client > 0.7
+    - http-types
+    - optparse-applicative >= 0.17 && < 0.20
+    - tasty >= 0.11 && < 1.6
+    - tasty-hspec >= 1.1 && < 1.3
+    - hspec >= 0.1 && <= 3
+    default-extensions:
+      - OverloadedStrings
+
+  iplookup-test:
+    main: Main.hs
+    source-dirs: test/iplookup
+    dependencies:
+      - haskellInDepthGHC9
+      - split 
+      - fingertree 
+      - optparse-applicative >= 0.17 && < 0.20
+      - random
+      - tasty >= 0.11 && < 1.6
+      - tasty-hspec >= 1.1 && < 1.3
+      - tasty-hedgehog >= 0.1 && <= 1.4
+      - hspec >= 0.1 && <= 3
+      - hedgehog >= 0.5 && < 1.2
+    ghc-options:
+      - -Wno-type-defaults
+    default-extensions:
+      - OverloadedStrings
+
+  isprime-test:
+    main: Main.hs
+    source-dirs: test/isprime
+    dependencies:
+      - haskellInDepthGHC9
+      - timeit 
+      - tasty >= 0.11 && < 1.6
+      - tasty-hspec >= 1.1 && < 1.3
+      - tasty-hedgehog >= 0.1 && <= 1.4
+      - hspec >= 0.1 && <= 3
+      - hedgehog >= 0.5 && < 1.2
 
   rpc-test:
     main:               Main.hs
@@ -551,3 +645,23 @@ benchmarks:
     - lens > 4.15
     - criterion >= 1.5.12 && < 2
 
+  iplookup-benchmark:
+    main: Main.hs
+    source-dirs: benchmark/iplookup
+    dependencies:
+      - haskellInDepthGHC9
+      - split 
+      - fingertree 
+      - optparse-applicative >= 0.17 && < 0.20
+      - criterion >= 1.5.12 && < 2
+      - random
+    default-extensions:
+      - OverloadedStrings
+
+  isprime-benchmark:
+    main: Main.hs
+    source-dirs: benchmark/isprime
+    dependencies:
+      - haskellInDepthGHC9
+      - timeit 
+      - criterion >= 1.5.12 && < 2

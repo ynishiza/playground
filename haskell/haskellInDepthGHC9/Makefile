@@ -40,12 +40,24 @@ run:  ## Run test
 	echo "Chapter 6"
 	@echo 4 $$'\n' | stack exec -- $(MAINEXE_NAME) 
 
+	@echo "Chapter 6 - du"
+	@make run-du
+
 	@echo "Chapter 7"
 	@echo 5 $$'\n' | stack exec -- $(MAINEXE_NAME) 
 	@echo 6 $$'\n' | stack exec -- $(MAINEXE_NAME) 
 
+	@echo "Chapter 7 - suntimes"
+	@make run-suntimes
+
+	@echo "Chapter 7 - iplookup"
+	@make run-iplookup
+
 	@echo "Chapter 9"
 	@echo 7 $$'\n' | stack exec -- $(MAINEXE_NAME) 
+
+	@echo "Chapter 9 - isprime"
+	@make run-isprime
 
 	@echo "Chapter 11"
 	@echo 8 $$'\n' | stack exec -- $(MAINEXE_NAME) 
@@ -65,6 +77,23 @@ run-singletons: ## Singletons tutorial https://blog.jle.im/entries/series/+intro
 	@echo "Singletons tutorial https://blog.jle.im/entries/series/+introduction-to-singletons.html"
 	@stack exec -- singletonsPart3
 	@stack exec -- singletonsPart4
+
+run-du: ## du
+	@stack exec -- du test -d 3 -e ".hs" -L
+	@stack exec -- du test --depth 3 --extension ".hs" -L
+
+run-suntimes: ## suntimes
+	@echo "Chapter 7"
+	@stack exec -- suntimes -f ./src/data/suntimes/input.txt -c ./src/data/suntimes/config.json
+
+run-iplookup: ## iplookup
+	@echo "Chapter 8"
+	@stack exec -- iplookup -d benchmark/data/iplookup/3.iprs -i 1.1.1.1,2.2.2.2 
+	@stack exec -- iplookup -d benchmark/data/iplookup/3.iprs -n 500000
+
+run-isprime: ## isprime
+	@echo "Chapter 9"
+	@stack exec -- isprime 7
 
 run-scratch: ## Run scratch space
 	@stack build $(PROJECTNAME):exe:scratch

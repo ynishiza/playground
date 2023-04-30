@@ -3,6 +3,7 @@ module Spec (run, specs) where
 
 import Prime
 import Control.Exception
+import Test.Hspec
 import Test.Tasty.Hspec
 
 run :: IO ()

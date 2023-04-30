@@ -29,39 +29,9 @@ run:  ## Run test
 	@echo "Chapter 2"
 	@stack exec -- stockquotes ./src/data/quotes.csv -n "My Company" -H "./stockreport.html"
 
-	echo "Chapter 6"
-	@stack exec -- du test -d 3 -e ".hs" -L
-	@stack exec -- du test --depth 3 --extension ".hs" -L
-
-	@echo "Chapter 7"
-	@stack exec -- suntimes -f ./src/data/suntimes/input.txt -c ./src/data/suntimes/config.json
-
-	@echo "Chapter 8"
-	@stack exec -- iplookup -d benchmark/data/iplookup/3.iprs -i 1.1.1.1,2.2.2.2 
-	@stack exec -- iplookup -d benchmark/data/iplookup/3.iprs -n 500000
-
-	@echo "Chapter 9"
-	@stack exec -- isprime 7
-	
-	@make test
-
-	@make benchmark
-
-benchmark: ## Run benchmark
-	@stack bench
-
-test: ## Run tests
-	@echo "Tests"
-	@stack test 
-
 ide: ## Check IDE setup
 	haskell-language-server-wrapper ./lib/*.hs
-	# haskell-language-server-wrapper ./src/stockquotes/*.hs
-	haskell-language-server-wrapper ./src/du/*.hs
-	haskell-language-server-wrapper ./test/du/*.hs
-	haskell-language-server-wrapper ./src/ip/lookup/*.hs
-	haskell-language-server-wrapper ./test/iplookup/*.hs
-	haskell-language-server-wrapper ./src/isprime/*.hs
+	haskell-language-server-wrapper ./src/stockquotes/*.hs
 
 debug: ## Print variables
 	@echo SHELL=$(SHELL)
@@ -69,7 +39,7 @@ debug: ## Print variables
 clean: ## Clean
 	stack clean
 	rm -f *.hi *.o *.cabal *.png *.svg *.html
-	find src test benchmark \
+	find src test \
 		-iname '*.o' \
 		-o -iname '*.hi' \
 		-o -iname '*dump-*' \

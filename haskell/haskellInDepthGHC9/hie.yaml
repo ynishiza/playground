@@ -66,3 +66,23 @@ cradle:
       component: haskellInDepthGHC9:exe:template
     - path: "./test/template"
       component: haskellInDepthGHC9:test:template-test
+    - path: "./src/du/"
+      component: haskellInDepthGHC9:exe:du
+    - path: "./test/du"
+      component: haskellInDepthGHC9:test:du-test
+    - path: "./src/suntimes/"
+      component: haskellInDepthGHC9:exe:suntimes
+    - path: "./test/suntimes"
+      component: haskellInDepthGHC9:test:suntimes-test
+    - path: "./src/ip/"
+      component: haskellInDepthGHC9:exe:iplookup
+    - path: "./test/iplookup"
+      component: haskellInDepthGHC9:test:iplookup-test
+    - path: "./benchmark/iplookup"
+      component: haskellInDepthGHC9:bench:iplookup-benchmark
+    - path: "./src/isprime/"
+      component: haskellInDepthGHC9:exe:isprime
+    - path: "./test/isprime"
+      component: haskellInDepthGHC9:test:isprime-test
+    - path: "./benchmark/isprime"
+      component: haskellInDepthGHC9:bench:isprime-benchmark

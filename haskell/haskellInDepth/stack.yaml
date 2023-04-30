@@ -1,6 +1,15 @@
 resolver: lts-18.21
 compiler: ghc-8.10.7
 
+# IMPORTANT: can't use ghc-8.10.7 on M1 macos (aarch64)
+# Install and use a separate x86_64
+system-ghc: false
+install-ghc: true
+arch: x86_64
+# system-ghc: true
+# install-ghc: false
+# arch: aarch64
+
 packages:
 - .
 

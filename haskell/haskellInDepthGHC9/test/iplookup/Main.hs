@@ -1,6 +1,7 @@
 import qualified Properties
 import qualified Spec
 import Test.Tasty
+import Test.Hspec
 import Test.Tasty.Hedgehog
 import Test.Tasty.Hspec
 

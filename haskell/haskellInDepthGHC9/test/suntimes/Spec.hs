@@ -13,6 +13,7 @@ import STExcept
 import SunTimes
 import Test.Tasty
 import Test.Tasty.Hspec
+import Test.Hspec
 import Types
 
 defaultWauth :: WebAPIAuth

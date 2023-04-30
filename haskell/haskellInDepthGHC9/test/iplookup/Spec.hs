@@ -15,7 +15,7 @@ import System.Random
 import System.Random.Stateful
 -- import Test.Tasty
 -- import Test.Tasty.Hspec
-import Test.Tasty.Hspec
+import Test.Hspec
 import Utils
 
 -- 192.168.3.15
