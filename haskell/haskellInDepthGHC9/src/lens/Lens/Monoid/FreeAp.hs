@@ -6,6 +6,8 @@ module Lens.Monoid.FreeAp
   ( FreeAp (..),
     fold,
     replaceWith,
+    hoist,
+    foldWith,
     storeFoldr,
     storeTraverses,
   )
@@ -29,10 +31,21 @@ instance Applicative (FreeAp a o) where
   f <*> x = FAp f x
 
 fold :: FreeAp a a x -> x
+-- fold = foldWith id id
 fold (FStore x) = x
 fold (FPure x) = x
 fold (FFmap f x) = f (fold x)
 fold (FAp f x) = fold f (fold x)
+
+hoist :: (a -> a') -> (x -> x') -> FreeAp a x x -> FreeAp a' x' x'
+hoist k _ (FStore a) = FStore (k a)
+hoist _ l (FPure x) = FPure (l x)
+
+foldWith :: (a -> r) -> (x -> r) -> FreeAp a o x -> r
+foldWith k _ (FStore a) = k a
+foldWith _ l (FPure x) = l x
+foldWith k l (FFmap f x) = foldWith k (l . f) x
+foldWith k l (FAp f x) = foldWith k (\n -> foldWith k (l . n) x) f
 
 replaceWith :: (IsList l, Item l ~ a) => FreeAp a a x -> l -> (x, l)
 replaceWith fap l =
@@ -41,7 +54,7 @@ replaceWith fap l =
 
 replaceWithList :: FreeAp a a x -> [a] -> (x, [a])
 replaceWithList c [] = (fold c, [])
-replaceWithList (FStore _) (a: as) = (a, as)
+replaceWithList (FStore _) (a : as) = (a, as)
 replaceWithList (FPure v) as = (v, as)
 replaceWithList (FFmap f x) as = (f x', as')
   where

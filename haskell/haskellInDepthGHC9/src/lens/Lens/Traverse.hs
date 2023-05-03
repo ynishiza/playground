@@ -1,5 +1,7 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RankNTypes #-}
 
 {- ORMOLU_DISABLE -}
@@ -21,17 +23,21 @@ module Lens.Traverse
     beside,
     partsOf,
     holesOf,
+    -- holesOf2,
+    -- holesOf3,
   )
 where
 {- ORMOLU_ENABLE -}
 
 import Data.Bitraversable
+import Data.Coerce (coerce)
 import Data.Function
 import Data.Functor.Compose
+import GHC.Stack (HasCallStack)
 import Lens.Lens
 import Lens.Monoid.Monoid
 
-type Traversing p s t a b = Over p (FreeAp a a) s t a b
+type Traversing p s t a b = forall f. Applicative f => Over p f s t a b
 
 fromTraverse :: ((a -> f b) -> s -> f t) -> LensLike f s t a b
 fromTraverse = id
@@ -92,30 +98,39 @@ partsOf lens k s =
     compute :: ([a] -> f [a]) -> FreeAp a a t -> f t
     compute f fap =
       foldStoreToList fap
+        & (coerce <$>)
         & f
         & (copyF fap <$>)
     copyF :: FreeAp a a x -> [a] -> x
-    copyF fap l = fst $ replaceWith fap l
+    copyF fap l = coerce $ fst $ replaceWith fap (coerce <$> l)
 
-holesOf :: forall f s t a. Applicative f => Traversing (->) s t a a -> s -> [(a -> f a) -> f t]
-holesOf lens s =
-  lens FStore s
-    & compute
+holesOf :: forall p f s t a. (ProfunctorNormal p, Applicative f) => Traversing p s t a a -> s -> [p a (f a) -> f t]
+holesOf lens s = holeOf <$> [0 .. length as - 1]
   where
-    compute :: FreeAp a a t -> [(a -> f a) -> f t]
-    compute fap = holeAt fap l <$> [0 .. (length l - 1)]
-      where
-        l = foldStoreToList fap
-    holeAt :: FreeAp a a t -> [a] -> Int -> (a -> f a) -> f t
-    holeAt fap as i f =
-      f a
-        & ((initl ++) . (: restl) <$>)
-        & (fst . replaceWith fap <$>)
-      where
-        a = as !! i
-        initl = take i as
-        restl = drop (i + 1) as
+    as = foldStoreToList $ lens (fromRep $ pure . FStore) s
+    holeOf :: Int -> p a (f a) -> f t
+    holeOf i0 p =
+      lens (strong (\a b -> Indexing $ \i -> (i + 1, if i == i0 then b else pure a)) p) s
+        & flip runIndexing 0
+        & snd
 
 foldStoreToList :: FreeAp a o x -> [a]
 foldStoreToList = storeFoldr (:) []
+
+singular :: forall p f s t a. (HasCallStack, ProfunctorNormal p, Functor f) => Traversing p s t a a -> Over p f s t a a
+singular lens p s =
+  lens (strong (\a x -> FStore x) p) s
+    & g
+  where
+    g :: FreeAp (f a) a t -> f t
+    g = undefined
+
+newtype FT f a o x = FT (FreeAp a o (f x))
+
+instance Functor f => Functor (FT f a o) where
+  fmap g (FT x) = FT $ FFmap (g <$>) x
+
+instance Applicative f => Applicative (FT f a o) where
+  pure _ = undefined
+  (FT f) <*> ~(FT x) = FT $ (<*>) <$> f <*> x
 

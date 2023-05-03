@@ -835,6 +835,7 @@ spec = describe "" $ do
                 & holesOf traverse
                 & fmap (\h f -> runIdentity $ h (Identity . f))
 
+        length holes & expects 5
         head holes pred
           & expects "`bcde"
         head holes succ

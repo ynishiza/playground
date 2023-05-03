@@ -1,9 +1,10 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TupleSections #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE ConstraintKinds #-}
 
 {- ORMOLU_DISABLE -}
 module Lens.Class
@@ -13,9 +14,11 @@ module Lens.Class
     Indexable (..),
     ProfunctorArrow(..),
     ProfunctorRepresentation(..),
+    ProfunctorNormal,
     strong,
     uncurry',
 
+    Distributable(..),
     Settable(..),
   )
 where
@@ -27,6 +30,35 @@ import Data.Function ((&))
 import Data.Functor.Identity
 import Data.Kind (Type)
 import Data.Tuple (swap)
+
+class Distributable t where
+  {-# MINIMAL distribute | collect #-}
+  distribute :: Functor f => f (t a) -> t (f a)
+  distribute = collect id
+  collect :: Functor f => (a -> t b) -> f a -> t (f b)
+  collect f = distribute . (f <$>)
+
+instance Distributable Identity where
+  distribute = Identity . (runIdentity <$>)
+
+instance Distributable ((->) a) where
+  distribute v x = ($ x) <$> v
+
+class (Applicative f, Traversable f) => Settable f where
+  {-# MINIMAL untainted, tainted #-}
+  untainted :: f a -> a
+  tainted :: a -> f a
+
+  -- untainedDot f = untainted . f
+  -- taintedDot f = tainted . f
+  untaintedDot :: Profunctor p => p a (f b) -> p a b
+  untaintedDot = rmap untainted
+  taintedDot :: Profunctor p => p a b -> p a (f b)
+  taintedDot = rmap tainted
+
+instance Settable Identity where
+  untainted = coerce
+  tainted = coerce
 
 -- ==================== Profunctor ====================
 
@@ -79,8 +111,10 @@ class Profunctor p => Indexable i p where
 
 class (ProfunctorArrow p, Functor (Rep p)) => ProfunctorRepresentation p where
   type Rep p :: Type -> Type
-  toRep :: p a b -> a -> Rep p b 
+  toRep :: p a b -> a -> Rep p b
   fromRep :: (a -> Rep p b) -> p a b
+
+type ProfunctorNormal p = (Monad (Rep p), Distributable (Rep p), ProfunctorRepresentation p)
 
 instance Profunctor (->) where
   dimap f g fn = g . fn . f
@@ -112,19 +146,3 @@ instance Applicative m => ProfunctorChoice (Kleisli m) where
   left' (Kleisli f) = Kleisli $ \case
     (Left a) -> Left <$> f a
     (Right b) -> pure $ Right b
-
-class (Applicative f, Traversable f) => Settable f where
-  {-# MINIMAL untainted, tainted #-}
-  untainted :: f a -> a
-  tainted :: a -> f a
-
-  -- untainedDot f = untainted . f
-  -- taintedDot f = tainted . f
-  untaintedDot :: Profunctor p => p a (f b) -> p a b
-  untaintedDot = rmap untainted
-  taintedDot :: Profunctor p => p a b -> p a (f b)
-  taintedDot = rmap tainted
-
-instance Settable Identity where
-  untainted = coerce
-  tainted = coerce

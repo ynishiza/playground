@@ -1,4 +1,5 @@
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 {- ORMOLU_DISABLE -}
 module Lens.Lens
@@ -58,7 +59,7 @@ type IndexedSetter i s t a b = forall p f. (Indexable i p, Settable f) => p a (f
 
 type IndexedSetter' i s a = IndexedSetter i s s a a
 
-type IndexPreservingSetter s t a b = forall p f. (ProfunctorRepresentation p, Settable f) => p a (f b) -> p s (f t)
+type IndexPreservingSetter s t a b = forall p f. (ProfunctorNormal p, Settable f) => p a (f b) -> p s (f t)
 
 type IndexedFold i s a = forall f p. (Indexable i p, Contravariant f, Applicative f) => p a (f a) -> s -> f s
 
