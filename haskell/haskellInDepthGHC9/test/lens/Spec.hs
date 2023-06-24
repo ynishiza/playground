@@ -23,7 +23,7 @@ import Test.Hspec
 import Tree
 
 data Alpha = NotAlpha | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P | Q | R | S | T | U | V | W | X | Y | Z
-  deriving (Eq, Ord, Show, Bounded, Enum)
+  deriving stock (Eq, Ord, Show, Bounded, Enum)
 
 instance Semigroup Alpha where
   a <> b = toEnum $ max (fromEnum a) (fromEnum b)
@@ -849,6 +849,20 @@ spec = describe "" $ do
         last holes succ
           & expects "abcdf"
 
+        -- with Indexes
+        let indexedHoles = 
+              [1::Int,2,3,4,5]
+                & holesOf traversed
+                & fmap (\h -> runIdentity $ h (Indexed $ \i a -> Identity $ i + a))
+        head indexedHoles
+          & expects [1,2,3,4,5]
+        (indexedHoles !! 1) 
+          & expects [1,3,3,4,5]
+        (indexedHoles !! 2) 
+          & expects [1,2,5,4,5]
+        last indexedHoles
+          & expects [1,2,3,4,9]
+
       it "[element, elements] get value at index" $ do
         let x =
               [A .. E]
@@ -902,6 +916,14 @@ spec = describe "" $ do
           & preview (element 0)
           & expects
           $ Just 1
+
+    describe "Effects" $ do 
+      it "[failover]" $ do
+        ([] :: [Int])
+          & failover traverse (+2) & expects Nothing
+        [1 :: Int]
+          & failover traverse (+2) & expects (Just [3])
+
 
   describe "Lens.Set" $ do
     it "allows polymorphic update" $ do
@@ -1127,6 +1149,16 @@ spec = describe "" $ do
         & preview _Nothing
         & expects Nothing
 
+      -- with prism functions
+      Just (Right (Left True))
+        & isn't (_Just . _Right . _Left) & expects False
+      Just (Right (Left True))
+        & isn't (_Just . _Left . _Right) & expects True
+      Just (Right (Left True))
+        & isn't (_Just . _Right) & expects False
+      Just (Right (Left True))
+        & isn't (_Just . _Left) & expects True
+
     it "[Getter]" $ do
       Just A
         & preview _Just
@@ -1323,6 +1355,15 @@ spec = describe "" $ do
           & expects ""
 
     describe "Effects" $ do
+      it "composes" $ do
+        Just A
+          & isn't _Just
+          & expects False
+
+        Just (A, B)
+          & matching _Just
+          & expects @(Either (Maybe Alpha) (Alpha, Alpha)) (Right (A, B))
+
       it "[isn't]" $ do
         Nothing
           & isn't _Just

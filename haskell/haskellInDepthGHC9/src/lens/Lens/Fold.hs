@@ -144,7 +144,7 @@ takingWhileBase lens predicate ref s =
   lens capture s
     & runFreeTake
     & storeTraverses ref
-    & (M.fold <$>)
+    & (M.foldx id <$>)
   where
     capture :: a -> FreeTake i a a a
     capture a = FreeTake a $ \(i, isTaking) -> if isTaking && predicate i a then (FStore a, True) else (FPure a, False)
@@ -154,7 +154,7 @@ droppingWhileBase lens predicate ref s =
   lens capture s
     & ruunFreeDrop
     & storeTraverses ref
-    & (M.fold <$>)
+    & (M.foldx id <$>)
   where
     capture :: a -> FreeDrop i a a a
     capture a = FreeDrop a $ \(i, isDropping) ->

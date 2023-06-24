@@ -13,6 +13,7 @@ import Control.Monad.Logger
 import Control.Monad.State
 import Servant
 import TextShow
+import Control.Monad.Error (MonadError)
 
 type MyAPI =
   "api"
@@ -36,7 +37,7 @@ data ServerState = MyState
     age :: Int
   }
 
-newtype MyServer a = MySerevr (StateT ServerState (LoggingT Handler) a)
+newtype MyServer a = MyServer (StateT ServerState (LoggingT Handler) a)
   deriving stock
     ( Functor
     )
@@ -44,6 +45,7 @@ newtype MyServer a = MySerevr (StateT ServerState (LoggingT Handler) a)
     ( Applicative,
       Monad,
       MonadState ServerState,
+      MonadError ServerError,
       MonadLogger
     )
 

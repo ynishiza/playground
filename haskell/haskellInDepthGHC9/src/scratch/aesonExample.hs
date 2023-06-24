@@ -5,6 +5,8 @@
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
 
 import Data.Aeson
+import Data.Aeson.Types
+import Data.Text qualified as T
 import GHC.Generics
 
 data MyData1 where
@@ -21,13 +23,30 @@ data MyData2 where
   deriving stock (Show, Eq, Generic)
 
 instance FromJSON MyData2 where
-  parseJSON = genericParseJSON $ defaultOptions
-    { fieldLabelModifier = camelTo2 '_'
-    }
+  parseJSON =
+    genericParseJSON $
+      defaultOptions
+        { fieldLabelModifier = camelTo2 '_'
+        }
+
 instance ToJSON MyData2 where
-  toEncoding = genericToEncoding $ defaultOptions
-    { fieldLabelModifier = camelTo2 '_'
-    }
+  toEncoding =
+    genericToEncoding $
+      defaultOptions
+        { fieldLabelModifier = camelTo2 '_'
+        }
+
+data Alpha = A | B | C
+
+instance FromJSON Alpha where
+  parseJSON (String s)
+    | s' == "a" = pure A
+    | s' == "b" = pure B
+    | s' == "c" = pure C
+    | otherwise = parseFail "ERROR"
+    where
+      s' = T.unpack s
+  parseJSON _ = parseFail "ERROR"
 
 test :: IO ()
 test = do
@@ -36,5 +55,4 @@ test = do
   print $ encode $ MyData1 1 "ABC"
 
   print $ decode' @MyData2 "{ \"some_field\": 1 }"
-  print $ encode $ MyData2 { someField = 1 }
-
+  print $ encode $ MyData2 {someField = 1}

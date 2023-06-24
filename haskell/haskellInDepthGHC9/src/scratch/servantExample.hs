@@ -1,99 +1,45 @@
 -- Run with
 --
---    stack ghci -- src/scratch/servantExample.hs
+--    stack ghci -- src/scratch/ServantAPI.hs src/scratch/servantExample.hs
 --
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
 
-import Control.Monad.IO.Class
-import Data.Aeson
-import GHC.Generics
+import ServantAPI
+import Data.ByteString.Lazy.Char8 qualified as BS
+import Data.Function ((&))
+import Network.Wai
 import Network.Wai.Handler.Warp
+import Network.Wai.Middleware.RequestLogger
 import Servant
+import Control.Exception (SomeException)
+import Control.Monad.Catch (try)
 
--- Data
-data User where
-  User :: {userId :: UserId, name :: String, email :: String} -> User
-  deriving (Generic, FromJSON, ToJSON, Show, Eq)
+-- Error handlers
+errorFromatter :: ErrorFormatters
+errorFromatter =
+  defaultErrorFormatters
+    { notFoundErrorFormatter = \req ->
+        err404 {errBody = "404 Not found:" <> BS.fromStrict (rawPathInfo req)}
+    }
 
-type UserId = String
-
-api :: Proxy API
-api = Proxy
-
--- Interfaces
-type API =
-  "api"
-    :> Summary "Main API"
-    :> Description
-         "This is a sample API\
-         \5 endpoints \
-         \ GET      /api/user \
-         \ POST     /api/user \
-         \ GET      /api/user/:uid \
-         \ POST     /api/user/:uid \
-         \ DELETE   /api/user/:uid "
-    :> ( BaseAPI
-           :<|> UserAPI
-       )
-
-type BaseAPI =
-  Summary "Base API"
-    :> Get '[JSON] String
-
-type UserAPI =
-  "user"
-    :> Summary "User API"
-    :> ( Get '[JSON] [User]
-           :<|> ReqBody '[JSON] User :> Post '[JSON] ()
-           :<|> TargetUserAPI
-       )
-
-type TargetUserAPI =
-  Capture "uid" UserId
-    :> ( Get '[JSON] User
-           :<|> ReqBody '[JSON] User :> Post '[JSON] ()
-           :<|> Delete '[JSON] ()
-       )
-
--- Handlers
-mainHandler :: Server API
-mainHandler =
-  baseAPIHandler
-    :<|> userAPIHandler
-
-baseAPIHandler :: Server BaseAPI
-baseAPIHandler = return "Hello"
-
-userAPIHandler :: Server UserAPI
-userAPIHandler =
-  ( do
-      liftIO $ putStrLn "GET user"
-      return []
-  )
-    :<|> ( \user -> do
-             liftIO $ putStrLn $ "POST user:" <> show user
-             return ()
-         )
-    :<|> targetUserAPIHandler
-
-targetUserAPIHandler :: Server TargetUserAPI
-targetUserAPIHandler uid =
-  ( do
-      liftIO $ putStrLn $ "GET uid:" <> uid
-      return $ User "123" "Yui" "test@test.com"
-  )
-    :<|> ( \user -> do
-             liftIO $ putStrLn $ "POST uid:" <> uid <> " user:" <> show user
-             return ()
-         )
-    :<|> ( do
-             liftIO $ putStrLn $ "DELETE uid:" <> uid
-             throwError err403
-         )
+-- Server settings
+serverSettings :: Settings
+serverSettings =
+  defaultSettings
+    & setPort 1234
+    & setHost "localhost"
 
 start :: IO ()
-start = run 1234 (serve api mainHandler)
+start =
+  serveWithContext api (errorFromatter :. EmptyContext) (hoistServer api handleError mainHandler)
+    & logStdoutDev
+    & runSettings serverSettings
+
+handleError :: Handler a -> Handler a
+handleError h = do
+  result <- try h
+  case result of
+    Left (e :: SomeException) -> throwError $ err400 { errBody = BS.pack ("Uncaught error: " <> show e)  }
+    Right x -> return x
+

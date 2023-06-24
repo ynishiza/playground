@@ -4,10 +4,9 @@
 
 module Lens.Monoid.FreeAp
   ( FreeAp (..),
+    foldx,
     fold,
     replaceWith,
-    hoist,
-    foldWith,
     storeFoldr,
     storeTraverses,
   )
@@ -30,22 +29,17 @@ instance Applicative (FreeAp a o) where
   pure = FPure
   f <*> x = FAp f x
 
-fold :: FreeAp a a x -> x
--- fold = foldWith id id
-fold (FStore x) = x
-fold (FPure x) = x
-fold (FFmap f x) = f (fold x)
-fold (FAp f x) = fold f (fold x)
+foldx :: (x -> r) -> FreeAp a a x -> r
+foldx g (FStore a) = g a
+foldx g (FPure x) = g x
+foldx g (FAp f x) = foldx (\f' -> foldx (g . f') x) f
+foldx g (FFmap f x) = foldx (g . f) x
 
-hoist :: (a -> a') -> (x -> x') -> FreeAp a x x -> FreeAp a' x' x'
-hoist k _ (FStore a) = FStore (k a)
-hoist _ l (FPure x) = FPure (l x)
-
-foldWith :: (a -> r) -> (x -> r) -> FreeAp a o x -> r
-foldWith k _ (FStore a) = k a
-foldWith _ l (FPure x) = l x
-foldWith k l (FFmap f x) = foldWith k (l . f) x
-foldWith k l (FAp f x) = foldWith k (\n -> foldWith k (l . n) x) f
+fold :: (a -> r) -> (x -> r) -> FreeAp a o x -> r
+fold k _ (FStore a) = k a
+fold _ l (FPure x) = l x
+fold k l (FFmap f x) = fold k (l . f) x
+fold k l (FAp f x) = fold k (\n -> fold k (l . n) x) f
 
 replaceWith :: (IsList l, Item l ~ a) => FreeAp a a x -> l -> (x, l)
 replaceWith fap l =
@@ -53,7 +47,7 @@ replaceWith fap l =
     & second fromList
 
 replaceWithList :: FreeAp a a x -> [a] -> (x, [a])
-replaceWithList c [] = (fold c, [])
+replaceWithList c [] = (foldx id c, [])
 replaceWithList (FStore _) (a : as) = (a, as)
 replaceWithList (FPure v) as = (v, as)
 replaceWithList (FFmap f x) as = (f x', as')
