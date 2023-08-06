@@ -1,5 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 module IPTypes
   ( IP (..),
     IPRange (..),
@@ -11,16 +12,16 @@ module IPTypes
     serializeIP,
     unserializeIP,
     ipModify,
-    module X
+    module X,
   )
 where
 
+import Control.DeepSeq
 import Data.Bits as X
 import Data.List (intercalate)
 import Data.Word as X
 import Fmt
 import Utils
-import Control.DeepSeq
 
 type LineNumber = Int
 
@@ -74,7 +75,7 @@ instance Show IPRange where
   show (IPRange ip1 ip2) = ip1 |+ "," +| ip2 |+ ""
 
 instance Ord IPRange where
-  compare (IPRange (IP l1) (IP h1)) (IPRange (IP l2) (IP h2)) 
+  compare (IPRange (IP l1) (IP h1)) (IPRange (IP l2) (IP h2))
     | l1 /= l2 = compare l1 l2
     | otherwise = compare (h1 - l1) (h2 - l2)
 

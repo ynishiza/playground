@@ -1,11 +1,8 @@
 module Gen
-  ( 
-    midIP,
-    generateByte,
+  ( generateByte,
     generateByteSeq,
     generateIP,
-    generateIPLinearFrom,
-    generateIPLinear,
+    generateIPBetween,
     generateIPRange,
     generateInvalidIPRange,
     generateIPRangeDBOf,
@@ -15,50 +12,46 @@ module Gen
 where
 
 import Control.Monad
+import Data.Function
+import Data.Functor
 import Hedgehog
-import qualified Hedgehog.Gen as G
-import qualified Hedgehog.Range as G
+import Hedgehog.Gen qualified as G hiding (constant)
+import Hedgehog.Range qualified as G
 import IPParse as X
 
 generateByte :: Gen Word8
-generateByte = G.word8 G.linearBounded
+generateByte = G.word8 G.constantBounded
 
 generateByteSeq :: Gen ByteSeq
 generateByteSeq = G.list (G.singleton 4) generateByte
 
-ipMidpoint :: IP -> IP -> IP
-ipMidpoint (IP l) (IP u) = IP ((u - l) `div` 2)
-
-midIP :: IP
-midIP = ipMidpoint minBound maxBound
+generateIPIn :: Integral a => Range a -> Gen IP
+generateIPIn range = IP <$> G.word32 (fromIntegral <$> range)
 
 generateIP :: Gen IP
-generateIP = generateIPLinearFrom midIP minBound maxBound
+generateIP =
+  [0 .. 31]
+    <&> (\x -> generateIPIn @Word32 (G.constant (2 ^ x - 1) (2 ^ (x + 1))))
+    & G.choice
 
-generateIPLinear:: IP -> IP -> Gen IP
-generateIPLinear ipl ipu = generateIPLinearFrom (ipMidpoint ipl ipu) ipl ipu
-
-generateIPLinearFrom :: IP -> IP -> IP -> Gen IP
-generateIPLinearFrom (IP o) (IP l) (IP h) =
+generateIPBetween :: IP -> IP -> Gen IP
+generateIPBetween (IP l) (IP h) = do
   guard (l <= h)
-    >> IP <$> G.word32 (G.linearFrom o l h)
+  generateIPIn (G.constant l h)
 
 generateIPRange :: Gen IPRange
 generateIPRange = do
-  ip1 <- generateIP
-  ip2 <- generateIPLinearFrom (ipModify ip1 (+1)) ip1 maxBound
-  return $ IPRange ip1 ip2
+  rangeSize <- G.word32 (G.exponential 1 (maxBound - 1))
+  ipLow <- generateIPIn (G.exponential 0 (maxBound - rangeSize))
+  return $ IPRange ipLow (ipLow + IP rangeSize)
 
 generateInvalidIPRange :: Gen IPRange
 generateInvalidIPRange = do
-  ip1 <- G.filter (> minBound) generateIP
-  let u = ipModify ip1 (subtract 1)
-  ip2 <- generateIPLinearFrom u minBound u
-  return $ IPRange ip1 ip2
+  ipLow <- G.filter (> minBound) generateIP
+  IPRange ipLow <$> generateIPIn (G.constant minBound (ipLow - 1))
 
 generateIPRangeDB :: Gen IPRangeDB
 generateIPRangeDB = generateIPRangeDBOf 50 10 100
 
 generateIPRangeDBOf :: Int -> Int -> Int -> Gen IPRangeDB
 generateIPRangeDBOf o l u = IPRangeDB <$> G.list (G.linearFrom o l u) generateIPRange
-
