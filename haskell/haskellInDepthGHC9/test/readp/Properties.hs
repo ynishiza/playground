@@ -21,12 +21,19 @@ import Combinators
 import Control.Monad
 import Data.List (intercalate)
 import Debug.Trace
+import GHC.Exts (fromString)
 import Hedgehog
-import Hedgehog.Gen qualified as H
+import Hedgehog.Gen qualified as H hiding (constant)
 import Hedgehog.Range qualified as H
 import ParseBasic qualified as B
 import ReadPBasic qualified as R
 import Text.ParserCombinators.ReadP qualified as R
+
+numTests :: TestLimit
+numTests = 500
+
+toLabelName :: Show a => a -> LabelName
+toLabelName = fromString . show
 
 genChar :: Gen Char
 genChar = H.alpha
@@ -56,7 +63,7 @@ genLargeAlphaNum0 :: Gen String
 genLargeAlphaNum0 = genStringOfSize 0 100 H.alphaNum
 
 genIntInRange :: Int -> Int -> Gen Int
-genIntInRange l h = H.integral (H.linear l h)
+genIntInRange l h = H.integral (H.constant l h)
 
 genRest :: Gen String
 genRest = genStringOfSize 0 10 (H.element ['!', '@', '#', '$', '%', '^', '&', '*'])
@@ -120,7 +127,9 @@ printDebug v = trace (show v <> "\n") pure ()
 readpEqual :: (MonadTest m, Eq a, Show a) => P a -> R.ReadP a -> String -> m ()
 readpEqual p1 p2 toParse = do
   annotate $ "test string:" <> toParse
+  let res = parse p1 toParse
   parse p1 toParse === parseReadP p2 toParse
+  label $ "result size:" <> toLabelName (length res)
 
 readpEqualWithNResults :: (MonadTest m, Eq a, Show a) => Int -> P a -> R.ReadP a -> String -> m ()
 readpEqualWithNResults n p1 p2 toParse = do
@@ -132,9 +141,10 @@ readpEqualWithNResults n p1 p2 toParse = do
       <> "result:"
       <> show (parse p1 toParse)
   length (parse p1 toParse) === n
+  label $ "n:" <> toLabelName n
 
 testCase :: PropertyName -> PropertyT IO () -> (PropertyName, Property)
-testCase name p = (name, property p)
+testCase name p = (name, withTests numTests $ property p)
 
 properties :: Group
 properties =
@@ -212,7 +222,7 @@ readPEquivalence =
       --
       testCase "[munch,munch1]" $ do
         rest <- forAll genLargeAlphaNum0
-        (pattern, _, str) <-
+        (pattern, n, str) <-
           forAll $
             genReplicate
               (genIntInRange 0 10)
@@ -227,6 +237,7 @@ readPEquivalence =
                 (munch1 (`elem` toParse))
                 (R.munch1 (`elem` toParse))
 
+        label $ "n:" <> toLabelName n
         runTest toParse
         runTest1 toParse,
       --
@@ -294,7 +305,7 @@ readPEquivalence =
         let toParse = str <> rest
             runTest0 =
               readpEqualWithNResults
-                (if n == 0 then 1 else n + 1)
+                (n + 1)
                 (many $ string pattern)
                 (R.many $ R.string pattern)
             runTest1 =
@@ -315,7 +326,7 @@ readPEquivalence =
         let toParse = str <> rest
             runTest0' =
               readpEqualWithNResults
-                (if n == 0 then 1 else n + 1)
+                (n + 1)
                 (many' $ string pattern)
                 (R.many $ R.string pattern)
             runTest1' =
@@ -341,7 +352,7 @@ readPEquivalence =
         let toParse = str <> rest
             runTest =
               readpEqualWithNResults
-                (if n == 0 then 1 else n + 1)
+                (n + 1)
                 (skipMany (string pattern))
                 (R.skipMany (R.string pattern))
             runTest1 =
@@ -363,12 +374,12 @@ readPEquivalence =
         let toParse = str <> rest
             runTest =
               readpEqualWithNResults
-                (if n == 0 then 1 else n + 1)
+                (n + 1)
                 (sepBy (string pattern) (string sepc))
                 (R.sepBy (R.string pattern) (R.string sepc))
             runTest1 =
               readpEqualWithNResults
-                (if n == 0 then 0 else n)
+                n
                 (sepBy1 (string pattern) (string sepc))
                 (R.sepBy1 (R.string pattern) (R.string sepc))
 
@@ -385,12 +396,12 @@ readPEquivalence =
         let toParse = str <> rest
             runTest =
               readpEqualWithNResults
-                (if n == 0 then 1 else n)
+                (max 1 n)
                 (endBy (string pattern) (string delim))
                 (R.endBy (R.string pattern) (R.string delim))
             runTest1 =
               readpEqualWithNResults
-                (if n == 0 then 0 else n - 1)
+                (max 0 (n - 1))
                 (endBy1 (string pattern) (string delim))
                 (R.endBy1 (R.string pattern) (R.string delim))
 
@@ -406,7 +417,7 @@ readPEquivalence =
         let n = length vals
             runTest =
               readpEqualWithNResults
-                (if n == 0 then 1 else n + 1)
+                (n + 1)
                 (chainr (show <$> B.integral @Int) B.pbracket "#")
                 (R.chainr (show <$> R.int @Int) R.bracket "#")
             runTest1 =
@@ -427,7 +438,7 @@ readPEquivalence =
         let n = length vals
             runTest =
               readpEqualWithNResults
-                (if n == 0 then 1 else n + 1)
+                (n + 1)
                 (chainl (show <$> B.integral @Int) B.pbracket "#")
                 (R.chainl (show <$> R.int @Int) R.bracket "#")
             runTest1 =
