@@ -1,3 +1,8 @@
+{-
+  Run with
+    stack exec -- src/scratch/<name>.hs
+    stack ghci -- src/scratch/<name>.hs
+-}
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Concurrent.STM.TSem

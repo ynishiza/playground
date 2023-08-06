@@ -1,3 +1,6 @@
+-- Run with 
+--  stack exec -- src/scratch/<name>.hs
+--  stack ghci -- src/scratch/<name>.hs
 {-# LANGUAGE GADTs #-}
 
 import Control.Monad

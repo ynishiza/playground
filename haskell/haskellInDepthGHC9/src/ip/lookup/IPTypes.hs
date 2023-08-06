@@ -1,3 +1,5 @@
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module IPTypes
   ( IP (..),
     IPRange (..),
@@ -13,7 +15,6 @@ module IPTypes
   )
 where
 
-import Data.Foldable
 import Data.Bits as X
 import Data.List (intercalate)
 import Data.Word as X
@@ -29,6 +30,7 @@ type ByteSeq = [Byte]
 
 newtype IP = IP {unIP :: Word32}
   deriving (Eq, Ord, Bounded)
+  deriving newtype (Num, Real, Enum, Integral)
 
 instance NFData IP where
   rnf (IP p) = rnf p
