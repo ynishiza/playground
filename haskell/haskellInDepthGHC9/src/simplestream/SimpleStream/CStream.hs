@@ -33,6 +33,7 @@ import Control.Monad.Trans.Class
 import Data.Functor.Sum
 import SimpleStream.Stream qualified as S
 
+-- Stream in CPS (continuation passing style)
 newtype CStream f m r where
   CStream :: {runCStream :: forall a. (r -> a) -> (f a -> a) -> (m a -> a) -> a} -> CStream f m r
 

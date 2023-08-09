@@ -74,9 +74,6 @@ fromDoorState d = case toSing d of
   (SomeSing SOpened) -> MkSomeDoor $ fromSDoorState SOpened
   (SomeSing SClosed) -> MkSomeDoor $ fromSDoorState SClosed
 
--- fromDoorState Opened = MkSomeDoor $ fromSDoorState SOpened
--- fromDoorState Closed = MkSomeDoor $ fromSDoorState SClosed
-
 fromSDoorState :: SDoorState s -> Door s
 fromSDoorState _ = MkDoor
 
@@ -160,9 +157,3 @@ test = do
 
   pure ()
 
-type T2 :: forall {a}. a -> Type
-data T2 a = T2
--- x = T2 @'False
-f :: forall {k}  (a::k). Proxy a
-f=Proxy
-x=f @Maybe

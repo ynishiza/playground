@@ -1,4 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Eta reduce" #-}
 
 {- ORMOLU_DISABLE -}
 module Properties
@@ -19,11 +22,13 @@ where
 
 import Combinators
 import Control.Monad
+import Data.Foldable
 import Data.List (intercalate)
 import Debug.Trace
 import GHC.Exts (fromString)
 import Hedgehog
 import Hedgehog.Gen qualified as H hiding (constant)
+import Hedgehog.Internal.Property (CoverPercentage)
 import Hedgehog.Range qualified as H
 import ParseBasic qualified as B
 import ReadPBasic qualified as R
@@ -125,23 +130,29 @@ printDebug :: (Monad m, Show a) => a -> m ()
 printDebug v = trace (show v <> "\n") pure ()
 
 readpEqual :: (MonadTest m, Eq a, Show a) => P a -> R.ReadP a -> String -> m ()
-readpEqual p1 p2 toParse = do
+readpEqual p1 p2 toParse = void $ readpEqual_ p1 p2 toParse
+
+readpEqual_ :: (MonadTest m, Eq a, Show a) => P a -> R.ReadP a -> String -> m [(a, String)]
+readpEqual_ p1 p2 toParse = do
   annotate $ "test string:" <> toParse
   let res = parse p1 toParse
-  parse p1 toParse === parseReadP p2 toParse
-  label $ "result size:" <> toLabelName (length res)
+  res === parseReadP p2 toParse
+  return res
 
 readpEqualWithNResults :: (MonadTest m, Eq a, Show a) => Int -> P a -> R.ReadP a -> String -> m ()
-readpEqualWithNResults n p1 p2 toParse = do
-  readpEqual p1 p2 toParse
+readpEqualWithNResults n p1 p2 toParse = void $ readpEqualWithNResults_ n p1 p2 toParse
+
+readpEqualWithNResults_ :: (MonadTest m, Eq a, Show a) => Int -> P a -> R.ReadP a -> String -> m [(a, String)]
+readpEqualWithNResults_ n p1 p2 toParse = do
+  res <- readpEqual_ p1 p2 toParse
   annotate $
     "test string:"
       <> toParse
       <> "\n"
       <> "result:"
-      <> show (parse p1 toParse)
-  length (parse p1 toParse) === n
-  label $ "n:" <> toLabelName n
+      <> show res
+  length res === n
+  return res
 
 testCase :: PropertyName -> PropertyT IO () -> (PropertyName, Property)
 testCase name p = (name, withTests numTests $ property p)
@@ -154,6 +165,7 @@ properties =
       testCase "Parses an integer" $ do
         n <- forAll $ genIntInRange (-10000) 10000
         annotate $ show $ parse (B.integral @Int) (show n)
+        coverRange "int = " (-10000, 1000, replicate 20 1) n
         parseLast B.integral (show n) === (n, ""),
       --
       testCase "fails on non-integral" $ do
@@ -163,6 +175,7 @@ properties =
       --
       testCase "Parses a unary expression" $ do
         v1 <- forAll $ genIntInRange (-100) 100
+        coverRange "int = " (-100, 10, replicate 20 1) v1
         parseLast (B.unaryExp B.arithmeticUnaryOp B.integral) (" -  " <> show v1)
           === (negate v1, ""),
       --
@@ -222,7 +235,7 @@ readPEquivalence =
       --
       testCase "[munch,munch1]" $ do
         rest <- forAll genLargeAlphaNum0
-        (pattern, n, str) <-
+        (term, n, str) <-
           forAll $
             genReplicate
               (genIntInRange 0 10)
@@ -230,8 +243,8 @@ readPEquivalence =
         let toParse = str <> rest
             runTest =
               readpEqual
-                (munch (`elem` pattern))
-                (R.munch (`elem` pattern))
+                (munch (`elem` term))
+                (R.munch (`elem` term))
             runTest1 =
               readpEqual
                 (munch1 (`elem` toParse))
@@ -243,8 +256,9 @@ readPEquivalence =
       --
       testCase "[skipSpaces]" $ do
         toParse <- forAll $ H.subsequence $ ['a' .. 'd'] <> [' ', '\n', '\r']
-        let runTest = readpEqual skipSpaces R.skipSpaces
-        runTest toParse,
+        let runTest = readpEqual_ skipSpaces R.skipSpaces
+        [(_, rest)] <- runTest toParse
+        label $ "# skipped = " <> toLabelName (length toParse - length rest),
       --
       testCase "[option]" $ do
         c <- forAll genString
@@ -293,10 +307,12 @@ readPEquivalence =
               readpEqual
                 (count n (satisfy (`elem` substr)))
                 (R.count n (R.satisfy (`elem` substr)))
+
+        coverRange "n" (0, 1, replicate 6 5) n
         runTest toParse,
       --
       testCase "[many, many1]" $ do
-        (pattern, n, str) <-
+        (term, n, str) <-
           forAll $
             genReplicate
               (genIntInRange 0 10)
@@ -306,18 +322,20 @@ readPEquivalence =
             runTest0 =
               readpEqualWithNResults
                 (n + 1)
-                (many $ string pattern)
-                (R.many $ R.string pattern)
+                (many $ string term)
+                (R.many $ R.string term)
             runTest1 =
               readpEqualWithNResults
                 n
-                (many1 $ string pattern)
-                (R.many1 $ R.string pattern)
+                (many1 $ string term)
+                (R.many1 $ R.string term)
+
+        coverRange "n" (0, 1, replicate 11 5) n
         runTest0 toParse
         runTest1 toParse,
       --
       testCase "[many', many1']" $ do
-        (pattern, n, str) <-
+        (term, n, str) <-
           forAll $
             genReplicate
               (genIntInRange 0 10)
@@ -327,13 +345,15 @@ readPEquivalence =
             runTest0' =
               readpEqualWithNResults
                 (n + 1)
-                (many' $ string pattern)
-                (R.many $ R.string pattern)
+                (many' $ string term)
+                (R.many $ R.string term)
             runTest1' =
               readpEqualWithNResults
                 n
-                (many1' $ string pattern)
-                (R.many1 $ R.string pattern)
+                (many1' $ string term)
+                (R.many1 $ R.string term)
+
+        coverRange "n" (0, 1, replicate 11 5) n
         runTest0' toParse
         runTest1' toParse,
       --
@@ -344,7 +364,7 @@ readPEquivalence =
       --
       testCase "[skipMany1]" $ do
         rest <- forAll genRest
-        (pattern, n, str) <-
+        (term, n, str) <-
           forAll $
             genReplicate
               (genIntInRange 0 10)
@@ -353,19 +373,20 @@ readPEquivalence =
             runTest =
               readpEqualWithNResults
                 (n + 1)
-                (skipMany (string pattern))
-                (R.skipMany (R.string pattern))
+                (skipMany (string term))
+                (R.skipMany (R.string term))
             runTest1 =
               readpEqualWithNResults
                 n
-                (skipMany1 (string pattern))
-                (R.skipMany1 (R.string pattern))
+                (skipMany1 (string term))
+                (R.skipMany1 (R.string term))
+        coverRange "n" (0, 1, replicate 11 5) n
         runTest toParse
         runTest1 toParse,
       --
       testCase "[sepBy, sepBy1]" $ do
         rest <- forAll genRest
-        (pattern, n, sepc, str) <-
+        (term, n, sepc, str) <-
           forAll $
             genReplicateWithSeparator
               (genIntInRange 0 10)
@@ -375,19 +396,20 @@ readPEquivalence =
             runTest =
               readpEqualWithNResults
                 (n + 1)
-                (sepBy (string pattern) (string sepc))
-                (R.sepBy (R.string pattern) (R.string sepc))
+                (sepBy (string term) (string sepc))
+                (R.sepBy (R.string term) (R.string sepc))
             runTest1 =
               readpEqualWithNResults
                 n
-                (sepBy1 (string pattern) (string sepc))
-                (R.sepBy1 (R.string pattern) (R.string sepc))
+                (sepBy1 (string term) (string sepc))
+                (R.sepBy1 (R.string term) (R.string sepc))
 
+        coverRange "n" (0, 1, replicate 11 5) n
         runTest toParse
         runTest1 toParse,
       testCase "[endBy, endBy1]" $ do
         rest <- forAll genRest
-        (pattern, n, delim, str) <-
+        (term, n, delim, str) <-
           forAll $
             genReplicateWithSeparator
               (genIntInRange 0 10)
@@ -397,14 +419,15 @@ readPEquivalence =
             runTest =
               readpEqualWithNResults
                 (max 1 n)
-                (endBy (string pattern) (string delim))
-                (R.endBy (R.string pattern) (R.string delim))
+                (endBy (string term) (string delim))
+                (R.endBy (R.string term) (R.string delim))
             runTest1 =
               readpEqualWithNResults
                 (max 0 (n - 1))
-                (endBy1 (string pattern) (string delim))
-                (R.endBy1 (R.string pattern) (R.string delim))
+                (endBy1 (string term) (string delim))
+                (R.endBy1 (R.string term) (R.string delim))
 
+        coverRange "n" (0, 1, replicate 11 5) n
         runTest toParse
         runTest1 toParse,
       testCase "[chainr]" $ do
@@ -425,6 +448,8 @@ readPEquivalence =
                 n
                 (chainr1 (show <$> B.integral @Int) B.pbracket)
                 (R.chainr1 (show <$> R.int @Int) R.bracket)
+
+        coverRange "n" (0, 1, replicate 11 5) n
         runTest toParse
         runTest1 toParse,
       --
@@ -446,6 +471,8 @@ readPEquivalence =
                 n
                 (chainl1 (show <$> B.integral @Int) B.pbracket)
                 (R.chainl1 (show <$> R.int @Int) R.bracket)
+
+        coverRange "n" (0, 1, replicate 11 5) n
         runTest toParse
         runTest1 toParse,
       testCase "[manyTill]" $ do
@@ -464,3 +491,15 @@ readPEquivalence =
                 (R.manyTill (R.string value) (R.string end))
         runTest toParse
     ]
+
+coverRange :: (Show i, Integral i) => LabelName -> (i, i, [CoverPercentage]) -> i -> PropertyT IO ()
+coverRange prefix (startValue, step, coverages) v = do
+  traverse_ coverForStep $ zip [0 ..] coverages
+  cover 0 (prefix <> " >= " <> toLabelName maxValue) $ maxValue <= v
+  where
+    numCoverages = length coverages
+    maxValue = startValue + (step * fromIntegral numCoverages)
+    coverForStep (i, requiredCoverage) = cover requiredCoverage (toLabelName l <> " <= " <> prefix <> " < " <> toLabelName u) $ l <= v && v < u
+      where
+        l = startValue + i * step
+        u = l + step
