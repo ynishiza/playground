@@ -1,7 +1,7 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ExplicitForAll #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -41,15 +41,16 @@ import Control.Exception
 import Control.Monad
 import Control.Monad.State
 import Data.List (intercalate)
-import qualified Data.Text as T
-import qualified Data.Text.IO as TIO
+import Data.Text qualified as T
+import Data.Text.IO qualified as TIO
 import Data.Typeable
 import Debug.Trace (trace)
 import Fmt
+import GHC.Exts (IsString)
 
 data UtilErrors = ShouldNeverHappen | NotImplemented !String deriving (Show)
 
-instance Exception UtilErrors where
+instance Exception UtilErrors
 
 showType :: forall p s. (Typeable s, Typeable p) => p s -> String
 showType x = show $ typeOf x
@@ -106,7 +107,10 @@ printBannerWrap :: T.Text -> IO () -> IO ()
 printBannerWrap name io = printBanner (name |+ " start") >> io >> printBanner (name |+ " end")
 
 printBanner :: T.Text -> IO ()
-printBanner name = fmtLn $ "=====" +| name |+ "====="
+printBanner = TIO.putStrLn . banner
+
+banner :: (IsString s, Semigroup s) => s -> s
+banner name = "=====" <> name <> "====="
 
 infixl 2 .@, ..@
 
