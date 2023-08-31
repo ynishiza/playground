@@ -4,6 +4,8 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
+{-# OPTIONS_GHC -ddump-deriv #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 module Chapter12.Generics
   ( run,
@@ -53,7 +55,7 @@ run =
         assertIsEqual metaPair (from (1, "A")) 
 
         fmtLn $ 
-          nameF "module name" (build $ getModuleName (Proxy :: Proxy (SomeThingType Int)))
+          nameF "module name" (build $ getModuleName (Proxy :: Proxy (SomeThingType Int ())))
           <> nameF "module name" (build $ moduleName $ from North)
           <> nameF "package name" (build $ packageName $ from North)
         testDone
@@ -91,21 +93,27 @@ data SomeThing a = MkSomeThing
   }
   deriving (Generic, Show, Eq)
 
-type SomeThingType :: Type -> Type
-type SomeThingType x =
+type SomeThingType :: Type -> Type -> Type
+type SomeThingType a x =
   M1 D ('MetaData "SomeThing" "Chapter12.Generics" "main" 'False)
     (M1 C ('MetaCons "MkSomeThing" 'PrefixI 'True)
         (M1 S ('MetaSel ('Just "v1") 'SourceUnpack 'SourceStrict 'DecidedStrict) (K1 R String)
         :*: M1 S ('MetaSel ('Just "v2") 'NoSourceUnpackedness 'NoSourceStrictness 'DecidedLazy) (K1 R String)
-        :*: M1 S ('MetaSel ('Just "v3") 'NoSourceUnpackedness 'NoSourceStrictness 'DecidedLazy) (K1 R Int)
+        :*: M1 S ('MetaSel ('Just "v3") 'NoSourceUnpackedness 'NoSourceStrictness 'DecidedLazy) (K1 R a)
         )
     )
     x
 
--- metaNorth :: MyDirectionType x         -- NO: fails for internal library since module is not "main"
+y :: Rep (SomeThing Int) x
+-- y :: SomeThingType Int x
+y = from (MkSomeThing "" "" 1)
+
+metaNorth :: Rep MyDirection x
+-- metaNorth :: MyDirectionType x         -- Same, but fails for internal library since module is not "main"
 metaNorth = from North
 
--- metaWest :: MyDirectionType x          -- NO: fails for internal library since module is not "main"
+metaWest :: Rep MyDirection x
+-- metaWest :: MyDirectionType x          -- Same, but fails for internal library since module is not "main"
 metaWest = from West
 
 consWest :: M1 C ('MetaCons "West" 'PrefixI 'False) U1 x
@@ -191,6 +199,7 @@ type PairType a b x =
                                            )
     ) x
 
-metaPair :: PairType Int String x
+-- metaPair :: PairType Int String x
+metaPair :: Rep (Int, String) x
 metaPair = M1 (M1 (M1 (K1 1) :*: M1 (K1 "A")))
 -- metaPair = from (1, "A")

@@ -12,6 +12,19 @@
 import Data.Typeable
 import GHC.Generics
 
+class ConstructorInfo m where
+  getConstructorName :: m a -> String
+
+instance ConstructorInfo a => ConstructorInfo (M1 D (s :: Meta) a) where
+  getConstructorName (M1 x) = getConstructorName x
+
+instance Constructor s => ConstructorInfo (M1 C (s :: Meta) a) where
+  getConstructorName = conName
+
+instance (ConstructorInfo f, ConstructorInfo g) => ConstructorInfo (f :+: g) where
+  getConstructorName (L1 x) = getConstructorName x
+  getConstructorName (R1 x) = getConstructorName x
+
 class FieldInfo m where
   getFieldInfo :: m a -> [(String, TypeRep)]
 
@@ -31,9 +44,32 @@ instance (FieldInfo f, FieldInfo g) => FieldInfo (f :*: g) where
 data MyData = MyData {name :: String, value :: Int}
   deriving stock (Show, Eq, Generic)
 
+data Alpha = A | B | C | D
+  deriving stock (Show, Eq, Generic)
+
 myDataFields :: [(String, TypeRep)]
 myDataFields = getFieldInfo $ from $ MyData "a" 1
 
 test :: IO ()
 test = do
-  putStrLn $ "MyData fields:" <> show (getFieldInfo $ from $ MyData "a" 1)
+  let value = MyData "a" 1
+
+  {-
+  MyData fields:[("name",[Char]),("value",Int)]
+  MyData name:"MyData"
+  MyData constructor:"MyData"
+    -}
+  putStrLn $ "MyData fields:" <> show (getFieldInfo $ from value)
+  putStrLn $ "MyData name:" <> show (datatypeName $ from value)
+  putStrLn $ "MyData constructor:" <> show (getConstructorName $ from value)
+
+  {-
+  A name:"Alpha"
+  B name:"Alpha"
+  A constructor:"A"
+  B constructor:"B"
+    -}
+  putStrLn $ "A name:" <> show (datatypeName $ from A)
+  putStrLn $ "B name:" <> show (datatypeName $ from B)
+  putStrLn $ "A constructor:" <> show (getConstructorName $ from A)
+  putStrLn $ "B constructor:" <> show (getConstructorName $ from B)

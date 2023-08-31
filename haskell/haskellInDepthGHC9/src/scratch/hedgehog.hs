@@ -11,9 +11,9 @@ import Control.Monad
 import Data.Foldable
 import GHC.Exts (fromString)
 import Hedgehog
-import Hedgehog.Gen
+import Hedgehog.Gen as G
 import Hedgehog.Internal.Seed
-import Hedgehog.Range
+import Hedgehog.Range as R
 
 main :: IO ()
 main = do
@@ -31,6 +31,10 @@ prop_linearWithResize = testCoverage $ resize 30 $ int $ linear 1 100
 
 prop_linearWithResizeOrigin :: Property
 prop_linearWithResizeOrigin = testCoverage $ resize 30 $ int $ linearFrom 50 1 100
+
+prop_a = testCoverage $ int (R.constant 1 100)
+prop_b = testCoverage $ int (R.exponential 1 100)
+
 
 testCoverage :: Gen Int -> Property
 testCoverage gen = property $ forAll gen >>= checkCoverage
