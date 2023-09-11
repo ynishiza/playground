@@ -69,7 +69,6 @@ run:  ## Run test
 	@echo 10 $$'\n' | stack exec -- $(MAINEXE_NAME) 
 	
 	@make run-singletons
-	@make run-scratch
 	@make test
 	@make benchmark
 
@@ -94,10 +93,6 @@ run-iplookup: ## iplookup
 run-isprime: ## isprime
 	@echo "Chapter 9"
 	@stack exec -- isprime 7
-
-run-scratch: ## Run scratch space
-	@stack build $(PROJECTNAME):exe:scratch
-	@stack exec -- scratch
 
 run-profile:
 	stack exec --profile -- $(MAINEXE_NAME) +RTS -p
