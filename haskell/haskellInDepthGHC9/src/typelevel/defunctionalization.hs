@@ -9,22 +9,24 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
 
-import Data.Kind
 import Data.Singletons.TH
 import GHC.TypeLits (Nat)
 import Prelude.Singletons
+import Data.Kind (Type)
+
+type T = Type
 
 type Fm :: Nat -> Nat -> Nat
 type family Fm a b where
   Fm x y = x + y
 
-type FSym0 :: TyFun Nat (TyFun Nat Nat -> Type) -> Type
--- type FSym0 :: (Nat ~> (Nat ~> Nat))
-data FSym0 a
+-- type FSym0 :: TyFun Nat (TyFun Nat Nat -> Type) -> Type
+type FSym0 :: (Nat ~> (Nat ~> Nat))
+data FSym0 (a :: TyFun Nat (Nat ~> Nat))
 
-type FSym1 :: Nat -> TyFun Nat Nat -> Type
--- type FSym1 :: Nat -> (Nat ~> Nat)
-data FSym1 a b'
+-- type FSym1 :: Nat -> TyFun Nat Nat -> Type
+type FSym1 :: Nat -> (Nat ~> Nat)
+data FSym1 (a :: Nat) (b' :: TyFun Nat Nat)
 
 type instance Apply FSym0 x = FSym1 x
 

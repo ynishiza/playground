@@ -86,6 +86,31 @@ jobs:
           ghc-version: '9.4.7'
           cabal-version: '3.8' # Exact version of Cabal
 
+      # Reference: https://github.com/actions/cache/blob/main/examples.md#haskell---stack
+      - uses: actions/cache@v3
+        name: Cache ~/.stack
+        with:
+          path: ~/.stack
+          key: ${{ runner.os }}-stack-global-playground-haskell
+          restore-keys: |
+            ${{ runner.os }}-stack-global-
+
+      - uses: actions/cache@v3
+        name: Cache haskellInDepth .stack-work
+        with:
+          path: ${{ github.workspace }}/haskell/haskellInDepth/.stack-work
+          key: ${{ runner.os }}-stack-work-playground-haskellInDepth
+          restore-keys: |
+            ${{ runner.os }}-stack-work-
+
+      - uses: actions/cache@v3
+        name: Cache haskellInDepthGHC9 .stack-work
+        with:
+          path: ${{ github.workspace }}/haskell/haskellInDepthGHC9/.stack-work
+          key: ${{ runner.os }}-stack-work-playground-haskellInDepthGHC9
+          restore-keys: |
+            ${{ runner.os }}-stack-work-
+
       - name: Install main
         working-directory: ${{ github.workspace }}/haskell/main
         run: make install
@@ -98,10 +123,6 @@ jobs:
         working-directory: ${{ github.workspace }}/haskell/main
         run: make runAll
 
-      - name: Cleanup main
-        working-directory: ${{ github.workspace }}/haskell/main
-        run: make clean
-
       # Haskell In Depth main (GHC9)
       - name: Install HID
         working-directory: ${{ github.workspace }}/haskell/haskellInDepthGHC9
@@ -111,10 +132,6 @@ jobs:
         working-directory: ${{ github.workspace }}/haskell/haskellInDepthGHC9
         run: make run
 
-      - name: Cleanup HID
-        working-directory: ${{ github.workspace }}/haskell/haskellInDepthGHC9
-        run: make clean
-
       # Haskell In Depth
       - name: Install HID
         working-directory: ${{ github.workspace }}/haskell/haskellInDepth
@@ -123,10 +140,6 @@ jobs:
       - name: Run test HID
         working-directory: ${{ github.workspace }}/haskell/haskellInDepth
         run: make run
-
-      - name: Cleanup HID
-        working-directory: ${{ github.workspace }}/haskell/haskellInDepth
-        run: make clean
 
 
   swift:
