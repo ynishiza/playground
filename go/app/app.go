@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/ynishiza/lib"
 	. "github.com/ynishiza/myapp/internal"
-	p "github.com/ynishiza/myapp/internal/packages"
+	// p "github.com/ynishiza/myapp/internal/packages"
 	"github.com/ynishiza/mymodule"
 	"github.com/ynishiza/mymodule/a"
 	"golang.org/x/net/html"
@@ -73,43 +73,13 @@ func main() {
 	// TestLocks()
 	// TestChannelSelect()
 	// TestError()
-	p.TestContext()
 
-	var s = atype{1}
-	s.y = -1000
-	var s2 = s
+	// Packages
+	// p.TestContext()
+	// p.TestGorm()
+	// p.TestGormTransacion()
+	// p.GormExample()
+	// p.TestGormError()
 
-	println(s.y, s2 == s)
-	s.f()
-	println(s.y)
-	s.f2()
-	println(s.y)
-	g(&s)
-	println(s.y)
-	h(s)
-	println(s.y)
-	s2.y = 3
-	println(s.y, s2 == s)
-
-	var t = [...]int{1, 2, 3}
-	t[0] = 1000
-	var t2 = t
-	t2[0] = 100
-	log.Print(t)
-	log.Print(t2)
-}
-
-type atype struct{ y int }
-
-func (x atype) f() {
-	x.y = 2
-}
-func (x *atype) f2() {
-	x.y = 200000
-}
-func g(x *atype) {
-	x.y *= 2
-}
-func h(x atype) {
-	x.y *= 2
+	TestErrorWrap()
 }

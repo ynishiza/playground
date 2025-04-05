@@ -70,7 +70,7 @@ func TestContext() {
 	cancel()
 	select {
 	case x := <-result:
-		fmt.Println("%v", x)
+		fmt.Printf("%v", x)
 	case <-ctx.Done():
 		printInfo(ctx)
 	}
@@ -79,7 +79,7 @@ func TestContext() {
 	result, ctx, cancel = runProcess(1000000, 1)
 	select {
 	case x := <-result:
-		fmt.Println("%v", x)
+		fmt.Printf("%v", x)
 	case <-ctx.Done():
 		printInfo(ctx)
 	}
@@ -89,7 +89,7 @@ func printInfo(ctx context.Context) {
 	var err = ctx.Err()
 	var cause = context.Cause(ctx)
 	if err == nil { 
-		fmt.Println("\n[Info] no error\n")
+		fmt.Printf("\n[Info] no error\n")
 	} else {
 		fmt.Printf("\n[Info] Error: %v \tCause: %v\tCanceled: %v \t Deadline: %v\n", err.Error(), cause.Error(), err == context.Canceled, err == context.DeadlineExceeded)
 	}

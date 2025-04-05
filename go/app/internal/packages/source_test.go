@@ -2,10 +2,11 @@ package packages
 
 import (
 	"fmt"
-	"golang.org/x/text/language"
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/text/language"
 	"golang.org/x/xerrors"
+	"regexp"
+	"testing"
 )
 
 func init() {
@@ -31,7 +32,7 @@ func TestXErrors(t *testing.T) {
 
 type MyInt int
 
-func (m MyInt) String() string { return fmt.Sprintf("MyInt[%d]", m) }
+func (m MyInt) String() string   { return fmt.Sprintf("MyInt[%d]", m) }
 func (m MyInt) GoString() string { return "MYINT" }
 
 func TestFmtInterfaces(t *testing.T) {
@@ -40,7 +41,7 @@ func TestFmtInterfaces(t *testing.T) {
 }
 
 func TestAcceptLanguage(t *testing.T) {
-	var m = map[string][]int { "a": []int { 1 } }
+	var m = map[string][]int{"a": []int{1}}
 	print(len(m["a"]))
 	print(len(m["b"]))
 	var assert = assert.New(t)
@@ -55,4 +56,11 @@ func TestAcceptLanguage(t *testing.T) {
 	assert.Equal("", z.String())
 	assert.Equal("", tags[0].String())
 
+}
+
+func TestRegex(t *testing.T) {
+	var assert = assert.New(t)
+
+	var r = regexp.MustCompile("(?P<N>[a-zA-Z]+)(?P<M>[0-9]+)")
+	assert.Equal([]string{"UQJP10", "UQJP", "10"}, r.FindStringSubmatch("UQJP10"))
 }

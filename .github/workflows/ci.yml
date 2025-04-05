@@ -133,13 +133,14 @@ jobs:
         run: make run
 
       # Haskell In Depth
-      - name: Install HID
-        working-directory: ${{ github.workspace }}/haskell/haskellInDepth
-        run: make install
+      # Disabled because Cairo fails to build
+      # - name: Install HID
+      #   working-directory: ${{ github.workspace }}/haskell/haskellInDepth
+      #   run: make install
 
-      - name: Run test HID
-        working-directory: ${{ github.workspace }}/haskell/haskellInDepth
-        run: make run
+      # - name: Run test HID
+      #   working-directory: ${{ github.workspace }}/haskell/haskellInDepth
+      #   run: make run
 
 
   swift:
