@@ -2,6 +2,11 @@
 *.o       
 *.out     
 hello     
+*.png
+*.jpeg
+*.jpg
+*.dot
+*.svg
 
 # Haskell
 *.hi

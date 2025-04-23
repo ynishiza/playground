@@ -1,0 +1,21 @@
+ROLLBACK;
+BEGIN;
+
+DROP TABLE IF EXISTS parent_a, child_a;
+CREATE TEMPORARY TABLE parent_a (
+  id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY
+);
+CREATE TEMPORARY TABLE child_a (
+  name VARCHAR NOT NULL
+) INHERITS(parent_a);
+
+INSERT INTO parent_a DEFAULT VALUES;
+INSERT INTO parent_a DEFAULT VALUES;
+INSERT INTO parent_a VALUES (DEFAULT), (DEFAULT);
+
+INSERT INTO child_a (id, name) (
+  SELECT x as id, format('%s', x) as name FROM generate_series(100, 150) AS t(x)
+);
+
+
+COMMIT;
