@@ -345,6 +345,37 @@ func TestTypeAssertion() {
 	match(true)
 }
 
+type T1 struct{}
+type T2 struct{ T1 }
+func (T1) fn() {}
+
+func TestPointerTypeAssertion() {
+	PrintBanner("TestTypeAssertion")
+	type B interface{ fn() }
+	var v interface{} = &T1{}
+	var v2 interface{} = &T2{}
+
+	switch v.(type) {
+	case T1:
+		panic("")
+	case *T1:
+		fmt.Println("v is *T1")
+	default:
+		panic("")
+	}
+	switch v2.(type) {
+	case T1:
+		panic("")
+	case *T1:
+		panic("")
+	case T2:
+	case *T2:
+		fmt.Println("v is *T2")
+	default:
+		panic("")
+	}
+}
+
 func TestEmbedded2() {
 	PrintBanner("TestEmbedded2")
 	var y = YYY{XXX: XXX{1}}

@@ -2,14 +2,18 @@ package main
 
 import (
 	"fmt"
+	"reflect"
+
 	"github.com/ynishiza/lib"
 	. "github.com/ynishiza/myapp/internal"
+
 	// p "github.com/ynishiza/myapp/internal/packages"
+	"log"
+
 	"github.com/ynishiza/mymodule"
 	"github.com/ynishiza/mymodule/a"
 	"golang.org/x/net/html"
 	"golang.org/x/net/icmp"
-	"log"
 )
 
 func main() {
@@ -51,12 +55,12 @@ func main() {
 	// internal.TestInterface()
 	// internal.TestTypeAssertion()
 	// internal.TestFunctionType()
-	TestMutation()
-	TestStatements()
+	// TestMutation()
+	// TestStatements()
 	// internal.TestEnum()
 	// internal.TestLiteral()
 	// internal.TestSemver()
-	TestArraySliceMap()
+	// TestArraySliceMap()
 
 	// internal.TestFunctionType()
 	// internal.TestMap()
@@ -67,7 +71,7 @@ func main() {
 	// internal.TestZeroValue()
 	// internal.TestNil()
 	// internal.TestString()
-	TestEmbedded2()
+	// TestEmbedded2()
 	// p.TestValidator()
 	// TestGoroutineSimple()
 	// TestLocks()
@@ -81,5 +85,29 @@ func main() {
 	// p.GormExample()
 	// p.TestGormError()
 
-	TestErrorWrap()
+	// TestErrorWrap()
+	TestPointerTypeAssertion()
+	TestReflectNew()
+}
+
+func TestReflectNew() {
+	var x []*int = []*int{}
+
+	var t = reflect.TypeOf(x)
+	fmt.Printf("%v\n", t.Kind() == reflect.Slice)
+	var tElem = t.Elem()
+	fmt.Printf("%v\n", tElem.Kind() == reflect.Pointer)
+	fmt.Printf("%v\n", tElem.Elem().Kind() == reflect.Int)
+	fmt.Printf("%v\n", reflect.New(tElem.Elem()).Elem().Int())
+	fmt.Printf("%v\n", *reflect.New(tElem.Elem()).Interface().(*int))
+	fmt.Printf("%v\n", reflect.TypeOf(8))
+
+	type T struct{}
+	var y = T{}
+	var t2 = reflect.TypeOf(&y)
+	fmt.Printf("%v\n", t2.Elem().Kind() == reflect.Struct)
+	var y2base = reflect.New(t2.Elem()).Interface()
+	fmt.Printf("%v\n", y2base)
+	var y2 = y2base.(*T)
+	fmt.Printf("%v\n", y2)
 }
