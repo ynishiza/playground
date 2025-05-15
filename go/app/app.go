@@ -2,14 +2,11 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"reflect"
 
 	"github.com/ynishiza/lib"
 	. "github.com/ynishiza/myapp/internal"
-
-	// p "github.com/ynishiza/myapp/internal/packages"
-	"log"
-
 	"github.com/ynishiza/mymodule"
 	"github.com/ynishiza/mymodule/a"
 	"golang.org/x/net/html"

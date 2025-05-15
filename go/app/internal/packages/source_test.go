@@ -49,12 +49,12 @@ func TestAcceptLanguage(t *testing.T) {
 	if error != nil {
 		assert.Fail("", error)
 	}
-	assert.Equal("", quals[0])
+	assert.Equal(float32(0.8), quals[0])
 	x, y, z := tags[0].Raw()
-	assert.Equal("", x.String())
-	assert.Equal("", y.String())
-	assert.Equal("", z.String())
-	assert.Equal("", tags[0].String())
+	assert.Equal("en", x.String())
+	assert.Equal("Zzzz", y.String())
+	assert.Equal("GB", z.String())
+	assert.Equal("en-GB", tags[0].String())
 
 }
 
@@ -62,5 +62,20 @@ func TestRegex(t *testing.T) {
 	var assert = assert.New(t)
 
 	var r = regexp.MustCompile("(?P<N>[a-zA-Z]+)(?P<M>[0-9]+)")
+	var result = r.FindStringSubmatch("UQJP10")
+	assert.Equal([]string{"UQJP10", "UQJP", "10"}, result)
+	assert.Equal("UQJP", result[r.SubexpIndex("N")])
+	assert.Equal("10", result[r.SubexpIndex("M")])
+
+	r = regexp.MustCompile("([a-zA-Z]+)([0-9]+)")
 	assert.Equal([]string{"UQJP10", "UQJP", "10"}, r.FindStringSubmatch("UQJP10"))
+
+	fmt.Printf("\nfind: %v", regexp.MustCompile("b+").FindString("aaabbcc"))
+	fmt.Printf("\nfind: %v", regexp.MustCompile("b+").FindString("aaabbccbb"))
+	fmt.Printf("\nfind: %v", regexp.MustCompile("b+").FindAllString("aaabbccbbbb", 1))
+	fmt.Printf("\nfind: %v", regexp.MustCompile("b+").FindStringIndex("aaabbbc "))
+	fmt.Printf("\nfind: %v", regexp.MustCompile("(?P<m1>a+)(?P<m2>b+)").FindStringSubmatch("aaabbbc "))
+	fmt.Printf("\nfind: %v", regexp.MustCompile("(?P<m1>a+)(?P<m2>b+)").SubexpNames())
+	fmt.Printf("\nfind: %v", regexp.MustCompile("(b+)").ReplaceAllString("aaabbbc ", "[$1]"))
 }
+
