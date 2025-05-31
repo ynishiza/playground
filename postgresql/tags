@@ -1,0 +1,22 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.8	//
+h	20250414_plpgsql.sql	/^CREATE OR REPLACE FUNCTION h() returns setof pg_class as $\$$/;"	a	line:49	language:SQL
+h	20250414_plpgsql.sql	/^CREATE OR REPLACE FUNCTION h() returns setof pg_class as $\$$/;"	f	line:49	language:SQL
+h2	20250414_plpgsql.sql	/^CREATE OR REPLACE FUNCTION h2() returns setof name as $\$$/;"	a	line:83	language:SQL
+h2	20250414_plpgsql.sql	/^CREATE OR REPLACE FUNCTION h2() returns setof name as $\$$/;"	f	line:83	language:SQL
+h3	20250414_plpgsql.sql	/^CREATE OR REPLACE FUNCTION pg_temp.h3() returns TABLE(n name, i oid) as $\$$/;"	f	line:95	language:SQL
+h4	20250414_plpgsql.sql	/^CREATE FUNCTION pg_temp.h4(out n name, out i oid) returns setof record as $\$$/;"	f	line:110	language:SQL
+pg_temp.h3	20250414_plpgsql.sql	/^CREATE OR REPLACE FUNCTION pg_temp.h3() returns TABLE(n name, i oid) as $\$$/;"	a	line:95	language:SQL
+pg_temp.h4	20250414_plpgsql.sql	/^CREATE FUNCTION pg_temp.h4(out n name, out i oid) returns setof record as $\$$/;"	a	line:110	language:SQL
+simple2	20250414_plpgsql.sql	/^CREATE OR REPLACE FUNCTION simple2(RECORD) RETURNS RECORD AS $\$$/;"	a	line:43	language:SQL
+simple2	20250414_plpgsql.sql	/^CREATE OR REPLACE FUNCTION simple2(RECORD) RETURNS RECORD AS $\$$/;"	f	line:43	language:SQL
+test_declaration_and_assignment	20250414_plpgsql.sql	/^CREATE OR REPLACE FUNCTION test_declaration_and_assignment($/;"	a	line:11	language:SQL
+test_out_inner	20250414_plpgsql.sql	/^CREATE OR REPLACE PROCEDURE test_out_inner(a int, out x int, out y text, out z boolean) as $\$$/;"	b	line:65	language:SQL
+test_out_inner	20250414_plpgsql.sql	/^CREATE OR REPLACE PROCEDURE test_out_inner(a int, out x int, out y text, out z boolean) as $\$$/;"	p	line:65	language:SQL
+test_out_outer	20250414_plpgsql.sql	/^CREATE OR REPLACE PROCEDURE test_out_outer() as $\$$/;"	b	line:72	language:SQL
+test_out_outer	20250414_plpgsql.sql	/^CREATE OR REPLACE PROCEDURE test_out_outer() as $\$$/;"	p	line:72	language:SQL
+test_raise	20250414_plpgsql.sql	/^CREATE OR REPLACE PROCEDURE test_raise() AS $\$$/;"	b	line:28	language:SQL

@@ -13,7 +13,7 @@ func SleepSeconds[N ~float64](n N) {
 }
 
 func PrintBanner(name string) {
-	fmt.Printf("===== %s =====", name)
+	fmt.Printf("\n===== %s =====\n", name)
 }
 
 var Logln = log.Println

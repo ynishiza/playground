@@ -66,3 +66,5 @@ func (u *UUU) fn2() {
 // func (*UUU) fn() { }
 // func (UUU) fn(x int) { }
 func (VVV) fn(x int) {}
+
+func (UUU) fn3() {}

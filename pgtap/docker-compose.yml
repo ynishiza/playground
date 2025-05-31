@@ -1,0 +1,18 @@
+version: "3.7"
+
+services:
+  playground-postgres2:
+    container_name: playground-postgres2
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    image: playground-postgres:latest
+    environment:
+      - POSTGRES_DB=playground
+      - POSTGRES_USER=yuinishizawa
+      - POSTGRES_HOST_AUTH_METHOD=trust			      # allow login without password
+      - POSTGRES_PORT=5432
+    ports:
+      - "54322:5432"
+    volumes:
+      - ./initdb.d:/docker-entrypoint-initdb.d

@@ -3,10 +3,12 @@ package main
 import (
 	"fmt"
 	"log"
-	"reflect"
+	"os"
 
 	"github.com/ynishiza/lib"
 	. "github.com/ynishiza/myapp/internal"
+	p "github.com/ynishiza/myapp/internal/packages"
+	"github.com/ynishiza/myapp/internal/std"
 	"github.com/ynishiza/mymodule"
 	"github.com/ynishiza/mymodule/a"
 	"golang.org/x/net/html"
@@ -14,6 +16,12 @@ import (
 )
 
 func main() {
+	log.Default()
+	log.SetPrefix("app:")
+	log.SetFlags(log.Ldate | log.Llongfile | log.Lmicroseconds)
+	log.Print("Hello")
+	log.SetFlags(log.LstdFlags | log.Lshortfile | log.LUTC)
+
 	defer func() {
 		if e := recover(); e != nil {
 			if v, s := e.(error); s {
@@ -27,17 +35,25 @@ func main() {
 		log.Println("DONE")
 	}()
 
-	log.Default()
-	log.SetPrefix("app:")
-	log.SetFlags(log.Ldate | log.Llongfile | log.Lmicroseconds)
-	log.Print("Hello")
-	log.SetFlags(log.LstdFlags | log.Lshortfile | log.LUTC)
+	if len(os.Args) == 1 {
+		log.Printf("%s all|default", os.Args[0])
+		os.Exit(1)
+	}
 
 	log.Printf("Test: %s", "Start app")
 	fmt.Println("Hello, World!")
-	// log.Fatal("Hello, World!")
-	// log.Panic("Hello, World!")
 
+	switch os.Args[1] {
+	case "all":
+		runAll()
+	case "default":
+		runDefault()
+	default:
+		log.Panic("Should never happen")
+	}
+}
+
+func runDefault() {
 	mymodule.Hello()
 	mymodule.Goodbye()
 	a.Hello()
@@ -47,64 +63,62 @@ func main() {
 	var x = [1]byte{1}
 	icmp.ParseIPv4Header(x[:])
 
-	// internal.TestBasics()
-	// internal.TestSlice()
-	// internal.TestInterface()
-	// internal.TestTypeAssertion()
-	// internal.TestFunctionType()
-	// TestMutation()
-	// TestStatements()
-	// internal.TestEnum()
-	// internal.TestLiteral()
-	// internal.TestSemver()
-	// TestArraySliceMap()
-
-	// internal.TestFunctionType()
-	// internal.TestMap()
-	// internal.TestGeneric()
-	// internal.TestInterface()
-	// internal.TestMethods()
-	// internal.TestCompositeLiteral()
-	// internal.TestZeroValue()
-	// internal.TestNil()
-	// internal.TestString()
-	// TestEmbedded2()
 	// p.TestValidator()
-	// TestGoroutineSimple()
-	// TestLocks()
-	// TestChannelSelect()
-	// TestError()
-
-	// Packages
-	// p.TestContext()
 	// p.TestGorm()
-	// p.TestGormTransacion()
-	// p.GormExample()
-	// p.TestGormError()
-
-	// TestErrorWrap()
-	TestPointerTypeAssertion()
-	TestReflectNew()
+	std.TestJSON()
+	TestSlice()
+	// p.TestGormArray()
 }
 
-func TestReflectNew() {
-	var x []*int = []*int{}
+func runAll() {
+	TestBasics()
+	TestSlice()
+	TestInterface()
+	TestTypeAssertion()
+	TestFunctionType()
+	TestMutation()
+	TestStatements()
+	TestLiteral()
+	TestSemver()
+	TestArraySliceMap()
 
-	var t = reflect.TypeOf(x)
-	fmt.Printf("%v\n", t.Kind() == reflect.Slice)
-	var tElem = t.Elem()
-	fmt.Printf("%v\n", tElem.Kind() == reflect.Pointer)
-	fmt.Printf("%v\n", tElem.Elem().Kind() == reflect.Int)
-	fmt.Printf("%v\n", reflect.New(tElem.Elem()).Elem().Int())
-	fmt.Printf("%v\n", *reflect.New(tElem.Elem()).Interface().(*int))
-	fmt.Printf("%v\n", reflect.TypeOf(8))
+	// Types
+	TestTypeIdentity()
+	TestType()
+	TestEnum()
+	TestFunctionType()
+	TestMap()
+	TestGeneric()
+	TestInterface()
+	TestMethods()
+	TestCompositeLiteral()
+	TestZeroValue()
+	TestNil()
+	TestString()
+	TestEmbedded2()
 
-	type T struct{}
-	var y = T{}
-	var t2 = reflect.TypeOf(&y)
-	fmt.Printf("%v\n", t2.Elem().Kind() == reflect.Struct)
-	var y2base = reflect.New(t2.Elem()).Interface()
-	fmt.Printf("%v\n", y2base)
-	var y2 = y2base.(*T)
-	fmt.Printf("%v\n", y2)
+	// Struct
+
+	// concurrency
+	TestGoroutineSimple()
+	TestLocks()
+	TestChannelSelect()
+
+	// error
+	TestError()
+
+	// Packages
+	p.TestValidator()
+	p.TestGorm()
+	p.TestGormTransacion()
+	p.GormExample()
+	p.TestGormError()
+	p.TestValidator()
+
+	TestErrorWrap()
+	TestPointerTypeAssertion()
+
+	// Std
+	std.TestReflectNew()
+	p.TestContext()
 }

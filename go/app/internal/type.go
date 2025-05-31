@@ -151,51 +151,14 @@ func TestFunctionType() {
 	outer(inner())
 }
 
-func TestStruct() {
-	// var c struct { x int; y string } = struct { x int; y string } { x:1, y:"" }
-	var a struct {
-		x int
-		y string
-	} = struct {
-		x int
-		y string
-	}{
-		x: 1,
-		y: "a",
-	}
-
-	var b struct {
-		x int
-		y string
-	} = struct {
-		x int
-		y string
-	}{x: 1, y: "a"}
-	// embedded
-	b = struct {
-		x int
-		y string
-	}{2, ""}
-	// empty
-	b = struct {
-		x int
-		y string
-	}{}
-	// partial
-	b = struct {
-		x int
-		y string
-	}{x: 2}
-	var c struct {
-		x int
-		y string
-	}
-
-	var embedded = struct {
-		int
-		string
-	}{1, "a"}
-	fmt.Println(a, b, c, embedded)
+func TestString() {
+	PrintBanner("TestString")
+	var v = "abc"[0]
+	fmt.Println(
+		v,
+		"abc"[0],
+		"abc"[2],
+	)
 }
 
 func TestGeneric() {
@@ -347,6 +310,7 @@ func TestTypeAssertion() {
 
 type T1 struct{}
 type T2 struct{ T1 }
+
 func (T1) fn() {}
 
 func TestPointerTypeAssertion() {
@@ -376,30 +340,97 @@ func TestPointerTypeAssertion() {
 	}
 }
 
-func TestEmbedded2() {
-	PrintBanner("TestEmbedded2")
-	var y = YYY{XXX: XXX{1}}
-	y.x = 100
-	print(y.x)
-	print(y.XXX.x)
-	y.f()
-	y.XXX.f()
-	y.g()
-	fmt.Print(y)
-
-	var y2 = YYY2{new(XXX)}
-	y2.x = 2000
-	fmt.Print(y2)
-	y2.f()
-	fmt.Println(y2, y2.x)
-	y2.x = 3000
-	y2.g()
-	fmt.Println(y2, y2.x)
+func TestLiteral() {
+	fmt.Println("rune", 'a')
+	fmt.Println("\u3042\nい")
+	fmt.Println("escape: \\n")
+	fmt.Println(`\u3042\n
+	い`)
 }
 
-type XXX struct{ x int }
-type YYY struct{ XXX }
-type YYY2 struct{ *XXX }
+func TestSlice() {
+	PrintBanner("TestSlice")
+	var a [5]int = [5]int{1, 2, 3, 4, 5}
+	var b []int = a[0:3]
+	var c = b[0:2:2]
+	fmt.Println(
+		a, b, c, cap(b), cap(c),
+	)
+	c[0] = 100
+	fmt.Println(
+		a, b, c,
+	)
 
-func (x XXX) f()  { fmt.Println("A!", x); x.x = 23903 }
-func (x *XXX) g() { fmt.Println("B!", x); x.x = 123 }
+	var s = "abcd"
+	var s2 = s[0:2]
+	var s3 = s[:2]
+	fmt.Println(s, s2, s3)
+
+	var x = []int {1,2,3,4,5,6}
+	x = append(x[:2], x[3:]...)
+	fmt.Printf("%v\n", x)
+	x = append(x[:4], x[5:]...)
+	fmt.Printf("%v\n", x)
+	y := append(x[:2], append([]int{10,11}, x[2:]...)...)
+	fmt.Printf("%v %v\n", x, y)
+
+	var p *int
+	fmt.Printf("%v %v", p, &p)
+}
+
+func TestMap() {
+	var d = make(map[string]int)
+	d["a"] = 1
+	d["b"] = 2
+	delete(d, "c")
+	fmt.Println(d, len(d))
+	fmt.Println(d["c"])
+}
+
+func TestZeroValue() {
+	type IF interface{}
+	PrintBanner("TestZeroValue")
+	var z1 [8]int
+	var z2 []int = nil
+	var z3 IF
+	fmt.Println(
+		z1, z2, nil, z3,
+	)
+}
+
+func TestNil() {
+	PrintBanner("TestNil")
+	var uninitInt int
+	var uninitIntPtr *int
+	var newIntPtr *int = new(int)
+
+	var uninitIntSlice []int
+	var emptyIntSlice []int = []int{}
+	var uninitIntSlicePtr *[]int
+	var newIntSlicePtr *[]int = new([]int)
+	var makeIntSlice []int = make([]int, 5)
+
+	var uninitMap map[string]int
+	var emptyMap map[string]int = map[string]int{}
+	var newMap = new(map[string]int)
+
+	// uninitMap["a"] = 1
+	emptyMap["a"] = 1
+	// (*newMap)["a"] = 1
+	fmt.Println(
+		"uninitialized int:", &uninitInt, uninitInt,
+		"\nuninitialized *int", uninitIntPtr,
+		// *uninitIntPtr,
+		"\nnew int:", newIntPtr, *newIntPtr,
+		"\nunint []int:", &uninitIntSlice, uninitIntSlice, &uninitIntSlice == nil, uninitIntSlice == nil, append(uninitIntSlice, 1),
+		"\nempty []int:", &emptyIntSlice, emptyIntSlice, &emptyIntSlice == nil, emptyIntSlice == nil, append(emptyIntSlice, 1),
+		"\nuninitialized pointer []int:", uninitIntSlicePtr,
+		// *uninitIntSlicePtr,
+		// *uninitializedPointer,
+		"\nnew []int:", newIntSlicePtr, *newIntSlicePtr, newIntSlicePtr == nil, *newIntSlicePtr == nil, append(*newIntSlicePtr, 1),
+		"\nmake []int:", &makeIntSlice, makeIntSlice,
+		"\nuninitialized map", &uninitMap, uninitMap, uninitMap["a"],
+		"\nemptyp map", &emptyMap, emptyMap, (*&emptyMap)["a"],
+		"\nnew map", newMap, *newMap, (*newMap)["a"],
+	)
+}

@@ -29,7 +29,11 @@ $(BIN): $(SRC)
 
 .PHONY: run
 run: $(BIN) ## Run test script
-	go run $(SRC)
+	go run $(SRC) all
+
+.PHONY: gorm_init
+gorm_init: ## Initialize gorm for testing
+	psql -f ./internal/packages/gorm_init.sql postgres
 
 godoc: ## Godoc
 	godoc -notes=BUG,NOTE

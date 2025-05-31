@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgconn"
+	// "github.com/jackc/pgx/v5/pgtype"
 	"github.com/ynishiza/myapp/internal/utils"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -171,4 +172,40 @@ type MyEntry struct {
 
 func (MyEntry) TableName() string {
 	return "gormtable"
+}
+
+type MyArrayTest struct {
+	Name   string
+	Values []string `gorm:"serializer:json"`
+	Objs   []struct {
+		X int
+		Y int
+	} `gorm:"serializer:json"`
+}
+
+func TestGormArray() {
+	utils.PrintBanner("TestGormArray")
+	db, err := gorm.Open(postgres.Open(gormSettings), &gormConfig)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	err = db.AutoMigrate(&MyArrayTest{})
+	if err != nil {
+		panic(err.Error())
+	}
+
+	var value = new(string)
+	*value = "a"
+	if err = db.Create(&MyArrayTest{
+		Values: []string{"a", "b"},
+		Objs: []struct {
+			X int
+			Y int
+		}{
+			{1, 2},
+		},
+	}).Error; err != nil {
+		panic(err.Error())
+	}
 }

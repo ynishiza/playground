@@ -37,3 +37,32 @@ func (myError) Error() string {
 	return "myError"
 }
 
+func TestError() {
+	PrintBanner("TestError")
+	var f = func() (int, error) {
+		return 0, MyError{"OOPS"}
+	}
+
+	if _, e := f(); e != nil {
+		fmt.Printf("error:%s", e.Error())
+	}
+	_, ee := f()
+	if e, ok := ee.(MyError); ok {
+		fmt.Printf("error:%s", e.name)
+	}
+
+	switch _, e := f(); m := e.(type) {
+	case MyError:
+		fmt.Printf("MyError:%s", m.name)
+	default:
+		panic("Unknown")
+	}
+}
+
+type MyError struct {
+	name string
+}
+
+func (m MyError) Error() string {
+	return fmt.Sprintf("name:%s", m.name)
+}

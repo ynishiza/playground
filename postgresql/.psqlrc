@@ -4,13 +4,13 @@
 \echo 'Loading custom psqlrc'
 
 -- clear custom routines
-CREATE OR REPLACE procedure clear_my_routines(namespace text DEFAULT 'public') AS $$
+CREATE OR REPLACE procedure clear_my_routines(owner text DEFAULT current_user, pattern text DEFAULT '^public\.') AS $$
 DECLARE
   builtin_namespaces constant text[] = ARRAY['pg_catalog', 'information_schema'];
   routine record;
   query text;
 BEGIN
-  RAISE INFO 'DROP routines for namespace %', namespace;
+  RAISE INFO 'DROP routines for pattern %', pattern;
   FOR routine IN
       -- get routines defined by current user
       SELECT
@@ -21,18 +21,18 @@ BEGIN
       WHERE
         -- note: omit builtins
         NOT n.nspname = ANY(builtin_namespaces)
-        AND pro.proowner = to_regrole(current_user)::oid
+        AND pro.proowner = to_regrole(owner)::oid
         AND pro.proname <> 'clear_my_routines'
         -- note: exclude extension functions
         AND pro.probin IS NULL
   LOOP
-      IF routine.nspname <> namespace THEN
+      IF routine.qualifiedname !~ pattern THEN
         RAISE INFO 'Skipping %', routine.qualifiedname;
         CONTINUE;
       END IF;
 
       query := format(
-        'DROP ROUTINE %s(%s)',
+        'DROP ROUTINE %s(%s) CASCADE',
         routine.qualifiedname,
         pg_get_function_identity_arguments(routine.oid)
       );
