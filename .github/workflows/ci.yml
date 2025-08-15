@@ -62,7 +62,7 @@ jobs:
       - run: set
       - name: Checkout
         uses: actions/checkout@v3
-      - uses: leafo/gh-actions-lua@v9
+      - uses: leafo/gh-actions-lua@v11
         with:
           luaVersion: "5.1.5"
 
