@@ -17,6 +17,10 @@ hello: ## Run hello
 build: ##
 	dot -Tpng ./graph.dot -o graph.png 
 
+.PHONY: build_svg
+build_svg: ##
+	dot -Tsvg ./graph.dot -o graph.svg 
+
 .PHONY: debug
 debug: ## Print variables
 	@echo SHELL=$(SHELL)

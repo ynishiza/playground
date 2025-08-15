@@ -9,6 +9,7 @@ import (
 	. "github.com/ynishiza/myapp/internal"
 	p "github.com/ynishiza/myapp/internal/packages"
 	"github.com/ynishiza/myapp/internal/std"
+	"github.com/ynishiza/myapp/internal/std/ast"
 	"github.com/ynishiza/mymodule"
 	"github.com/ynishiza/mymodule/a"
 	"golang.org/x/net/html"
@@ -65,9 +66,10 @@ func runDefault() {
 
 	// p.TestValidator()
 	// p.TestGorm()
-	std.TestJSON()
-	TestSlice()
+	// std.TestJSON()
+	// TestSlice()
 	// p.TestGormArray()
+	ast.Test()
 }
 
 func runAll() {
