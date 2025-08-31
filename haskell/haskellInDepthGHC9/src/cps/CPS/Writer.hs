@@ -7,6 +7,7 @@ module CPS.Writer (CWriterT (..), runCWriter, module X) where
 import CPS.Class as X
 import Control.Arrow (first, second, (>>>))
 import Control.Monad.Writer as X
+import Control.Monad
 import Data.Coerce
 import Data.Functor.Identity
 

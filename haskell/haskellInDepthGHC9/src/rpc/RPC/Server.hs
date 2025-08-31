@@ -10,6 +10,7 @@ where
 import Data.Serialize
 import Network.Connection
 import Network.Simple.TCP
+import Control.Monad
 import RPC.Common
 import RPC.Messaging
 

@@ -31,7 +31,7 @@ where
 
 import Control.Monad.Logger as X
 import Control.Monad.Reader as X
-import Control.Monad.Error as X
+import Control.Monad.Except as X
 import Data.Aeson
 import Data.IORef
 import Data.Map.Strict

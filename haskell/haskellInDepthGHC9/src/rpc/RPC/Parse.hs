@@ -22,6 +22,7 @@ import Data.Tuple
 import Language.Haskell.Meta.Parse
 import Language.Haskell.TH
 import Language.Haskell.TH.Quote
+import Control.Monad
 import RPC.Common
 import RPC.ParseUtils
 

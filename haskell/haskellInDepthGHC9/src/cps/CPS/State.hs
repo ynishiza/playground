@@ -9,6 +9,7 @@ module CPS.State (CStateT (..), module X, runCState) where
 import CPS.Class
 import Control.Arrow (first, (>>>))
 import Control.Monad.State as X
+import Control.Monad
 import Data.Coerce
 import Data.Functor.Identity
 

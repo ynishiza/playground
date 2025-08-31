@@ -128,7 +128,7 @@ instance (Monad m, Functor f) => Monad (Stream f m) where
       loop (Step s) = wrap $ loop <$> s
       loop (Effect e) = Effect $ loop <$> e
 
-instance MonadTrans (Stream f) where
+instance Functor f => MonadTrans (Stream f) where
   lift :: Monad m => m a -> Stream f m a
   lift = effect
 
@@ -456,16 +456,16 @@ streamStepFromStep_ = streamStepFromStep id
 streamStepFromStep :: Functor f => (Stream f x (Stream str n r) -> str (Stream str n r)) -> f (Stream str n r) -> Stream str n r
 streamStepFromStep fn = Step . fn . yields
 
-streamStepFromEffect :: Monad m => (Stream x m (Stream str n r) -> str (Stream str n r)) -> m (Stream str n r) -> Stream str n r
+streamStepFromEffect :: (Functor x, Monad m) => (Stream x m (Stream str n r) -> str (Stream str n r)) -> m (Stream str n r) -> Stream str n r
 streamStepFromEffect fn = Step . fn . lift
 
-streamStepFromEffect_ :: Monad m => m (Stream (Stream f m) n r) -> Stream (Stream f m) n r
+streamStepFromEffect_ :: (Monad m, Functor f) => m (Stream (Stream f m) n r) -> Stream (Stream f m) n r
 streamStepFromEffect_ = streamStepFromEffect id
 
-streamEffectFromEffect_ :: (Monad m) => m (Stream f (Stream g m) r) -> Stream f (Stream g m) r
+streamEffectFromEffect_ :: (Monad m, Functor g) => m (Stream f (Stream g m) r) -> Stream f (Stream g m) r
 streamEffectFromEffect_ = streamEffectFromEffect id
 
-streamEffectFromEffect :: (Monad m) => (Stream x m (Stream f str r) -> str (Stream f str r)) -> m (Stream f str r) -> Stream f str r
+streamEffectFromEffect :: (Monad m, Functor x) => (Stream x m (Stream f str r) -> str (Stream f str r)) -> m (Stream f str r) -> Stream f str r
 streamEffectFromEffect fn = Effect . fn . lift
 
 streamEffectFromStep :: Functor f => (Stream f x (Stream g str r) -> str (Stream g str r)) -> f (Stream g str r) -> Stream g str r

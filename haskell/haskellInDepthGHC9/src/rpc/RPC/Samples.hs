@@ -16,6 +16,7 @@ where
 
 import Control.Concurrent
 import Control.Exception
+import Control.Monad
 import Data.Serialize
 import RPC.Common
 import RPC.Messaging

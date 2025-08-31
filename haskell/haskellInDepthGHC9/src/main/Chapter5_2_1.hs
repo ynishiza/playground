@@ -7,6 +7,7 @@
 module Chapter5_2_1 (run) where
 
 import Control.Monad.State
+import Control.Monad
 import System.Random
 import Utils
 

@@ -8,6 +8,7 @@ module TemplateSpec
 where
 
 import Common
+import Control.Monad
 import GHC.Real
 import RPC.Base
 import Test.Hspec

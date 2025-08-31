@@ -20,6 +20,7 @@ module Playground
 where
 
 import Control.Exception
+import Control.Monad.IO.Class
 import Control.Monad.Except
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as B

@@ -13,6 +13,7 @@ where
 import Common
 import Data.Serialize hiding (get, put)
 import GHC.Real
+import Control.Monad
 import RPC.Base
 
 echo :: String -> RemoteObj String

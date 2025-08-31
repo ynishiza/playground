@@ -36,6 +36,9 @@ data Do a where
   DoE :: x -> (x -> y) -> (y -> a) -> Do a
   DoIO :: IO a -> Do a
 
+instance Show a => Show (Do a) where
+  show _ = ""
+
 instance Functor Do where
   fmap f (DoA k) = DoA $ f . k
   fmap f (DoB k) = DoB $ f . k

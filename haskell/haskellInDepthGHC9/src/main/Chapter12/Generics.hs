@@ -122,7 +122,7 @@ consWest = M1 U1
 consNorth :: M1 C ('MetaCons "North" 'PrefixI 'False) U1 x
 consNorth = M1 U1
 
-metaV1 :: String -> M1 S ('MetaSel ('Just "v1") 'SourceUnpack 'SourceStrict 'DecidedStrict) (K1 R String) x
+metaV1 :: String -> M1 S ('MetaSel ('Just "v1") 'SourceUnpack 'SourceStrict 'DecidedUnpack) (K1 R String) x
 metaV1 = M1 . K1
 
 metaV2 :: String -> M1 S ('MetaSel ('Just "v2") 'NoSourceUnpackedness 'NoSourceStrictness 'DecidedLazy) (K1 R String) x
@@ -135,6 +135,7 @@ somethingABC :: SomeThing Int
 somethingABC = MkSomeThing "ABC" "DEF" 1
 
 -- metaSomeThingABC :: SomeThingType x      -- NO: fails for internal library since module is not "main"
+-- metaSomeThingABC :: SomeThingType Int x      -- NO: fails for internal library since module is not "main"
 metaSomeThingABC = from somethingABC
 
 type BoolType :: forall a. a -> Type

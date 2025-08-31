@@ -8,6 +8,7 @@ module Chapter5_1_3 (run) where
 import Control.Monad.State
 import Control.Monad.Writer
 import Data.Foldable
+import Data.Monoid
 import qualified Data.Text as T
 import Fmt
 import Utils

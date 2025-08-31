@@ -6,6 +6,7 @@ module CPS.Reader (CReaderT (..), runCReader, module X) where
 import CPS.Class as X
 import Control.Monad.Reader as X
 import Data.Coerce
+import Control.Monad
 import Data.Functor.Identity
 
 newtype CReaderT r m a = CReaderT {runCReaderT :: forall s. r -> (a -> m s) -> m s}
