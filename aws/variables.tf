@@ -4,6 +4,11 @@ variable "aws_region" {
   default     = "ap-northeast-1"
 }
 
+variable "peer_owner_id" {
+  type        = string
+  default     = "main_to_sub"
+}
+
 variable "project_name" {
   description = "Name prefix used for resource names and tags."
   type        = string
@@ -45,5 +50,25 @@ variable "private_subnet_cidrs" {
   validation {
     condition     = length(var.private_subnet_cidrs) >= 2 && alltrue([for cidr in var.private_subnet_cidrs : can(cidrnetmask(cidr))])
     error_message = "private_subnet_cidrs must contain at least two valid IPv4 CIDR blocks."
+  }
+}
+
+variable "private_vpc_cidr" {
+  type        = string
+  default     = "160.0.0.0/16"
+
+  validation {
+    condition     = can(cidrnetmask(var.private_vpc_cidr))
+    error_message = "vpc_cidr must be a valid IPv4 CIDR block."
+  }
+}
+
+variable "private_vpc_subnet_cidrs" {
+  type        = list(string)
+  default     = ["160.0.10.0/24", "160.0.11.0/24"]
+
+  validation {
+    condition     = length(var.private_vpc_subnet_cidrs) >= 2 && alltrue([for cidr in var.private_vpc_subnet_cidrs : can(cidrnetmask(cidr))])
+    error_message = "private_vpc_subnet_cidrs must contain at least two valid IPv4 CIDR blocks."
   }
 }
