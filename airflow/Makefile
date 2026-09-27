@@ -1,39 +1,32 @@
 SHELL=/usr/bin/env bash
 
+VENV_DIR=./.venv
 DOCKER_COMPOSE=docker-compose.yml
 AIRFLOW_SERVER_CONTAINER=airflow-airflow_playground_apiserver-1
 
 CODE_SOURCE=.
 
+
 .PHONY: default
 default: help
 
-.PHONY: airflow
-airflow: ## Execute airflow command
-	docker exec -ti $(AIRFLOW_SERVER_CONTAINER) bash
+.PHONY: install
+install: ## Setup uv env
+	uv python install && uv sync --all-extras --dev
 
-.PHONY: docker_start
-docker_start: ## Start local development containers.
-	docker compose -f $(DOCKER_COMPOSE) up
+.PHONY: airflow_start
+airflow_start: ## Start airflow
+	source $(VENV_DIR)/bin/activate ; \
+	airflow standalone
 
-.PHONY: docker_stop
-docker_stop: ## Stop all docker composes.
-	docker compose -f $(DOCKER_COMPOSE) down
+.PHONY: airflow_info
+airflow_info: ## Execute airflow command
+	source $(VENV_DIR)/bin/activate && airflow info
 
-.PHONY: docker_rm
-docker_rm: ## Cleanup resources used by the docker compose settings.
-	@# down: remove containers, named volumes, networks
-	docker compose -f $(DOCKER_COMPOSE) down --volumes
-	@echo "Use docker compose -f $(DOCKER_COMPOSE) rm -rmi to remove images"
-
-.PHONY: fetch_airflow_admin_password
-fetch_airflow_admin_password: ## Show the local Airflow admin password (generated on first boot, in hmc_airflow_apiserver's logs).
-	@line=$$(docker compose -f $(DOCKER_COMPOSE) logs airflow_playground_apiserver 2>/dev/null | grep "Password for user" | tail -1); \
-	if [ -z "$$line" ]; then \
-		echo "No password found. Is hmc_airflow_apiserver running? (make docker_start)"; \
-	else \
-		echo "$$line" | sed 's/.*Password for user/Password for user/'; \
-	fi
+.PHONY: airflow_password
+airflow_password: ## Show the local Airflow admin password (generated on first boot, in hmc_airflow_apiserver's logs).
+	cat ./airflow/simple_auth_manager_passwords.json.generated
+	@echo "Server at localhost:8080"
 
 .PHONY: clean
 clean: ## Clean caches and test files.
@@ -44,10 +37,6 @@ clean: ## Clean caches and test files.
 debug: ## Debug variables.
 	@echo SHELL=$(SHELL)
 	@echo SHELL=$(DOCKER_COMPOSE)
-
-.PHONY: install
-install: ## Setup uv env
-	uv python install && uv sync --all-extras --dev
 
 .PHONY: help
 help: ## Display this help.
