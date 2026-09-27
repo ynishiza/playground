@@ -1,0 +1,130 @@
+x-pip-additional-requirements: &pip-additional-requirements >-
+  beautifulsoup4 cryptography fsspec httpx lxml psycopg[binary]
+  pydantic-settings pyrate-limiter python-dotenv s3fs structlog tenacity
+
+x-airflow-common: &airflow-common
+  image: apache/airflow:3.3.1-python3.14
+  env_file:
+    - .env
+  environment: &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://airflow_playground_apiserver:8080/execution/
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow_admin:password@airflow_playground_postgres:5432/airflow_db
+    AIRFLOW__DATABASE__SQL_ALCHEMY_SCHEMA: airflow
+    AIRFLOW__CORE__FERNET_KEY: yvxytKec9HP_cCDMXhDy0wsY8UBJVpS-e89UOffmiyY=
+    AIRFLOW__API__SECRET_KEY: 70pfOmKs2Cz0Vrsy7rTqGUJmcylPlqaQTYQxMl2uHeQ=
+    AIRFLOW__API_AUTH__JWT_SECRET: TkFG7gy11qz6PqrTkWTIEhJ732nMfRRlub_nzOy1XW8=
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    PYTHONPATH: /opt/airflow/src
+    WEBORCA_DATA_ROOT: /opt/airflow/data
+  volumes:
+    - ./src/airflow_playground/dags:/opt/airflow/dags
+    - ./airflow/logs:/opt/airflow/logs
+    - ./airflow/plugins:/opt/airflow/plugins
+    - ./src:/opt/airflow/src:ro
+    - ./data:/opt/airflow/data
+    - ./secrets:/opt/airflow/secrets:ro
+  user: "50000:0"
+  networks:
+    - airflow_playground_network
+  depends_on: &airflow-common-depends-on
+    airflow_playground_postgres:
+      condition: service_healthy
+
+services:
+  airflow_playground_postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: airflow_admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: airflow_db
+    volumes:
+      - ./db/initdb.d:/docker-entrypoint-initdb.d
+      - airflow_playground_postgres_volume:/var/lib/postgresql
+    ports:
+      - "5432:5432"
+    networks:
+      - airflow_playground_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow_admin -d airflow_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: always
+
+  # One-shot: fixes up permissions on the mounted volumes, then runs
+  # Airflow's metadata DB migration (against the airflow role/database/
+  # schema created by db/init.d/airflow.sql). Exits after completing.
+  airflow_playground_init:
+    <<: *airflow-common
+    restart: "no"
+    user: "0:0"
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        chown -R 50000:0 /opt/airflow/dags /opt/airflow/logs /opt/airflow/plugins
+        exec /entrypoint airflow db migrate
+
+  airflow_playground_apiserver:
+    <<: *airflow-common
+    environment:
+      <<: *airflow-common-env
+      _PIP_ADDITIONAL_REQUIREMENTS: *pip-additional-requirements
+    command: api-server
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/api/v2/monitor/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow_playground_init:
+        condition: service_completed_successfully
+
+  airflow_playground_scheduler:
+    <<: *airflow-common
+    environment:
+      <<: *airflow-common-env
+      _PIP_ADDITIONAL_REQUIREMENTS: *pip-additional-requirements
+    command: scheduler
+    healthcheck:
+      test: ["CMD-SHELL", 'airflow jobs check --job-type SchedulerJob --hostname "$${HOSTNAME}"']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow_playground_init:
+        condition: service_completed_successfully
+
+  airflow_playground_dag_processor:
+    <<: *airflow-common
+    environment:
+      <<: *airflow-common-env
+      _PIP_ADDITIONAL_REQUIREMENTS: *pip-additional-requirements
+    command: dag-processor
+    healthcheck:
+      test: ["CMD-SHELL", 'airflow jobs check --job-type DagProcessorJob --hostname "$${HOSTNAME}"']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow_playground_init:
+        condition: service_completed_successfully
+
+volumes:
+  airflow_playground_postgres_volume:
+
+networks:
+  airflow_playground_network:
+    driver: bridge

@@ -1,0 +1,39 @@
+# Python: build files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Python: test
+.coverage
+.pytest_cache/
+htmlcov/
+
+# Python: virtual environment
+.venv
+
+# Python: type checking / linting
+.ruff_cache/
+.mypy_cache/
+
+# Environment variables
+.env
+
+# WebORCA client: raw persisted XML responses (see
+# src/hmc_dwh/extractors/weborca/README.md)
+data/weborca/
+
+# WebORCA API credentials: client certs, API keys (never commit these)
+secrets/**/*
+!secrets/.keep
+
+# User local tools and OS
+.vscode/
+.idea/
+.codex/
+.DS_Store
+
+# Airflow (docker compose)
+airflow/logs/
